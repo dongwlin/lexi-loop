@@ -57,7 +57,8 @@ apps/server/
 │  │     └─ schema/              bun ORM 映射（仅 repo 子树可导入）
 │  │        ├─ dictionary.go
 │  │        ├─ user_word.go
-│  │        └─ review.go
+│  │        ├─ review.go
+│  │        └─ jsonb.go          jsonb 列的 Valuer / Scanner 通用包装
 │  ├─ service/                   业务用例编排（具体类型，不按 API 版本复制）
 │  │  ├─ word.go                 WordService
 │  │  ├─ dictionary.go           DictionaryService（MVP：本地 Lookup）
