@@ -1,93 +1,20 @@
 package migrations
 
-// 集成测试：包级 TestMain 启动一次共享的真实 PostgreSQL（postgres:18-alpine，
-// testcontainers），本包全部集成用例复用同一实例；Docker 不可用或传 -short 时
-// 集成用例跳过、纯单元测试仍运行。
+// 集成测试：共享 PostgreSQL 容器由 main_test.go 的包级 TestMain 启动，
+// Docker 不可用或传 -short 时集成用例跳过。
 // 覆盖 Go 测试规范 §2 的迁移基线：空库可完整 up；并验证版本簿记、
 // 重复 up 的 ErrNoChange 幂等、down 按步回退与最低版本边界。
 
 import (
 	"context"
-	"flag"
 	"io/fs"
-	"log"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
-	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
-
-const (
-	testDBName   = "lexi_loop_test"
-	testDBUser   = "lexi"
-	testDBPass   = "lexi"
-	pgImage      = "postgres:18-alpine"
-	pgConnParams = "sslmode=disable"
-)
-
-// 包级共享状态：TestMain 初始化，集成用例通过 requireTestConnStr 获取。
-var testDBConnStr string
-
-// TestMain 为整个包启动一个共享的 PostgreSQL 容器，跑完全部用例后统一清理。
-func TestMain(m *testing.M) {
-	flag.Parse() // testing.Short 依赖已解析的 -test.short 等 flag
-
-	if testing.Short() {
-		log.Print("short 模式：跳过 testcontainers 集成测试（纯单元测试继续）")
-		os.Exit(m.Run())
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	defer cancel()
-
-	container, err := tcpostgres.Run(ctx, pgImage,
-		tcpostgres.WithDatabase(testDBName),
-		tcpostgres.WithUsername(testDBUser),
-		tcpostgres.WithPassword(testDBPass),
-		testcontainers.WithWaitStrategy(
-			// postgres 首次启动会先跑 initdb 的临时实例、随后重启为正式实例；
-			// 只等端口就绪会抢在 init 完成前连接、被服务端重置。
-			// 等就绪日志出现两次（第二次才是正式实例）再开始跑用例。
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2),
-		),
-	)
-	if err != nil {
-		if container != nil {
-			_ = container.Terminate(context.Background())
-		}
-		log.Printf("testcontainers 启动失败，集成测试将被跳过（纯单元测试继续）: %v", err)
-		os.Exit(m.Run())
-	}
-	defer func() {
-		if err := container.Terminate(context.Background()); err != nil {
-			log.Printf("终止 postgres 容器失败: %v", err)
-		}
-	}()
-
-	connStr, err := container.ConnectionString(ctx, pgConnParams)
-	if err != nil {
-		log.Fatalf("获取容器连接串失败: %v", err)
-	}
-	testDBConnStr = connStr
-
-	os.Exit(m.Run())
-}
-
-// requireTestConnStr 返回 TestMain 创建的容器连接串；Docker 不可用或 -short 时跳过集成用例。
-func requireTestConnStr(t *testing.T) string {
-	t.Helper()
-	if testDBConnStr == "" {
-		t.Skip("testcontainers 不可用，跳过集成测试")
-	}
-	return testDBConnStr
-}
 
 // migrationVersion 连接容器数据库读取 schema_migrations 当前版本；
 // 尚无任何已应用版本（最低版本）时返回 (0, false)。
