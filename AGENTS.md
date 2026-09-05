@@ -13,7 +13,7 @@ PRD（product/prd.md：做什么）
 → specs（specs/backend/ — 后端工程规范；specs/frontend/ — 前端工程规范）
 ```
 
-新人/Agent 先读 [docs/architecture/overview.md](docs/architecture/overview.md)，再按需下沉；导航与权威关系表见 [docs/README.md](docs/README.md)。
+新人/Agent 先读 [docs/architecture/overview.md](docs/architecture/overview.md)，再按需下沉；导航与权威关系表见 [docs/README.md](docs/README.md)。在 `apps/server` 内工作时，先读 [apps/server/AGENTS.md](apps/server/AGENTS.md) 的子树级指引（与本文档叠加生效）。
 
 ## Agent 工作记录
 
