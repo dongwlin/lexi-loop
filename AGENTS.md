@@ -10,7 +10,7 @@ PRD（product/prd.md：做什么）
 → domain design（dictionary/* · review/* · frontend/review-flow.md）
 → API（api/words.md · api/reviews.md）
 → implementation（backend/structure.md）
-→ specs（specs/backend/ — 后端工程规范：技术选型、架构分层、测试、HTTP API 设计）
+→ specs（specs/backend/ — 后端工程规范；specs/frontend/ — 前端工程规范）
 ```
 
 新人/Agent 先读 [docs/architecture/overview.md](docs/architecture/overview.md)，再按需下沉；导航与权威关系表见 [docs/README.md](docs/README.md)。
@@ -42,6 +42,13 @@ PRD（product/prd.md：做什么）
 | Go 单体架构规范（分层 / Domain / Repo / Service / Handler / 事务 / 缓存） | [docs/specs/backend/Go 单体应用架构规范.md](docs/specs/backend/Go%20单体应用架构规范.md) | 引用 |
 | Go 测试规范 | [docs/specs/backend/Go 测试规范.md](docs/specs/backend/Go%20测试规范.md) | 引用 |
 | HTTP API 设计规范（响应结构 / 错误码 / 分页 / 路由版本） | [docs/specs/backend/HTTP API 设计规范.md](docs/specs/backend/HTTP%20API%20设计规范.md) | 引用 |
+| 前端技术栈 | [docs/specs/frontend/前端技术栈.md](docs/specs/frontend/前端技术栈.md) | 引用 |
+| 前端应用架构规范 | [docs/specs/frontend/前端应用架构规范.md](docs/specs/frontend/前端应用架构规范.md) | 引用 |
+| 前端 API 与认证集成规范 | [docs/specs/frontend/前端 API 与认证集成规范.md](docs/specs/frontend/前端%20API%20与认证集成规范.md) | 引用 |
+| 前端交互与可访问性规范 | [docs/specs/frontend/前端交互与可访问性规范.md](docs/specs/frontend/前端交互与可访问性规范.md) | 引用 |
+| 前端测试规范 | [docs/specs/frontend/前端测试规范.md](docs/specs/frontend/前端测试规范.md) | 引用 |
+| 设计系统方案 | [docs/specs/frontend/Reka UI + Tailwind CSS v4 + Radix Colors 设计系统方案.md](docs/specs/frontend/Reka%20UI%20+%20Tailwind%20CSS%20v4%20+%20Radix%20Colors%20设计系统方案.md) | 引用 |
+| Vue 性能与缓存优化 | [docs/specs/frontend/Vue 性能与缓存优化.md](docs/specs/frontend/Vue%20性能与缓存优化.md) | 引用 |
 | 品牌 | [docs/brand/naming.md](docs/brand/naming.md) | 引用 |
 
 不要在同一文档之外**复制一份再维护**任何 schema、公式或决策结论——跨文件不一致大多由此产生。
@@ -61,6 +68,13 @@ API 契约冲突     → api/* 为准
 后端架构规范冲突 → specs/backend/Go 单体应用架构规范.md 为准
 后端测试规范冲突 → specs/backend/Go 测试规范.md 为准
 HTTP API 规范冲突 → specs/backend/HTTP API 设计规范.md 为准
+前端技术选型冲突 → specs/frontend/前端技术栈.md 为准
+前端架构规范冲突 → specs/frontend/前端应用架构规范.md 为准
+前端认证集成冲突 → specs/frontend/前端 API 与认证集成规范.md 为准
+前端交互与可访问性冲突 → specs/frontend/前端交互与可访问性规范.md 为准
+前端测试规范冲突 → specs/frontend/前端测试规范.md 为准
+设计系统冲突     → specs/frontend/Reka UI + Tailwind CSS v4 + Radix Colors 设计系统方案.md 为准
+Vue 性能优化冲突 → specs/frontend/Vue 性能与缓存优化.md 为准
 品牌相关         → brand/naming.md 为准
 ```
 

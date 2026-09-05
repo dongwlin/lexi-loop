@@ -53,7 +53,14 @@ docs/
 │  │  ├─ Go 单体应用架构规范.md  后端分层 / Domain / Repo / Service / Handler / 事务 / 缓存
 │  │  ├─ Go 测试规范.md          TDD / 分层测试 / 测试替身 / CI
 │  │  └─ HTTP API 设计规范.md    响应结构 / 错误码 / 分页 / 路由版本
-│  └─ frontend/                 前端规范（待补充）
+│  └─ frontend/
+│     ├─ 前端技术栈.md                    前端框架 / 构建工具 / 依赖选型
+│     ├─ 前端应用架构规范.md              目录结构 / 依赖方向 / 状态归属 / API 分层
+│     ├─ 前端 API 与认证集成规范.md       Bearer Token / Refresh / 并发刷新 / 请求重放
+│     ├─ 前端交互与可访问性规范.md        WCAG 2.2 AA / 键盘 / 焦点 / 表单 / 动画
+│     ├─ 前端测试规范.md                  Vitest / Testing Library / MSW / Storybook / Playwright
+│     ├─ Reka UI + Tailwind CSS v4 + Radix Colors 设计系统方案.md  Token / 色彩 / 组件样式
+│     └─ Vue 性能与缓存优化.md            KeepAlive / 预取 / 虚拟列表 / 缓存策略
 ├─ brand/
 │  ├─ naming.md               项目名称 / Slogan
 │  ├─ logo.png                Logo 主图
@@ -109,6 +116,13 @@ brand/naming.md  ← 品牌旁路，不依赖其它文档
 | Go 单体架构规范 | [specs/backend/Go 单体应用架构规范.md](specs/backend/Go%20单体应用架构规范.md) |
 | Go 测试规范 | [specs/backend/Go 测试规范.md](specs/backend/Go%20测试规范.md) |
 | HTTP API 设计规范 | [specs/backend/HTTP API 设计规范.md](specs/backend/HTTP%20API%20设计规范.md) |
+| 前端技术栈 | [specs/frontend/前端技术栈.md](specs/frontend/前端技术栈.md) |
+| 前端应用架构规范 | [specs/frontend/前端应用架构规范.md](specs/frontend/前端应用架构规范.md) |
+| 前端 API 与认证集成规范 | [specs/frontend/前端 API 与认证集成规范.md](specs/frontend/前端%20API%20与认证集成规范.md) |
+| 前端交互与可访问性规范 | [specs/frontend/前端交互与可访问性规范.md](specs/frontend/前端交互与可访问性规范.md) |
+| 前端测试规范 | [specs/frontend/前端测试规范.md](specs/frontend/前端测试规范.md) |
+| 设计系统方案 | [specs/frontend/Reka UI + Tailwind CSS v4 + Radix Colors 设计系统方案.md](specs/frontend/Reka%20UI%20+%20Tailwind%20CSS%20v4%20+%20Radix%20Colors%20设计系统方案.md) |
+| Vue 性能与缓存优化 | [specs/frontend/Vue 性能与缓存优化.md](specs/frontend/Vue%20性能与缓存优化.md) |
 | 项目名称 / slogan | [brand/naming.md](brand/naming.md) |
 | 冻结决策 | [decisions/README.md](decisions/README.md) |
 
