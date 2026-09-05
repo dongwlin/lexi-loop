@@ -4,7 +4,7 @@
 
 ## 当前状态：MVP 骨架
 
-后端可启动，根路径 `/healthz` 可用；业务各层为注释占位，模块与命令形态已就位。`internal/infra/config`（viper + `LEXI_*` 环境变量）已实现，其余包为 TODO 占位；`migrate` 与 `import-ecdict` 命令已注册但报「尚未实现」。分层现状与下一步清单以 [README.md](README.md) 为准——完成里程碑后同步更新两处，避免状态失真。
+后端可启动，根路径 `/healthz` 可用；业务各层为注释占位，模块与命令形态已就位。`internal/infra/config`（viper + `LEXI_*` 环境变量）与 `internal/infra/database`（bun + pgx/v5 连接池构造，含 testcontainers 集成测试）已实现，其余包为 TODO 占位；`migrate` 与 `import-ecdict` 命令已注册但报「尚未实现」。分层现状与下一步清单以 [README.md](README.md) 为准——完成里程碑后同步更新两处，避免状态失真。
 
 改动本子树任何代码前：先读 [docs/agent-log/](../../docs/agent-log/) 当月文件的最近记录了解上下文，再核对下表对应文档与当前代码。
 
@@ -27,12 +27,14 @@
 cd apps/server
 go build ./...                 # 构建全部包
 go vet ./...                   # 静态检查
+go test ./...                  # 单元 + 集成测试（集成需本机 Docker）
+go test -short ./...           # 只跑单元测试（跳过集成测试）
 go run . serve                 # 启动 HTTP 服务（默认监听 :8080）
 LEXI_HTTP_ADDR=:9090 go run . serve
 curl http://localhost:8080/healthz   # -> {"status":"ok"}
 ```
 
-仓库当前无任何测试文件；新增测试后按 `go test ./...` 运行。并发 / 回滚用例必须用 testcontainers + 真实 PostgreSQL 验证（structure.md §5.4 列出的四个场景：单 active session、同 item 并发提交只累计一次、最后两 item 并发提交后 session 必为 completed、提交中注入失败整体回滚）。
+`infra/config` 与 `infra/database` 已有测试：`infra/database` 的集成测试在包级 `TestMain` 中启动一次共享的真实 PostgreSQL 容器（镜像 `postgres:18-alpine`，全部用例复用）；无 Docker 或传 `-short` 时集成用例跳过、单元测试仍运行。并发 / 回滚用例必须用 testcontainers + 真实 PostgreSQL 验证（structure.md §5.4 列出的四个场景：单 active session、同 item 并发提交只累计一次、最后两 item 并发提交后 session 必为 completed、提交中注入失败整体回滚）。
 
 ## 分层实现要点
 
