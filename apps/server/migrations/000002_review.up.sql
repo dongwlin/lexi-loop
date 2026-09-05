@@ -1,0 +1,4 @@
+-- 迁移 000002：复习域表（docs/backend/structure.md §2）。
+-- 字段语义以 docs/review/data-model.md 为准。
+-- TODO: 创建 user_words 学习字段（软删除）、review_sessions、review_items
+--（含「全库至多一个 active session」的部分唯一索引）。

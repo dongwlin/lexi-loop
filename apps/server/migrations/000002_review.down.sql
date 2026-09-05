@@ -1,0 +1,2 @@
+-- 回退 000002_review.up.sql。
+-- TODO: DROP TABLE review_items / review_sessions / 相关索引等。

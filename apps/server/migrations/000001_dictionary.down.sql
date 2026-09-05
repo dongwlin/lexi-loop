@@ -1,0 +1,2 @@
+-- 回退 000001_dictionary.up.sql。
+-- TODO: DROP TABLE dictionary_entries 等。

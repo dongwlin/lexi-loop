@@ -1,0 +1,3 @@
+-- 迁移是数据库结构的唯一可执行落点（docs/backend/structure.md §2）。
+-- 由 lexi-loop migrate up 执行；字段语义以 docs/dictionary/data-model.md 为准。
+-- TODO: 创建 dictionary_entries（含 headword 唯一约束、lemma 查询所需索引）。
