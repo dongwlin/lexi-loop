@@ -4,7 +4,7 @@ LexiLoop（词环）英语生词复习系统后端。工程结构规范见 [docs
 
 ## 当前状态：MVP 骨架
 
-代码框架已按分层规范搭好，**业务逻辑尚未实现**（业务各层为注释占位，见各文件 TODO）。当前交付物是「可启动的 Gin 服务器 + `/healthz` 健康检查」、`internal/infra/database` 数据库连接池（bun + pgx，含 testcontainers 集成测试）与 `migrations` 迁移执行入口（embed + golang-migrate，`migrate` 命令已接入；迁移 SQL 本身仍为占位）；`import-ecdict` 命令已注册但报「尚未实现」。
+代码框架已按分层规范搭好，**业务用例尚未实现**（repo / service / handler / apperr 仍为注释占位，见各文件 TODO）。当前交付物是「可启动的 Gin 服务器 + `/healthz` 健康检查」、`internal/domain` 领域模型与纯业务规则（按 dictionary / review 数据模型落四实体：工厂生成 UUID v7 与 UTC 时间戳、ApplyReview / Submit / Complete / Abandon 状态迁移、weight / mastery 动态计算，含单元测试）、`internal/infra/database` 数据库连接池（bun + pgx，含 testcontainers 集成测试）与 `migrations` 迁移执行入口（embed + golang-migrate，`migrate` 命令已接入；迁移 SQL 本身仍为占位）；`import-ecdict` 命令已注册但报「尚未实现」。
 
 ```text
 apps/server/
@@ -13,7 +13,7 @@ apps/server/
 ├─ migrations/                   版本化迁移（migrations.go 执行入口 + up/down SQL 占位）
 └─ internal/
    ├─ app/                       组合根：Server 生命周期、优雅关闭
-   ├─ domain/                    领域模型与纯业务规则（占位）
+   ├─ domain/                    领域模型与纯业务规则（已实现，含单元测试）
    ├─ repo/                      数据访问适配器 + internal/schema（占位）
    ├─ service/                   业务用例编排（占位）
    ├─ importer/ecdict/           ECDICT 离线导入（占位）
@@ -75,11 +75,10 @@ go test -race ./internal/infra/... ./migrations  # infra + 迁移全量（含集
 
 ## 下一步（按依赖顺序）
 
-1. `internal/domain`：按 [dictionary/data-model.md](../../docs/dictionary/data-model.md) 与 [review/data-model.md](../../docs/review/data-model.md) 落模型
-2. `internal/repo` + `migrations/`：数据访问与真实迁移 DDL（迁移执行入口已就绪，SQL 仍为占位）
-3. `internal/apperr` + `httpresp`：类型化错误与统一响应（[HTTP API 设计规范](../../docs/specs/backend/HTTP%20API%20设计规范.md)）
-4. `internal/service` / `internal/handler/v1`：业务用例与版本化 Handler
-5. 中间件替换为 `handler/middleware` 自定义实现，`app/provider.go` 完成组合根组装
+1. `internal/repo` + `migrations/`：数据访问与真实迁移 DDL（迁移执行入口已就绪，SQL 仍为占位）
+2. `internal/apperr` + `httpresp`：类型化错误与统一响应（[HTTP API 设计规范](../../docs/specs/backend/HTTP%20API%20设计规范.md)）
+3. `internal/service` / `internal/handler/v1`：业务用例与版本化 Handler
+4. 中间件替换为 `handler/middleware` 自定义实现，`app/provider.go` 完成组合根组装
 
 ## 模块
 

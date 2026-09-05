@@ -4,7 +4,7 @@
 
 ## 当前状态：MVP 骨架
 
-后端可启动，根路径 `/healthz` 可用；业务各层为注释占位，模块与命令形态已就位。`internal/infra/config`（viper + `LEXI_*` 环境变量）、`internal/infra/database`（bun + pgx/v5 连接池构造）与 `migrations` 包（embed + golang-migrate 迁移执行入口，`migrate` 命令已接入，迁移 SQL 仍为占位；均含 testcontainers 集成测试）已实现，其余包为 TODO 占位；`import-ecdict` 命令已注册但报「尚未实现」。分层现状与下一步清单以 [README.md](README.md) 为准——完成里程碑后同步更新两处，避免状态失真。
+后端可启动，根路径 `/healthz` 可用；模块与命令形态已就位。`internal/domain`（四表领域模型、`NewXxx` 工厂、ApplyReview / Submit / Complete / Abandon 状态迁移、weight / mastery 纯函数，含单元测试）、`internal/infra/config`（viper + `LEXI_*` 环境变量）、`internal/infra/database`（bun + pgx/v5 连接池构造）与 `migrations` 包（embed + golang-migrate 迁移执行入口，`migrate` 命令已接入，迁移 SQL 仍为占位；均含 testcontainers 集成测试）已实现，其余包为 TODO 占位；`import-ecdict` 命令已注册但报「尚未实现」。分层现状与下一步清单以 [README.md](README.md) 为准——完成里程碑后同步更新两处，避免状态失真。
 
 改动本子树任何代码前：先读 [docs/agent-log/](../../docs/agent-log/) 当月文件的最近记录了解上下文，再核对下表对应文档与当前代码。
 
