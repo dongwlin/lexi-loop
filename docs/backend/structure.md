@@ -10,7 +10,7 @@
 后端内部采用分层架构，依赖方向单向流动：
 
 ```text
-main → cmd → app / importer / infra/database（迁移）
+main → cmd → app / importer / migrations（迁移）
 app → handler / service / infra（组装）
 handler/router → handler/v1 / handler/middleware
 handler/v1 → service / httpresp / apperr
@@ -33,6 +33,7 @@ apps/server/
 │  ├─ import_ecdict.go           调用 importer/ecdict 执行离线导入
 │  └─ migrate.go                 执行数据库迁移
 ├─ migrations/                   PostgreSQL 版本化迁移
+│  ├─ migrations.go              迁移执行入口：embed 内嵌 SQL + golang-migrate
 │  ├─ 000001_dictionary.up.sql
 │  ├─ 000001_dictionary.down.sql
 │  ├─ 000002_review.up.sql
@@ -86,8 +87,7 @@ apps/server/
 │  └─ infra/                     纯技术组件，由组合根组装
 │     ├─ config/
 │     └─ database/
-│        ├─ database.go          连接池构造
-│        └─ migrate.go           migrations/ 的执行适配器
+│        └─ database.go          连接池构造
 └─ go.mod
 ```
 
@@ -107,7 +107,7 @@ lexi-loop import-ecdict <file>  将 ECDICT CSV 导入 dictionary_entries
 ```
 
 - `serve` 调用 `internal/app` 完成组件组装并管理服务生命周期。
-- `migrate` 调用 `infra/database` 的迁移执行适配器，只操作 `migrations/` 中的版本化 SQL，不在 Go 代码中另存一份 schema。
+- `migrate` 调用 `migrations` 包的迁移执行入口（embed 内嵌 SQL + golang-migrate），只操作 `migrations/` 中的版本化 SQL，不在 Go 代码中另存一份 schema。
 - `import-ecdict` 调用 `internal/importer/ecdict`；Cobra 命令文件不解析 CSV、不直接构造 SQL。
 - `cmd` 可以依赖 `app`、`importer` 和基础设施构造函数；任何业务包不得反向依赖 `cmd`。
 - `app` 只是最外层组合根；Handler、Service、Repo、Domain、Importer 和 Infra 都不得反向导入 `app`。

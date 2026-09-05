@@ -9,6 +9,7 @@
 | Web 框架 | gin                      | HTTP JSON API、参数绑定、校验与中间件链                    |
 | 数据库    | PostgreSQL               | 关系型数据的默认持久化方案                                 |
 | 数据访问   | bun + pgx/v5/stdlib      | SQL-first ORM，通过 `database/sql` 接入 PostgreSQL |
+| 数据库迁移 | golang-migrate/v4        | 版本化 SQL 迁移，SQL 经 embed 内嵌于 `apps/server/migrations/` |
 | 日志     | zerolog                  | 低分配的结构化 JSON 日志                               |
 | 依赖组装   | 手写组合根                    | 显式构造并组装长生命周期组件                                |
 | 认证     | go-paseto                | 本地验证的 access token + refresh token            |

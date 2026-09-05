@@ -4,7 +4,7 @@
 
 ## 当前状态：MVP 骨架
 
-后端可启动，根路径 `/healthz` 可用；业务各层为注释占位，模块与命令形态已就位。`internal/infra/config`（viper + `LEXI_*` 环境变量）与 `internal/infra/database`（bun + pgx/v5 连接池构造，含 testcontainers 集成测试）已实现，其余包为 TODO 占位；`migrate` 与 `import-ecdict` 命令已注册但报「尚未实现」。分层现状与下一步清单以 [README.md](README.md) 为准——完成里程碑后同步更新两处，避免状态失真。
+后端可启动，根路径 `/healthz` 可用；业务各层为注释占位，模块与命令形态已就位。`internal/infra/config`（viper + `LEXI_*` 环境变量）、`internal/infra/database`（bun + pgx/v5 连接池构造）与 `migrations` 包（embed + golang-migrate 迁移执行入口，`migrate` 命令已接入，迁移 SQL 仍为占位；均含 testcontainers 集成测试）已实现，其余包为 TODO 占位；`import-ecdict` 命令已注册但报「尚未实现」。分层现状与下一步清单以 [README.md](README.md) 为准——完成里程碑后同步更新两处，避免状态失真。
 
 改动本子树任何代码前：先读 [docs/agent-log/](../../docs/agent-log/) 当月文件的最近记录了解上下文，再核对下表对应文档与当前代码。
 
@@ -32,9 +32,11 @@ go test -short ./...           # 只跑单元测试（跳过集成测试）
 go run . serve                 # 启动 HTTP 服务（默认监听 :8080）
 LEXI_HTTP_ADDR=:9090 go run . serve
 curl http://localhost:8080/healthz   # -> {"status":"ok"}
+LEXI_DATABASE_URL='postgres://lexi:lexi@localhost:5432/lexi_loop?sslmode=disable' go run . migrate up      # 应用全部未执行的迁移
+LEXI_DATABASE_URL='...' go run . migrate down [steps]   # 回退指定步数（默认 1，超过可用数时截断）
 ```
 
-`infra/config` 与 `infra/database` 已有测试：`infra/database` 的集成测试在包级 `TestMain` 中启动一次共享的真实 PostgreSQL 容器（镜像 `postgres:18-alpine`，全部用例复用）；无 Docker 或传 `-short` 时集成用例跳过、单元测试仍运行。并发 / 回滚用例必须用 testcontainers + 真实 PostgreSQL 验证（structure.md §5.4 列出的四个场景：单 active session、同 item 并发提交只累计一次、最后两 item 并发提交后 session 必为 completed、提交中注入失败整体回滚）。
+`infra/config`、`infra/database` 与 `migrations` 已有测试：`infra/database` 与 `migrations` 的集成测试各自在包级 `TestMain` 中启动一次共享的真实 PostgreSQL 容器（镜像 `postgres:18-alpine`，全部用例复用）；无 Docker 或传 `-short` 时集成用例跳过、单元测试仍运行。并发 / 回滚用例必须用 testcontainers + 真实 PostgreSQL 验证（structure.md §5.4 列出的四个场景：单 active session、同 item 并发提交只累计一次、最后两 item 并发提交后 session 必为 completed、提交中注入失败整体回滚）。
 
 ## 分层实现要点
 
@@ -49,7 +51,7 @@ curl http://localhost:8080/healthz   # -> {"status":"ok"}
 - 成功 / 失败响应与 `apperr.Kind → HTTP 状态` 映射只存在于 `handler/httpresp`；Handler 与 Middleware 不得自行复制（§4.4）。
 - 错误用 `errors.Is` / `errors.As` + `apperr` 识别，禁止按 `err.Error()` 文本分支（§4.5）。
 - 状态值使用 Domain 类型化常量，不在 Service / Repo / Handler 中散落字符串（§4.1）。
-- `migrations/` 是数据库结构的唯一可执行落点，字段语义以数据模型文档为准；启动不隐式迁移，由 `lexi-loop migrate` 显式执行（§2）。
+- `migrations/` 是数据库结构的唯一可执行落点，字段语义以数据模型文档为准；启动不隐式迁移，由 `lexi-loop migrate` 显式执行，执行入口为 `migrations` 包的 `Migrate`（embed + golang-migrate，down 步数按当前版本截断为可用数）（§2、§3）。
 - 写用例（StartSession / SubmitResult / ImportWords 等）的锁顺序、幂等、有上限重试与回滚边界按 structure.md §5 实现。
 
 ## MVP 边界与冻结决策
