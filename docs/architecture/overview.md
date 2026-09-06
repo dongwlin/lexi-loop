@@ -63,7 +63,7 @@ lexi-loop/
 │  ├─ web/              前端应用（Vue）
 │  └─ server/           后端应用（Go）
 ├─ packages/
-│  └─ api-client/       API 客户端（后续通过 OpenAPI 文档自动生成）
+│  └─ api-client/       API 客户端（Orval 从 docs/openapi/ 自动生成）
 ├─ pnpm-workspace.yaml  pnpm 工作区配置
 ├─ package.json         根 package.json（脚本入口）
 └─ docs/                项目文档

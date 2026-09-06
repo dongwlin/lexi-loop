@@ -88,11 +88,7 @@ src/
 │       ├── queries.ts
 │       └── use-auth-session.ts    # Vue: useAuthSession.ts
 └── lib/
-    ├── api/
-    │   ├── client.ts
-    │   ├── errors.ts
-    │   ├── transport.ts
-    │   └── generated/
+    ├── api.ts                     # 组合 packages/api-client：注入 Base URL 与 access token
     ├── auth/
     │   ├── refresh-coordinator.ts
     │   ├── session-manager.ts
@@ -101,13 +97,14 @@ src/
     └── env.ts
 ```
 
-项目较小时可以合并文件，但职责不能混合。
+契约 API Client 位于 monorepo 共享包 `packages/api-client`（见 `docs/architecture/overview.md` §5.2 与《[[前端技术栈]]》§7）；`lib/api` 只做应用侧组合。项目较小时可以合并文件，但职责不能混合。
 
 | 模块 | 职责 | 不负责 |
 | --- | --- | --- |
-| `lib/api/transport.ts` | 发送请求、解析 Header 和响应体、支持 Abort | token 刷新、业务错误展示 |
-| `lib/api/client.ts` | 附加 access token、统一解包、认证 401 后重放 | 登录表单、路由跳转、Toast |
-| `lib/api/errors.ts` | 统一错误类型和协议错误转换 | 决定具体页面文案 |
+| `packages/api-client` transport | 发送请求、解析 Header 和响应体、支持 Abort | token 刷新、业务错误展示 |
+| `packages/api-client` client | 附加 access token、统一解包、认证 401 后重放 | 登录表单、路由跳转、Toast |
+| `packages/api-client` errors | 统一错误类型和协议错误转换 | 决定具体页面文案 |
+| `lib/api`（应用侧组合） | 注入 Base URL 与 access token，导出端点实例 | 登录表单、路由跳转、Toast |
 | `lib/auth/token-storage.ts` | 持久化 refresh token 与元数据 | 调用认证 API、保存 `/me` |
 | `lib/auth/refresh-coordinator.ts` | 单飞刷新、跨标签页互斥和结果通知 | 业务权限判断 |
 | `lib/auth/session-manager.ts` | 会话状态、登录结果提交、恢复和退出 | 保存当前用户 DTO |
@@ -783,7 +780,7 @@ ETag 由 API 传输或缓存适配层处理，不散落在 Feature 中：
 
 生成器的默认选择见《[[前端技术栈]]》；本节只规定所有生成器都必须遵循的集成边界。
 
-- Swagger/OpenAPI 生成代码统一放在 `lib/api/generated/`
+- Swagger/OpenAPI 生成代码统一放在 monorepo 共享包 `packages/api-client`，应用内不得出现第二份生成物
 - 生成文件不手工修改
 - 页面和组件不得直接 import 生成客户端
 - 生成客户端必须经过统一 Transport/API Client，确保 Header、响应解包、错误模型和认证刷新一致
