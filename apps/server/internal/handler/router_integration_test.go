@@ -115,12 +115,23 @@ func TestIntegration_WordRoutes(t *testing.T) {
 		resetTables(t)
 		engine := newTestServer(t)
 
+		// fieldErrors 是字段级错误细节的形态（HTTP API 设计规范 §3.2）。
+		var fieldErrData struct {
+			FieldErrors []struct {
+				Field  string `json:"field"`
+				Reason string `json:"reason"`
+			} `json:"fieldErrors"`
+		}
+
 		t.Run("缺少 words 字段", func(t *testing.T) {
 			rec := doJSON(t, engine, "POST", "/api/v1/words/import", map[string]any{})
 			require.Equal(t, http.StatusBadRequest, rec.Code)
+			assert.Contains(t, rec.Header().Get("Content-Type"), "application/json",
+				"错误响应 Content-Type 保持 application/json")
 			e := decodeEnvelope(t, rec.Body.Bytes())
 			assert.Equal(t, "BASE.PARAM.VALIDATION_FAILED", e.Code)
-			assert.JSONEq(t, "{}", string(e.Data), "无错误细节时 data 为空对象")
+			require.NoError(t, json.Unmarshal(e.Data, &fieldErrData))
+			assert.NotEmpty(t, fieldErrData.FieldErrors, "缺少必填字段时返回字段级错误")
 		})
 
 		t.Run("计数为零", func(t *testing.T) {
@@ -128,7 +139,11 @@ func TestIntegration_WordRoutes(t *testing.T) {
 				"words": []map[string]any{{"word": "abc", "count": 0}},
 			})
 			require.Equal(t, http.StatusBadRequest, rec.Code)
-			assert.Equal(t, "BASE.PARAM.VALIDATION_FAILED", decodeEnvelope(t, rec.Body.Bytes()).Code)
+			e := decodeEnvelope(t, rec.Body.Bytes())
+			assert.Equal(t, "BASE.PARAM.VALIDATION_FAILED", e.Code)
+			require.NoError(t, json.Unmarshal(e.Data, &fieldErrData))
+			require.NotEmpty(t, fieldErrData.FieldErrors)
+			assert.Contains(t, fieldErrData.FieldErrors[0].Field, "count")
 		})
 
 		t.Run("畸形 JSON", func(t *testing.T) {

@@ -1,13 +1,17 @@
-// Package handler 是 HTTP 层组装入口：全局中间件挂载、/api/v1 业务路由组
-// （docs/backend/structure.md §4.4）。
+// Package handler 是 HTTP 层组装入口：全局中间件挂载、huma API 构造与
+// /api/v1 业务操作注册、OpenAPI spec 离线生成（docs/backend/structure.md
+// §4.4）。
 package handler
 
 import (
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/adapters/humagin"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 
 	"github.com/dongwlin/lexi-loop/apps/server/internal/handler/middleware"
-	v1 "github.com/dongwlin/lexi-loop/apps/server/internal/handler/v1"
+	"github.com/dongwlin/lexi-loop/apps/server/internal/handler/v1"
+	"github.com/dongwlin/lexi-loop/apps/server/internal/handler/httpresp"
 )
 
 // Options 是 RegisterRoutes 的横切依赖与配置，由组合根（internal/app）传入。
@@ -20,8 +24,36 @@ type Options struct {
 	CORSAllowedOrigins []string
 }
 
+// humaConfig 构造 huma API 的 OpenAPI 元数据：运行时路由与离线 spec 生成
+// 共用，保证两处的标题 / 版本 / 描述一致。不设置 OpenAPIPath / DocsPath /
+// SchemasPath——spec 只离线生成落盘，不挂载到线上系统（docs/specs/backend/
+// Go 技术栈.md「API 文档」），也因此不引入向响应体注入 $schema 的
+// SchemaLinkTransformer，响应体外壳保持纯净。
+func humaConfig() huma.Config {
+	return huma.Config{
+		OpenAPI: &huma.OpenAPI{
+			OpenAPI: "3.1.0",
+			Info: &huma.Info{
+				Title:       "LexiLoop API",
+				Version:     "1.0.0",
+				Description: "LexiLoop（词环）英语生词复习系统 /api/v1 接口。spec 由 `lexi-loop openapi` 离线生成至 docs/openapi/，请勿手改。",
+			},
+		},
+		Formats:       huma.DefaultFormats,
+		DefaultFormat: "application/json",
+	}
+}
+
+// newAPI 在给定 gin 路由上构造 huma API：先装配统一错误模型（校验失败
+// 422 降为 400 等，见 httpresp.UseHumaError），再挂载适配器。业务操作
+// 路径自带 /api/v1 前缀，humagin 把 {param} 转换为 gin 的 :param。
+func newAPI(r *gin.Engine) huma.API {
+	httpresp.UseHumaError()
+	return humagin.New(r, humaConfig())
+}
+
 // RegisterRoutes 是 HTTP 路由挂载的唯一入口：构造并挂载全局中间件，
-// 建立 /api/v1 业务路由组。版本化 Handler 与横切依赖由组合根
+// 注册 /api/v1 业务操作。版本化 Handler 与横切依赖由组合根
 // （internal/app）构造后传入，路径契约见 docs/api/words.md 与
 // docs/api/reviews.md。
 //
@@ -36,18 +68,7 @@ func RegisterRoutes(r *gin.Engine, opts Options, wordH *v1.WordHandler, reviewH 
 	r.Use(middleware.CORS(opts.CORSAllowedOrigins))
 	r.Use(middleware.Logger(opts.Log))
 
-	v1Group := r.Group("/api/v1")
-	{
-		words := v1Group.Group("/words")
-		words.POST("/import", wordH.Import)
-		words.GET("", wordH.List)
-		words.GET("/:id", wordH.Get)
-		words.PATCH("/:id", wordH.UpdateReviewMeaning)
-		words.DELETE("/:id", wordH.Delete)
-
-		reviews := v1Group.Group("/reviews")
-		reviews.POST("", reviewH.Start)
-		reviews.POST("/:sessionId/items/:itemId", reviewH.Submit)
-		reviews.GET("/:id", reviewH.Get)
-	}
+	api := newAPI(r)
+	wordH.Register(api)
+	reviewH.Register(api)
 }

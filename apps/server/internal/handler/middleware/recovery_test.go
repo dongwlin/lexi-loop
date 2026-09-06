@@ -35,7 +35,7 @@ func TestRecovery_未写出响应时输出内部错误(t *testing.T) {
 	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/boom", nil))
 
 	require.Equal(t, http.StatusInternalServerError, w.Code)
-	var resp httpresp.Response
+	var resp httpresp.Error
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.Equal(t, apperr.CodeInternal, resp.Code)
 	assert.Equal(t, apperr.Internal(nil).Message, resp.Message)

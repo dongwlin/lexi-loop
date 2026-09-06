@@ -2,6 +2,10 @@
 // （camelCase 字段、空列表 []、空对象 {}）只由本包定义；Service 请求 /
 // 结果类型不含 json 标签（docs/specs/backend/HTTP API 设计规范.md §1、§12，
 // docs/backend/structure.md §4.3–§4.4）。
+//
+// 请求体的存在性 / 长度 / 取值约束以 huma 的 JSON Schema 标签声明
+// （required / minLength / minimum / minItems / enum 等），替代 gin 的
+// binding 标签；schema 生成与请求校验共用同一份标签。
 package dto
 
 import (
@@ -11,11 +15,15 @@ import (
 	"github.com/dongwlin/lexi-loop/apps/server/internal/service"
 )
 
+// NoData 是无额外数据端点的 data 形态（HTTP API 设计规范 §5.1：统一返回
+// 空对象 {}）。
+type NoData struct{}
+
 // Meaning 是释义义项的 JSON 形态（dictionary/data-model.md §4，
-// HTTP 契约与 JSONB 存储结构一致）。
+// HTTP 契约与 JSONB 存储结构一致）。pos / translations 允许缺省。
 type Meaning struct {
-	Pos          string   `json:"pos"`
-	Translations []string `json:"translations"`
+	Pos          string   `json:"pos" required:"false"`
+	Translations []string `json:"translations" required:"false"`
 }
 
 // NewMeanings 把 service 层的释义转换为响应 DTO；空切片归一为 [] 而非 null
@@ -45,14 +53,14 @@ func ToDomainMeanings(ms []Meaning) []domain.Meaning {
 
 // ImportWordsRequest 是 POST /api/v1/words/import 的请求体。
 type ImportWordsRequest struct {
-	Words []ImportWordInput `json:"words" binding:"required,min=1,dive"`
+	Words []ImportWordInput `json:"words" minItems:"1" nullable:"false"`
 }
 
 // ImportWordInput 是单个导入项：word 经服务端归一，count 为本次计入的
 // 遇词次数。
 type ImportWordInput struct {
-	Word  string `json:"word" binding:"required"`
-	Count int    `json:"count" binding:"min=1"`
+	Word  string `json:"word" minLength:"1"`
+	Count int    `json:"count" minimum:"1"`
 }
 
 // ImportWordsResponse 是导入用例的响应数据。
@@ -73,11 +81,12 @@ func NewImportWordsResponse(r *service.ImportWordsResult) ImportWordsResponse {
 
 // ---- 列表与详情（api/words.md §3–§4）----
 
-// ListWordsQuery 是 GET /api/v1/words 的查询参数。
+// ListWordsQuery 是 GET /api/v1/words 的查询参数；page / pageSize 缺省值
+// 在 schema 中声明（1 / 20），越界值（<1 / >100）由 Handler 归一。
 type ListWordsQuery struct {
-	Page     int    `form:"page"`
-	PageSize int    `form:"pageSize"`
-	Search   string `form:"search"`
+	Page     int    `query:"page" default:"1"`
+	PageSize int    `query:"pageSize" default:"20"`
+	Search   string `query:"search"`
 }
 
 // WordListItem 是列表项（api/words.md §3 字段）。
@@ -85,7 +94,7 @@ type WordListItem struct {
 	ID                     string     `json:"id"`
 	Word                   string     `json:"word"`
 	Phonetic               string     `json:"phonetic"`
-	EffectiveReviewMeaning []Meaning  `json:"effectiveReviewMeaning"`
+	EffectiveReviewMeaning []Meaning  `json:"effectiveReviewMeaning" nullable:"false"`
 	EncounterCount         int        `json:"encounterCount"`
 	ReviewCount            int        `json:"reviewCount"`
 	RememberCount          int        `json:"rememberCount"`
@@ -129,7 +138,7 @@ func NewWordDetail(item *service.WordItem) WordDetail {
 
 // ListWordsResponse 是列表用例的响应数据（data.list + data.pagination）。
 type ListWordsResponse struct {
-	List       []WordListItem `json:"list"`
+	List       []WordListItem `json:"list" nullable:"false"`
 	Pagination Pagination     `json:"pagination"`
 }
 
@@ -165,8 +174,8 @@ func NewListWordsResponse(page, pageSize int, total int64, items []*service.Word
 // ---- 更新复习释义（api/words.md §5）----
 
 // UpdateReviewMeaningRequest 是 PATCH /api/v1/words/:id 的请求体。
-// customReviewMeaning 传 null（或缺省）表示清除自定义、回退词典层默认
+// customReviewMeaning 可缺省或传 null，均表示清除自定义、回退词典层默认
 // 复习释义。
 type UpdateReviewMeaningRequest struct {
-	CustomReviewMeaning []Meaning `json:"customReviewMeaning"`
+	CustomReviewMeaning []Meaning `json:"customReviewMeaning" required:"false"`
 }

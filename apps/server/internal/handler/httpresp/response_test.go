@@ -8,18 +8,29 @@ import (
 	"testing"
 	"time"
 
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/dongwlin/lexi-loop/apps/server/internal/apperr"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// rawResponse 只解出顶层契约字段；Data 用 RawMessage 保留原始 JSON 形态，
-// 以便断言空对象 {} 与透传的数据。
-type rawResponse struct {
+// rawEnvelope 只解出顶层契约字段；Data 用 RawMessage 保留原始 JSON 形态，
+// 以便断言空对象 {} 与字段级错误细节。
+type rawEnvelope struct {
 	Code    string          `json:"code"`
 	Message string          `json:"message"`
 	Data    json.RawMessage `json:"data"`
+}
+
+func decodeModel(t *testing.T, m any) rawEnvelope {
+	t.Helper()
+
+	raw, err := json.Marshal(m)
+	require.NoError(t, err)
+	var env rawEnvelope
+	require.NoError(t, json.Unmarshal(raw, &env))
+	return env
 }
 
 func newTestContext(t *testing.T) (*gin.Context, *httptest.ResponseRecorder) {
@@ -31,45 +42,28 @@ func newTestContext(t *testing.T) (*gin.Context, *httptest.ResponseRecorder) {
 	return c, w
 }
 
-func decodeBody(t *testing.T, w *httptest.ResponseRecorder) rawResponse {
-	t.Helper()
-
-	var resp rawResponse
-	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
-	return resp
-}
-
-func TestSuccess(t *testing.T) {
+func TestOK(t *testing.T) {
 	t.Parallel()
 
 	t.Run("携带数据时原样透传", func(t *testing.T) {
 		t.Parallel()
 
-		c, w := newTestContext(t)
-		Success(c, gin.H{"list": []any{}})
-
-		assert.Equal(t, http.StatusOK, w.Code)
-		assert.Contains(t, w.Header().Get("Content-Type"), "application/json")
-		resp := decodeBody(t, w)
-		assert.Equal(t, "OK", resp.Code)
-		assert.Equal(t, "success", resp.Message)
-		assert.JSONEq(t, `{"list":[]}`, string(resp.Data))
+		env := decodeModel(t, OK(gin.H{"list": []any{}}))
+		assert.Equal(t, "OK", env.Code)
+		assert.Equal(t, "success", env.Message)
+		assert.JSONEq(t, `{"list":[]}`, string(env.Data))
 	})
 
-	t.Run("无数据时渲染为空对象而非 null", func(t *testing.T) {
+	t.Run("无数据渲染为空对象而非 null", func(t *testing.T) {
 		t.Parallel()
 
-		c, w := newTestContext(t)
-		Success(c, nil)
-
-		resp := decodeBody(t, w)
-		assert.Equal(t, "OK", resp.Code)
-		assert.Equal(t, "success", resp.Message)
-		assert.JSONEq(t, `{}`, string(resp.Data), "空值规范 §5.1：无额外数据时 data 为 {}")
+		env := decodeModel(t, OK(struct{}{}))
+		assert.Equal(t, "OK", env.Code)
+		assert.JSONEq(t, `{}`, string(env.Data), "空值规范 §5.1：无额外数据时 data 为 {}")
 	})
 }
 
-func TestError(t *testing.T) {
+func TestFromError(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -149,18 +143,12 @@ func TestError(t *testing.T) {
 			wantRetryAfter: "2",
 		},
 		{
-			name:        "未识别 kind 按 500 兜底",
-			err:         &apperr.Error{},
-			wantStatus:  http.StatusInternalServerError,
-			wantCode:    "",
-			wantMessage: "",
-		},
-		{
-			name:        "非应用错误按 500 且不暴露 cause",
-			err:         errors.New("connection refused"),
-			wantStatus:  http.StatusInternalServerError,
-			wantCode:    "ERROR",
-			wantMessage: "internal server error",
+			name: "非应用错误按 500 且不暴露 cause",
+			err:  errors.New("connection refused"),
+			wantStatus:     http.StatusInternalServerError,
+			wantCode:       "ERROR",
+			wantMessage:    "internal server error",
+			wantRetryAfter: "",
 		},
 		{
 			name:        "apperr.Internal 同样不暴露 cause",
@@ -181,25 +169,119 @@ func TestError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			c, w := newTestContext(t)
-			Error(c, tt.err)
+			m := FromError(tt.err)
 
-			assert.Equal(t, tt.wantStatus, w.Code)
-			resp := decodeBody(t, w)
-			assert.Equal(t, tt.wantCode, resp.Code)
-			assert.Equal(t, tt.wantMessage, resp.Message)
-			assert.JSONEq(t, `{}`, string(resp.Data), "失败响应未携带细节时 data 为 {}")
-			assert.Equal(t, tt.wantRetryAfter, w.Header().Get("Retry-After"))
+			require.Equal(t, tt.wantStatus, m.GetStatus())
+			env := decodeModel(t, m)
+			assert.Equal(t, tt.wantCode, env.Code)
+			assert.Equal(t, tt.wantMessage, env.Message)
+			assert.JSONEq(t, `{}`, string(env.Data), "失败响应未携带细节时 data 为 {}")
+			headers := m.GetHeaders()
+			assert.Equal(t, tt.wantRetryAfter, headers.Get("Retry-After"))
 		})
 	}
 
 	t.Run("cause 不出现在响应体", func(t *testing.T) {
 		t.Parallel()
 
-		c, w := newTestContext(t)
-		Error(c, apperr.Internal(errors.New("secret connection string")))
+		m := FromError(apperr.Internal(errors.New("secret connection string")))
+		raw, err := json.Marshal(m)
+		require.NoError(t, err)
+		assert.NotContains(t, string(raw), "secret")
+	})
 
-		assert.NotContains(t, w.Body.String(), "secret")
+	t.Run("未识别 kind 按 500 兜底", func(t *testing.T) {
+		t.Parallel()
+
+		m := FromError(&apperr.Error{})
+		assert.Equal(t, http.StatusInternalServerError, m.GetStatus())
+	})
+}
+
+func TestFromErrorDataPassthrough(t *testing.T) {
+	t.Parallel()
+
+	err := apperr.New(apperr.InvalidArgument, apperr.CodeValidationFailed, "invalid parameter", nil)
+	err.Data = []FieldError{{Field: "count", Reason: "must be positive"}}
+	m := FromError(err)
+
+	assert.Equal(t, http.StatusBadRequest, m.GetStatus())
+	env := decodeModel(t, m)
+	assert.JSONEq(t, `{"fieldErrors":[{"field":"count","reason":"must be positive"}]}`, string(env.Data),
+		"错误细节经 apperr.Error.Data 进入 data（HTTP API 设计规范 §3.2）")
+}
+
+func TestNewHumaError(t *testing.T) {
+	t.Parallel()
+
+	t.Run("校验失败 422 降为 400 且映射字段级错误", func(t *testing.T) {
+		t.Parallel()
+
+		m := NewHumaError(http.StatusUnprocessableEntity, "validation failed",
+			&huma.ErrorDetail{Message: "expected number", Location: "body.words.0.count", Value: "abc"},
+			&huma.ErrorDetail{Message: "must be at least 1", Location: "query.page"},
+		)
+
+		require.Equal(t, http.StatusBadRequest, m.GetStatus(), "项目 422 已被 FailedPrecondition 业务前置条件占用")
+		env := decodeModel(t, m)
+		assert.Equal(t, "BASE.PARAM.VALIDATION_FAILED", env.Code)
+		assert.Equal(t, "invalid parameter", env.Message)
+		var data struct {
+			FieldErrors []struct {
+				Field  string `json:"field"`
+				Reason string `json:"reason"`
+			} `json:"fieldErrors"`
+		}
+		require.NoError(t, json.Unmarshal(env.Data, &data))
+		require.Len(t, data.FieldErrors, 2)
+		assert.Equal(t, "words.0.count", data.FieldErrors[0].Field, "location 去掉 body 前缀")
+		assert.Equal(t, "expected number", data.FieldErrors[0].Reason)
+		assert.Equal(t, "page", data.FieldErrors[1].Field, "location 去掉 query 前缀")
+		assert.Empty(t, m.GetHeaders().Get("Retry-After"), "校验错误不携带 Retry-After")
+	})
+
+	t.Run("畸形请求体与必填请求体映射 400", func(t *testing.T) {
+		t.Parallel()
+
+		m := NewHumaError(http.StatusBadRequest, "request body is required")
+		require.Equal(t, http.StatusBadRequest, m.GetStatus())
+		env := decodeModel(t, m)
+		assert.Equal(t, "BASE.PARAM.VALIDATION_FAILED", env.Code)
+		assert.JSONEq(t, `{"fieldErrors":[{"field":"body","reason":"request body is required"}]}`, string(env.Data))
+	})
+
+	t.Run("415 与 406 同属参数类错误归入 400", func(t *testing.T) {
+		t.Parallel()
+
+		for _, status := range []int{http.StatusUnsupportedMediaType, http.StatusNotAcceptable} {
+			m := NewHumaError(status, "unsupported media type",
+				&huma.ErrorDetail{Message: "unsupported content type", Location: "body"})
+			assert.Equal(t, http.StatusBadRequest, m.GetStatus())
+			assert.Equal(t, "BASE.PARAM.VALIDATION_FAILED", decodeModel(t, m).Code)
+		}
+	})
+
+	t.Run("未预期错误按内部错误渲染且不透传细节", func(t *testing.T) {
+		t.Parallel()
+
+		m := NewHumaError(http.StatusInternalServerError, "unexpected error occurred", errors.New("secret cause"))
+		require.Equal(t, http.StatusInternalServerError, m.GetStatus())
+		env := decodeModel(t, m)
+		assert.Equal(t, "ERROR", env.Code)
+		assert.Equal(t, "internal server error", env.Message)
+		assert.JSONEq(t, `{}`, string(env.Data))
+		raw, err := json.Marshal(m)
+		require.NoError(t, err)
+		assert.NotContains(t, string(raw), "secret")
+	})
+
+	t.Run("status 0 的样例模型仅取类型", func(t *testing.T) {
+		t.Parallel()
+
+		m := NewHumaError(0, "")
+		require.NotNil(t, m)
+		env := decodeModel(t, m)
+		assert.NotEmpty(t, env.Code)
 	})
 }
 
@@ -211,20 +293,21 @@ func TestAbortError(t *testing.T) {
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	assert.True(t, c.IsAborted(), "AbortError 必须中断后续中间件与 Handler 链")
-	resp := decodeBody(t, w)
-	assert.Equal(t, "BASE.AUTH.TOKEN_EXPIRED", resp.Code)
-}
+	var env rawEnvelope
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &env))
+	assert.Equal(t, "BASE.AUTH.TOKEN_EXPIRED", env.Code)
+	assert.Equal(t, "", w.Header().Get("Retry-After"))
 
-func TestErrorDataPassthrough(t *testing.T) {
-	t.Parallel()
+	t.Run("限流错误透传 Retry-After 响应头", func(t *testing.T) {
+		c, w := newTestContext(t)
+		AbortError(c, &apperr.Error{
+			Kind:       apperr.RateLimited,
+			Code:       apperr.CodeRateLimited,
+			Message:    "rate limited",
+			RetryAfter: 30 * time.Second,
+		})
 
-	c, w := newTestContext(t)
-	err := apperr.New(apperr.InvalidArgument, apperr.CodeValidationFailed, "invalid parameter", nil)
-	err.Data = gin.H{"fieldErrors": []gin.H{{"field": "count", "reason": "must be positive"}}}
-	Error(c, err)
-
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-	resp := decodeBody(t, w)
-	assert.JSONEq(t, `{"fieldErrors":[{"field":"count","reason":"must be positive"}]}`, string(resp.Data),
-		"错误细节经 apperr.Error.Data 进入 data（HTTP API 设计规范 §3.2）")
+		assert.Equal(t, http.StatusTooManyRequests, w.Code)
+		assert.Equal(t, "30", w.Header().Get("Retry-After"))
+	})
 }
