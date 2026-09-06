@@ -37,7 +37,7 @@ pnpm -F @lexi-loop/api-client generate  # 后端契约变更（docs/openapi/ 更
 pnpm -F @lexi-loop/api-client test:run  # api-client mutator / 生成端点单测
 ```
 
-纯逻辑单元测试已覆盖 `lib/env`、`lib/storage/local-storage`、`stores/theme`、`utils/`（parseImportText / buildPageItems / parsePositiveInt / formatMeanings / meaningText / formatDateTime / review-snapshot）与两个 Feature 的 query keys；组件 / 页面级测试待质量设施（jsdom + Testing Library、MSW、Playwright 等，见 README 待办与《前端技术栈》§10/§11）落地后补——设施未引入不构成跳过纯逻辑单测的理由。
+纯逻辑单元测试已覆盖 `lib/env`、`lib/storage/local-storage`、`stores/theme`、`utils/`（parseImportText / buildPageItems / parsePositiveInt / formatMeanings / meaningText / formatDateTime / review-snapshot / review-resume）与两个 Feature 的 query keys；组件 / 页面级测试待质量设施（jsdom + Testing Library、MSW、Playwright 等，见 README 待办与《前端技术栈》§10/§11）落地后补——设施未引入不构成跳过纯逻辑单测的理由。
 
 ## 架构与实现要点
 
@@ -58,7 +58,7 @@ pnpm -F @lexi-loop/api-client test:run  # api-client mutator / 生成端点单�
 冻结决策索引见根 [AGENTS.md](../../AGENTS.md) 与 [docs/decisions/README.md](../../docs/decisions/README.md)。前端落地时的硬约束（细节以对应权威文档为准，这里不展开）：
 
 - D011：权重 / mastery 由服务端动态计算，前端不复算公式；列表 / 详情 DTO 未返回掌握度前，生词库 / 详情不展示这两项（README 已登记契约缺口）。
-- D009：复习数量截断 `min(count, available)` 由服务端保证；前端数量选择（10 / 20 / 30 / 50 + 自定义）超出词库时只做提示，不复算可用量。
+- D009：复习数量截断 `min(count, available)` 由服务端保证；前端开始前用 GET /words 分页 total（与复习候选集同为未删除生词）做不足提示，不自行复算公式。
 - D010：全库至多一个 active session，恢复由用户选择（继续 / 放弃）；服务端无 abandon 端点，「放弃本轮」只清本地快照，旧 session 由下一轮开始时自动 abandon（api/reviews.md）。
 - D007：释义展示取值 `custom ?? review ?? raw` 语义以 dictionary/data-model.md 为准；清除自定义释义（PATCH null）后回退三层取值。
 - D004：删除生词为软删除语义（可重新导入恢复），界面不出现「物理删除」类表述。
