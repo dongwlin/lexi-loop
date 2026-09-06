@@ -4,7 +4,7 @@
 
 ## 当前状态：MVP 业务落地完成，页面基础设施就绪
 
-工程骨架（Vue 3 + vue-router + Pinia + TanStack Query + Tailwind CSS v4 + Reka UI / Radix Colors + Storybook 10）、设计系统主题层（`src/styles/`，Light / Dark / System）、API Client 装配（workspace 包 [`packages/api-client`](../../packages/api-client/)：Orval 生成请求函数与 DTO 类型 + 手写 mutator 统一传输、`{code, message, data}` 解包与 `ApiError` 分类；web 侧装配点为 `src/lib/api.ts`）、Feature 层（`src/features/words/`、`src/features/review/` 的 keys / queries / mutations）均已就绪；五个路由页面（导入页 `/import`、生词库 `/words`、生词详情 `/words/:id`、复习页 `/review`、复习结果页 `/review/result/:session`）已完整落地，页面基础设施（路由 meta → `document.title`、SPA 页面级导航后焦点移到新页面主标题、skip link、main landmark、各页面 h1 与状态分支）已就绪。下一步清单（含服务端契约缺口登记）以 [README.md](README.md) 为准——完成里程碑后同步更新两处，避免状态失真。
+工程骨架（Vue 3 + vue-router + Pinia + TanStack Query + Tailwind CSS v4 + Reka UI / Radix Colors + Storybook 10）、设计系统主题层（`src/styles/`，Light / Dark / System）、API Client 装配（workspace 包 [`packages/api-client`](../../packages/api-client/)：Orval 生成请求函数与 DTO 类型 + 手写 mutator 统一传输、`{code, message, data}` 解包与 `ApiError` 分类；web 侧装配点为 `src/lib/api.ts`）、Feature 层（`src/features/words/`、`src/features/review/` 的 keys / queries / mutations）、五个路由页面（导入页 `/import`、生词库 `/words`、生词详情 `/words/:id`、复习页 `/review`、复习结果页 `/review/result/:session`）、页面基础设施（路由 meta → `document.title`、SPA 页面级导航后焦点移到新页面主标题、skip link、main landmark、各页面 h1 与状态分支）与质量设施（ESLint + Prettier、jsdom + Testing Library、MSW、@storybook/addon-vitest + addon-a11y、Playwright；细节见《前端技术栈》§10/§11 与 README「质量与品牌」）均已就绪。下一步清单（含服务端契约缺口登记）以 [README.md](README.md) 为准——完成里程碑后同步更新两处，避免状态失真。
 
 改动本子树任何代码前：先读 [docs/agent-log/](../../docs/agent-log/) 当月文件的最近记录了解上下文，再核对下表对应文档与当前代码。
 
@@ -27,17 +27,22 @@
 
 ```bash
 cd apps/web
-pnpm dev        # 开发服务器（未设 VITE_API_BASE_URL 时 /api 代理到本地 Go 服务 127.0.0.1:8080）
-pnpm build      # vue-tsc -b + vite build
-pnpm typecheck  # vue-tsc --noEmit
-pnpm test:run   # vitest 单次执行（pnpm test 为 watch）
-pnpm storybook  # 组件工作台 localhost:6006（storybook:build 产物 storybook-static/ 不入库）
+pnpm dev             # 开发服务器（未设 VITE_API_BASE_URL 时 /api 代理到本地 Go 服务 127.0.0.1:8080）
+pnpm build           # vue-tsc -b + vite build
+pnpm typecheck       # vue-tsc --noEmit
+pnpm lint            # ESLint Flat Config（类型感知 TS / Vue / vuejs-accessibility / TanStack Query / import-x）
+pnpm format          # Prettier 格式化（含 Tailwind class 排序）
+pnpm test:run        # vitest 单次执行（web jsdom + storybook 浏览器两个 project；pnpm test 为 watch）
+pnpm test:coverage   # vitest + v8 覆盖率
+pnpm test:storybook  # 仅 storybook project（Story 在真实 Chromium 中执行，含 axe 门禁）
+pnpm test:e2e        # Playwright E2E（webServer 跑生产构建 + vite preview :4173）
+pnpm storybook       # 组件工作台 localhost:6006（storybook:build 产物 storybook-static/ 不入库）
 
 pnpm -F @lexi-loop/api-client generate  # 后端契约变更（docs/openapi/ 更新）后重新生成 API client，生成物不手改
 pnpm -F @lexi-loop/api-client test:run  # api-client mutator / 生成端点单测
 ```
 
-纯逻辑单元测试已覆盖 `lib/env`、`lib/storage/local-storage`、`stores/theme`、`utils/`（parseImportText / buildPageItems / parsePositiveInt / formatMeanings / meaningText / formatDateTime / review-snapshot / review-resume / review-state-machine / review-keyboard / isPageLevelNavigation）与两个 Feature 的 query keys；组件 / 页面级测试待质量设施（jsdom + Testing Library、MSW、Playwright 等，见 README 待办与《前端技术栈》§10/§11）落地后补——设施未引入不构成跳过纯逻辑单测的理由。
+纯逻辑单元测试已覆盖 `lib/env`、`lib/storage/local-storage`、`stores/theme`、`utils/`（parseImportText / buildPageItems / parsePositiveInt / formatMeanings / meaningText / formatDateTime / review-snapshot / review-resume / review-state-machine / review-keyboard / isPageLevelNavigation）与两个 Feature 的 query keys。质量设施已落地（《前端技术栈》§10/§11、测试规范 §15）：vitest.config.ts 按 projects 拆分——`web`（jsdom + tests/setup.ts 全局设施 + MSW 边界）与 `storybook`（Story 即浏览器测试 + addon-a11y 门禁，全局 `a11y.test: 'error'`，豁免须注释登记）；MSW handler 工厂在 `tests/mocks/`，集成测试在 `tests/integration/`（现覆盖 api-client 经 MSW 的 HTTP 边界）；Playwright 用例在 `e2e/`。组件 / 页面集成测试按《前端测试规范》§4 优先级陆续补充——新增组件与页面行为须带对应层级的测试，不再有「设施未落地」的豁免理由。
 
 ## 架构与实现要点
 

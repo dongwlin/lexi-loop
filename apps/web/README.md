@@ -5,13 +5,18 @@ LexiLoop（词环）的 Vue 3 + TypeScript + Vite 前端应用。产品与技术
 ## 命令
 
 ```bash
-pnpm dev        # 开发服务器（/api 代理到本地 Go 服务，默认 127.0.0.1:8080）
-pnpm build      # 类型检查 + 生产构建
-pnpm preview    # 预览生产构建
-pnpm typecheck  # vue-tsc 类型检查
-pnpm test       # vitest（watch）
-pnpm test:run   # vitest（单次执行）
+pnpm dev             # 开发服务器（/api 代理到本地 Go 服务，默认 127.0.0.1:8080）
+pnpm build           # 类型检查 + 生产构建
+pnpm preview         # 预览生产构建
+pnpm typecheck       # vue-tsc 类型检查
+pnpm lint            # ESLint Flat Config（前端技术栈 §11.1）
+pnpm format          # Prettier 格式化（含 Tailwind class 排序）
+pnpm test            # vitest（watch，全部 project）
+pnpm test:run        # vitest 单次执行（web + storybook project）
+pnpm test:coverage   # vitest + v8 覆盖率
+pnpm test:storybook  # 仅 storybook project（Story 即真实浏览器测试）
 
+pnpm test:e2e        # Playwright E2E（构建 + vite preview，本地 4173）
 pnpm storybook        # Storybook 组件工作台（localhost:6006）
 pnpm storybook:build  # Storybook 静态构建（产物 storybook-static/，不入库）
 ```
@@ -30,9 +35,11 @@ MVP 服务端暂无认证端点；认证落地后在 `src/lib/api.ts` 注入 `ge
 
 主题偏好为 Light / Dark / System（《Vue 组件设计系统方案》§11）：偏好持久化在 `localStorage`（`lexi-loop.theme`），解析后的主题类互斥挂在 `<html>`，`main.ts` 在应用挂载前初始化。
 
+测试设施在应用根目录外层：`vitest.config.ts`（Vitest Projects：`web` 为 jsdom 单元 / 组件 / 集成测试，`storybook` 为真实浏览器 Story 测试）、`tests/`（`setup.ts` 全局设施 + `mocks/` 的 MSW Handler 工厂与 server + `integration/` 跨页面集成测试）、`e2e/`（Playwright 用例，webServer 面向生产构建 preview）。
+
 ## 待办
 
-MVP 完成度评估（2026-09-06）：工程骨架、设计系统主题层、API Client（Orval 生成 + 统一 mutator）、Feature 层（words / review 的 api keys / queries / mutations）与后端 8 个端点已就绪；`src/pages/` 五个路由页面（导入、生词库、生词详情、复习、复习结果）已全部落地，页面基础设施（路由 meta → document.title、skip link、main landmark、h1 与状态分支）已就绪。以下按依赖顺序登记，完成后删除对应条目。
+MVP 完成度评估（2026-09-06）：工程骨架、设计系统主题层、API Client（Orval 生成 + 统一 mutator）、Feature 层（words / review 的 api keys / queries / mutations）与后端 8 个端点已就绪；`src/pages/` 五个路由页面（导入、生词库、生词详情、复习、复习结果）已全部落地，页面基础设施（路由 meta → document.title、skip link、main landmark、h1 与状态分支）已就绪。质量设施（Lint / 格式化 / 组件测试环境 / MSW / Storybook 测试与 a11y 门禁 / Playwright）已于 2026-09-07 落地，见下方「质量与品牌」。以下按依赖顺序登记，完成后删除对应条目。
 
 ### MVP 业务落地（review-flow.md §2–§10）
 
@@ -54,5 +61,6 @@ MVP 完成度评估（2026-09-06）：工程骨架、设计系统主题层、API
 
 ### 质量与品牌
 
-- [ ] 引入剩余质量设施：ESLint + Prettier、MSW、Playwright、组件测试环境（jsdom + Testing Library）、`@storybook/addon-vitest` 与 `addon-a11y` 等（见《前端技术栈》§10/§11；Vitest 与 Vue Router / Pinia / TanStack Query / Tailwind CSS v4 / Reka UI + Radix Colors 已随骨架引入，Storybook 10 + `@storybook/vue3-vite` 与 Button Story 已落地）
+质量设施已就位（2026-09-07）：ESLint Flat Config（类型感知 TS / Vue / vuejs-accessibility / TanStack Query / import-x 规则）+ Prettier（含 Tailwind class 排序，配置与脚本见《前端技术栈》§11）；组件测试环境 jsdom + Testing Library（`vitest.config.ts` 按《前端测试规范》§15 合并 vite 配置，`tests/` 为跨页面集成与共享设施）；MSW 在 HTTP 边界 Mock（`tests/mocks/`，`onUnhandledRequest: 'error'`，测试指向保留假主机）；Storybook 项目接入 `@storybook/addon-vitest`（Story 在真实 Chromium 中执行）与 `addon-a11y`（axe 检查为测试门禁，全局 `test: 'error'`）；Playwright E2E（`playwright.config.ts`，webServer 跑生产构建 + preview，`e2e/` 存放用例）。Story 以菜单打开收尾时的 `aria-hidden-focus` 豁免等例外均以注释登记在对应 Story。
+
 - [ ] 品牌设计产出 favicon 后放入 `public/`，并在 `index.html` 补 `<link rel="icon">`（create-vite 模板 favicon 已删除）
