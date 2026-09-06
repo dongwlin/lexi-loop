@@ -37,7 +37,15 @@ export const System: Story = {
 
 // 打开菜单核对弹层配方（rounded-popover / bg-overlay / shadow-overlay）与选中指示。
 export const DarkMenuOpen: Story = {
-  parameters: { controls: { disable: true } },
+  parameters: {
+    controls: { disable: true },
+    a11y: {
+      // Story 以菜单打开收尾：Reka 弹层打开时给应用根节点标 aria-hidden
+      // （焦点圈闭在弹层内，隐藏元素期间不可达），axe 静态分析识别不了焦点圈闭，
+      // 对该 Story 属误报；按测试规范 §10.5 显式豁免此一条，其余规则仍为门禁。
+      config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] },
+    },
+  },
   render: renderWithPreference('dark'),
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole('button', { name: '界面主题' }))
