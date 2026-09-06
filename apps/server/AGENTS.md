@@ -2,9 +2,9 @@
 
 `apps/server` 是 LexiLoop 的 Go 后端应用。本文件是 server 子树内 Agent 的补充工作指引；仓库级纪律（改动前读 agent-log、冲突裁决、改动后记录）以根目录 [AGENTS.md](../../AGENTS.md) 为准，代码目录与各层职责权威见 [docs/backend/structure.md](../../docs/backend/structure.md)。本文件不维护 schema、公式或决策结论，只引用。
 
-## 当前状态：MVP 骨架
+## 当前状态：MVP 业务链路可用
 
-后端可启动，根路径 `/healthz` 可用；模块与命令形态已就位。`internal/domain`（四表领域模型、`NewXxx` 工厂、ApplyReview / Submit / Complete / Abandon 状态迁移、weight / mastery 纯函数，含单元测试）、`internal/infra/config`（viper + `LEXI_*` 环境变量）、`internal/infra/database`（bun + pgx/v5 连接池构造）、`migrations` 包（embed + golang-migrate 迁移执行入口，`migrate` 命令已接入，迁移 SQL 为四表真实 DDL）与 `internal/repo`（DictionaryRepo / UserWordRepo / ReviewRepo 数据访问适配器：schema ↔ domain 转换、SQLSTATE 错误归一化、软删除、遇词累计 upsert、advisory lock / FOR UPDATE / 条件 UPDATE；`internal/repo`、`infra/database` 与 `migrations` 均含 testcontainers 集成测试）、`internal/apperr`（Kind / 稳定业务 code / `New` / `Internal` 类型化应用错误）与 `internal/handler/httpresp`（统一 `code` / `message` / `data` 响应结构与唯一的 `apperr.Kind → HTTP 状态` 映射，两者均含单元测试）已实现，其余包为 TODO 占位；`import-ecdict` 命令已注册但报「尚未实现」。分层现状与下一步清单以 [README.md](README.md) 为准——完成里程碑后同步更新两处，避免状态失真。
+后端已实现 Word / Review 全部业务用例与 `/api/v1` 端点：`internal/domain`（四表领域模型、`NewXxx` 工厂、ApplyReview / Submit / Complete / Abandon 状态迁移、weight / mastery 纯函数，含单元测试）、`internal/infra/config`（viper + `LEXI_*` 环境变量）、`internal/infra/database`（bun + pgx/v5 连接池构造）、`migrations` 包（embed + golang-migrate 迁移执行入口，`migrate` 命令已接入，迁移 SQL 为四表真实 DDL）与 `internal/repo`（DictionaryRepo / UserWordRepo / ReviewRepo 数据访问适配器：schema ↔ domain 转换、SQLSTATE 错误归一化、软删除、遇词累计 upsert、advisory lock / FOR UPDATE / 条件 UPDATE；`internal/repo`、`infra/database` 与 `migrations` 均含 testcontainers 集成测试）、`internal/apperr`（Kind / 稳定业务 code / `New` / `Internal` 类型化应用错误）与 `internal/handler/httpresp`（统一 `code` / `message` / `data` 响应结构与唯一的 `apperr.Kind → HTTP 状态` 映射，两者均含单元测试）、`internal/service`（`WordService` / `DictionaryService` / `ReviewService` / `WeightedSampler` / `tx.go` 可重放事务重试，按 structure.md §5 的事务与并发边界实现，含覆盖 §5.4 必测场景的 testcontainers 集成测试）、`internal/handler/v1`（版本化 Handler + DTO，含 httptest 组件测试）与 `internal/handler/router.go`（`/api/v1` 业务路由已挂载）、`internal/app`（组合根已接入 DB / Service / Handler；`serve` 需要 `LEXI_DATABASE_URL`）均已实现；`import-ecdict` 命令与 `handler/middleware` 自定义实现仍为占位。分层现状与下一步清单以 [README.md](README.md) 为准——完成里程碑后同步更新两处，避免状态失真。
 
 改动本子树任何代码前：先读 [docs/agent-log/](../../docs/agent-log/) 当月文件的最近记录了解上下文，再核对下表对应文档与当前代码。
 
@@ -29,14 +29,14 @@ go build ./...                 # 构建全部包
 go vet ./...                   # 静态检查
 go test ./...                  # 单元 + 集成测试（集成需本机 Docker）
 go test -short ./...           # 只跑单元测试（跳过集成测试）
-go run . serve                 # 启动 HTTP 服务（默认监听 :8080）
-LEXI_HTTP_ADDR=:9090 go run . serve
+go run . serve                 # 启动 HTTP 服务（默认监听 :8080；需要 LEXI_DATABASE_URL）
+LEXI_HTTP_ADDR=:9090 LEXI_DATABASE_URL='postgres://lexi:lexi@localhost:5432/lexi_loop?sslmode=disable' go run . serve
 curl http://localhost:8080/healthz   # -> {"status":"ok"}
 LEXI_DATABASE_URL='postgres://lexi:lexi@localhost:5432/lexi_loop?sslmode=disable' go run . migrate up      # 应用全部未执行的迁移
 LEXI_DATABASE_URL='...' go run . migrate down [steps]   # 回退指定步数（默认 1，超过可用数时截断）
 ```
 
-`infra/config`、`infra/database`、`internal/repo`、`migrations`、`internal/apperr` 与 `internal/handler/httpresp` 已有测试（apperr 与 httpresp 为纯单元测试，其余含集成）：`infra/database`、`internal/repo` 与 `migrations` 的集成测试各自在包级 `TestMain` 中启动一次共享的真实 PostgreSQL 容器（镜像 `postgres:18-alpine`，全部用例复用；repo 的 `TestMain` 会先应用全部迁移）；无 Docker 或传 `-short` 时集成用例跳过、单元测试仍运行。并发 / 回滚用例必须用 testcontainers + 真实 PostgreSQL 验证（structure.md §5.4 列出的四个场景：单 active session、同 item 并发提交只累计一次、最后两 item 并发提交后 session 必为 completed、提交中注入失败整体回滚；advisory lock 与条件 UPDATE 的 Repo 侧机制已有集成测试，用例级并发组合在 Service 层验证）。
+`infra/config`、`infra/database`、`internal/repo`、`migrations`、`internal/apperr`、`internal/handler/httpresp`、`internal/service` 与 `internal/handler` 已有测试（apperr / httpresp / sampler 为纯单元测试，其余含集成）：`infra/database`、`internal/repo`、`migrations`、`internal/service` 与 `internal/handler` 的集成测试各自在包级 `TestMain` 中启动一次共享的真实 PostgreSQL 容器（镜像 `postgres:18-alpine`，全部用例复用；各包 `TestMain` 会先应用全部迁移）；无 Docker 或传 `-short` 时集成用例跳过、单元测试仍运行。structure.md §5.4 列出的并发 / 回滚必测场景（单 active session、同 item 并发提交只累计一次、最后两 item 并发提交后 session 必为 completed、提交中注入失败整体回滚、items 中途失败不留半成品 session）已在 Service 层验证，失败注入使用测试库临时触发器与真实 SQL 篡改，不触碰 migrations。
 
 ## 分层实现要点
 

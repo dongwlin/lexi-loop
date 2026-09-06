@@ -63,6 +63,7 @@ apps/server/
 │  │  ├─ word.go                 WordService
 │  │  ├─ dictionary.go           DictionaryService（MVP：本地 Lookup）
 │  │  ├─ review.go               ReviewService
+│  │  ├─ tx.go                   可重放事务的有上限重试与内部错误包装
 │  │  └─ sampler.go              具体的 WeightedSampler
 │  ├─ importer/
 │  │  └─ ecdict/                 ECDICT CSV 适配器与导入用例
