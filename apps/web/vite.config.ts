@@ -21,4 +21,13 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    // E2E（playwright test）跑在生产预览上，/api 代理与开发环境保持一致。
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8080',
+        changeOrigin: true,
+      },
+    },
+  },
 })

@@ -11,6 +11,10 @@ node_modules
 dist
 dist-ssr
 storybook-static
+coverage
+test-results
+playwright-report
+blob-report
 *.local
 
 # Editor directories and files
