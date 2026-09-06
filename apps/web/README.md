@@ -26,7 +26,7 @@ MVP 服务端暂无认证端点；认证落地后在 `src/lib/api.ts` 注入 `ge
 
 ## 结构
 
-按《前端应用架构规范》§3 组织：`src/app/` 应用装配（根组件、显式路由表、providers / pinia / query client 一次性安装），`src/pages/` 路由页面（页面结构见 [docs/frontend/review-flow.md](../../docs/frontend/review-flow.md) §1），`src/components/ui/` 业务无关基础组件——每个组件独立文件夹（`button/Button.vue` + 同目录 Story），经 `components/ui/index.ts` 统一导出（Button 配方见《Vue 组件设计系统方案》§8.1），`src/components/layout/` 跨页面布局（AppShell、ThemeSwitcher），`src/stores/` 跨页面客户端状态，`src/lib/` 基础设施适配（env / api / storage），`src/styles/` 设计系统主题层（Tailwind CSS v4 + Radix Colors，见《Vue 组件设计系统方案》）。`src/features/` 按业务能力组织（当前 `words/`、`review/`），Query Key / Query / Mutation 置于各 Feature 的 `api/`（《前端应用架构规范》§8.1），DTO 直接使用 `@lexi-loop/api-client` 生成类型，queryFn 透传 `signal`；`src/utils/` 存放无状态纯函数（《前端应用架构规范》§4.5 / §4.8，当前 `parseImportText`、生词库的 `buildPageItems` / `parsePositiveInt` / `formatMeanings`、生词详情的 `meaningText` / `formatDateTime`）。
+按《前端应用架构规范》§3 组织：`src/app/` 应用装配（根组件、显式路由表、providers / pinia / query client 一次性安装），`src/pages/` 路由页面（页面结构见 [docs/frontend/review-flow.md](../../docs/frontend/review-flow.md) §1），`src/components/ui/` 业务无关基础组件——每个组件独立文件夹（`button/Button.vue` + 同目录 Story），经 `components/ui/index.ts` 统一导出（Button 配方见《Vue 组件设计系统方案》§8.1），`src/components/layout/` 跨页面布局（AppShell、ThemeSwitcher），`src/stores/` 跨页面客户端状态，`src/lib/` 基础设施适配（env / api / storage），`src/styles/` 设计系统主题层（Tailwind CSS v4 + Radix Colors，见《Vue 组件设计系统方案》）。`src/features/` 按业务能力组织（当前 `words/`、`review/`），Query Key / Query / Mutation 置于各 Feature 的 `api/`（《前端应用架构规范》§8.1），DTO 直接使用 `@lexi-loop/api-client` 生成类型，queryFn 透传 `signal`；`src/utils/` 存放无状态纯函数（《前端应用架构规范》§4.5 / §4.8，当前 `parseImportText`、生词库的 `buildPageItems` / `parsePositiveInt` / `formatMeanings`、生词详情的 `meaningText` / `formatDateTime`、复习的 `review-snapshot` / `review-resume` / 复习状态机迁移 `review-state-machine` / 键盘映射 `review-keyboard`、路由页面级导航判定 `isPageLevelNavigation`）。
 
 主题偏好为 Light / Dark / System（《Vue 组件设计系统方案》§11）：偏好持久化在 `localStorage`（`lexi-loop.theme`），解析后的主题类互斥挂在 `<html>`，`main.ts` 在应用挂载前初始化。
 
@@ -42,7 +42,6 @@ MVP 完成度评估（2026-09-06）：工程骨架、设计系统主题层、API
 - [x] 复习页 `/review`（review-flow §6–§8、§10）：数量选择（10 / 20 / 30 / 50 + 自定义，自定义输入未确认直接开始时先应用输入；开始前以 GET /words 分页 total 提示可用量不足，D009 截断仍由服务端保证）、active session 恢复（「继续复习 / 放弃本轮」由用户选择，D010；恢复检查经 Feature 层查询 `fetchQuery` 强制取新，瞬时失败呈错误态可重试、仅 404 清快照；「继续复习」以 GET session 逐词结果按 word join 本地快照，跳到首个未答项续答）、状态机 idle → recalling → revealed → answered、键盘操作绑定复习区域（Space 揭示释义，1 / ← 不记得，2 / → 记得；焦点在按钮等控件上时 Space / Enter 保留原生激活）、完成跳转结果页。备注：无 abandon 端点，「放弃本轮」MVP 只清除本地快照，服务端旧 session 在下一轮开始时自动 abandon
 - [x] 复习结果页 `/review/result/:session`（review-flow §9）：汇总（总计 / 记得 / 不记得 / 正确率）、「需要加强」列表、再来一轮 / 回到生词库；不存在 id 呈 404 态（对齐详情页），未完成 / 已放弃分支区分文案
 - [x] 页面基础设施：路由 meta → `document.title` 随路由更新、SPA 页面级导航完成后焦点移到新页面主标题（h1 带 `tabindex="-1"`，兜底主内容；初次加载与搜索 / 分页等仅 query 变化不移动焦点，《前端交互与可访问性规范》§5.3）、AppShell skip link（目标 `main` 带 `tabindex="-1"` 保证跳转后焦点落入主内容）与 `main` landmark、各页面 h1 与 Loading / Empty / Error 分支（《前端交互与可访问性规范》§6.1）
-- [ ] 纯逻辑单元测试：复习状态机迁移、键盘映射（导入解析聚合、生词库分页窗口 / query 参数解析 / 释义格式化、生词详情释义编辑文本编解码 / 时间格式化、复习快照存取（含畸形 items 校验）、恢复进度 word 对齐（review-resume）与路由页面级导航判定（isPageLevelNavigation）已随对应功能落地；组件 / 页面集成测试待下方质量设施落地后补）
 
 ### 依赖服务端契约扩展（先行登记，前端不自行复算公式）
 

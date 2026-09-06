@@ -37,7 +37,7 @@ pnpm -F @lexi-loop/api-client generate  # 后端契约变更（docs/openapi/ 更
 pnpm -F @lexi-loop/api-client test:run  # api-client mutator / 生成端点单测
 ```
 
-纯逻辑单元测试已覆盖 `lib/env`、`lib/storage/local-storage`、`stores/theme`、`utils/`（parseImportText / buildPageItems / parsePositiveInt / formatMeanings / meaningText / formatDateTime / review-snapshot / review-resume / isPageLevelNavigation）与两个 Feature 的 query keys；组件 / 页面级测试待质量设施（jsdom + Testing Library、MSW、Playwright 等，见 README 待办与《前端技术栈》§10/§11）落地后补——设施未引入不构成跳过纯逻辑单测的理由。
+纯逻辑单元测试已覆盖 `lib/env`、`lib/storage/local-storage`、`stores/theme`、`utils/`（parseImportText / buildPageItems / parsePositiveInt / formatMeanings / meaningText / formatDateTime / review-snapshot / review-resume / review-state-machine / review-keyboard / isPageLevelNavigation）与两个 Feature 的 query keys；组件 / 页面级测试待质量设施（jsdom + Testing Library、MSW、Playwright 等，见 README 待办与《前端技术栈》§10/§11）落地后补——设施未引入不构成跳过纯逻辑单测的理由。
 
 ## 架构与实现要点
 
