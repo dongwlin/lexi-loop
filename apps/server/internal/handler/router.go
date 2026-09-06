@@ -9,9 +9,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 
+	"github.com/dongwlin/lexi-loop/apps/server/internal/handler/httpresp"
 	"github.com/dongwlin/lexi-loop/apps/server/internal/handler/middleware"
 	"github.com/dongwlin/lexi-loop/apps/server/internal/handler/v1"
-	"github.com/dongwlin/lexi-loop/apps/server/internal/handler/httpresp"
 )
 
 // Options 是 RegisterRoutes 的横切依赖与配置，由组合根（internal/app）传入。

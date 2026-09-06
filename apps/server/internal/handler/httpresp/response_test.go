@@ -143,8 +143,8 @@ func TestFromError(t *testing.T) {
 			wantRetryAfter: "2",
 		},
 		{
-			name: "非应用错误按 500 且不暴露 cause",
-			err:  errors.New("connection refused"),
+			name:           "非应用错误按 500 且不暴露 cause",
+			err:            errors.New("connection refused"),
 			wantStatus:     http.StatusInternalServerError,
 			wantCode:       "ERROR",
 			wantMessage:    "internal server error",

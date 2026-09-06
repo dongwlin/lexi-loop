@@ -47,6 +47,9 @@ docs/
 │  └─ algorithm.md            权重 / mastery / 抽样（唯一权威公式）
 ├─ backend/
 │  └─ structure.md            Go 工程结构（领域 → package）
+├─ openapi/
+│  ├─ openapi.json            OpenAPI 3.1 spec（由 `lexi-loop openapi` 离线生成，勿手改；契约权威仍是 api/*）
+│  └─ openapi.yaml            同上（YAML 格式）
 ├─ specs/
 │  ├─ backend/
 │  │  ├─ Go 技术栈.md          后端框架 / 数据库 / CLI / 日志 / 测试等选型
@@ -131,6 +134,7 @@ brand/naming.md  ← 品牌旁路，不依赖其它文档
 ```text
 我要改权重            → review/algorithm.md
 我要改复习接口        → api/reviews.md
+我要看接口 spec 产物  → openapi/openapi.yaml（由 lexi-loop openapi 离线生成，勿手改）
 我要改词形解析        → dictionary/normalization.md
 我要改数据库表        → dictionary/data-model.md / review/data-model.md
 我要改页面            → frontend/review-flow.md

@@ -12,7 +12,7 @@
 ```text
 main → cmd → app / importer / migrations（迁移）
 app → handler / service / infra（组装）
-handler/router → handler/v1 / handler/middleware
+handler/router → handler/v1 / handler/middleware / httpresp（错误模型装配）
 handler/v1 → service / httpresp / apperr
 handler/middleware → service（按需）/ httpresp
 service → repo / domain / apperr / 外部端口（按需）
@@ -31,7 +31,8 @@ apps/server/
 │  ├─ root.go                    根命令、全局参数与退出码
 │  ├─ serve.go                   启动 HTTP 服务
 │  ├─ import_ecdict.go           调用 importer/ecdict 执行离线导入
-│  └─ migrate.go                 执行数据库迁移
+│  ├─ migrate.go                 执行数据库迁移
+│  └─ openapi.go                 离线生成 OpenAPI 3.1 spec 至 docs/openapi/
 ├─ migrations/                   PostgreSQL 版本化迁移
 │  ├─ migrations.go              迁移执行入口：embed 内嵌 SQL + golang-migrate
 │  ├─ 000001_dictionary.up.sql
@@ -70,12 +71,13 @@ apps/server/
 │  │     ├─ parser.go             CSV 解析与源字段映射
 │  │     └─ importer.go           批处理、事务与进度编排
 │  ├─ handler/
-│  │  ├─ router.go               全局中间件、HTTP 兜底及 `/api/v1` 业务路由的唯一挂载入口
-│  │  ├─ httpresp/               统一响应与唯一的 apperr.Kind → HTTP 状态映射
+│  │  ├─ router.go               全局中间件、huma API 构造及 `/api/v1` 业务操作的唯一挂载入口
+│  │  ├─ openapi.go              离线构建 OpenAPI 3.1 spec（产物落 docs/openapi/，不挂载到线上系统）
+│  │  ├─ httpresp/               统一响应外壳（Envelope / 错误模型）与唯一的 apperr.Kind → HTTP 状态映射
 │  │  │  └─ response.go
 │  │  ├─ v1/
-│  │  │  ├─ word.go              词 Handler
-│  │  │  ├─ review.go            复习 Handler
+│  │  │  ├─ word.go              词操作（huma 声明式注册）
+│  │  │  ├─ review.go            复习操作（huma 声明式注册）
 │  │  │  └─ dto/
 │  │  │     ├─ word.go            词请求 / 响应 DTO
 │  │  │     └─ review.go          复习请求 / 响应 DTO
@@ -108,11 +110,13 @@ lexi-loop serve                 启动 HTTP API
 lexi-loop migrate up            执行数据库迁移
 lexi-loop migrate down          回退明确指定的迁移步数
 lexi-loop import-ecdict <file>  将 ECDICT CSV 导入 dictionary_entries
+lexi-loop openapi               离线生成 /api/v1 的 OpenAPI 3.1 spec（docs/openapi/，不需要数据库）
 ```
 
 - `serve` 调用 `internal/app` 完成组件组装并管理服务生命周期。
 - `migrate` 调用 `migrations` 包的迁移执行入口（embed 内嵌 SQL + golang-migrate），只操作 `migrations/` 中的版本化 SQL，不在 Go 代码中另存一份 schema。
 - `import-ecdict` 调用 `internal/importer/ecdict`；Cobra 命令文件不解析 CSV、不直接构造 SQL。
+- `openapi` 调用组合根的离线 spec 构建入口（`internal/app` → `handler.BuildOpenAPISpec`）：不启动 HTTP、不连接数据库，操作注册仍完整执行 schema 生成与契约检查；产物为生成器维护的 docs/openapi/ 文件，契约权威仍是 api/* 文档。
 - `cmd` 可以依赖 `app`、`importer` 和基础设施构造函数；任何业务包不得反向依赖 `cmd`。
 - `app` 只是最外层组合根；Handler、Service、Repo、Domain、Importer 和 Infra 都不得反向导入 `app`。
 
@@ -161,11 +165,11 @@ Service 从 Repo 获取领域模型，调用 Domain 方法，再通过 Repo 写�
 
 ### 4.4 handler、router 与 httpresp
 
-`app/server.go` 作为组合根创建 Gin Engine，并将日志、CORS Origin 白名单、具体 Service 和版本化 Handler 传给 `handler.RegisterRoutes`。`handler/router.go` 是 HTTP 挂载的唯一入口：它构造并挂载全局 Middleware（自定义实现位于 `handler/middleware/`，CORS 封装官方 gin-contrib/cors）、注册 HTTP 兜底，再建立 `/api/v1` 业务路由组。这保留 LexiLoop 已有 API 契约的 `/api/v1/...` 路径，同时遵循通用规范中“中间件定义与挂载分离”的边界。
+`app/server.go` 作为组合根创建 Gin Engine，并将日志、CORS Origin 白名单、具体 Service 和版本化 Handler 传给 `handler.RegisterRoutes`。`handler/router.go` 是 HTTP 挂载的唯一入口：它构造并挂载全局 Middleware（自定义实现位于 `handler/middleware/`，CORS 封装官方 gin-contrib/cors），经 humagin 适配器构造 huma API 并注册 `/api/v1` 业务操作（操作路径自带 `/api/v1` 前缀，huma 把 `{param}` 转换为 gin 的 `:param`；不挂载 `/openapi`、`/docs` 等文档路由，spec 由 `handler/openapi.go` 离线生成落盘 docs/openapi/）。
 
-版本化 Handler 持有具体 Service，只负责参数绑定、基础格式校验、DTO 转换和 Service 调用；Domain 可作为 DTO 转换的读取来源，但不是 JSON 契约。Middleware 在 `handler/middleware/` 中定义，可按需依赖具体 Service，但不得包含业务规则，也不与具体业务 Handler 相互依赖。
+版本化 Handler 持有具体 Service；请求绑定、基础格式校验与请求体 schema 由 huma 按 DTO 的 schema 标签声明式完成，操作函数只负责 DTO 转换和 Service 调用；Domain 可作为 DTO 转换的读取来源，但不是 JSON 契约。Middleware 在 `handler/middleware/` 中定义，可按需依赖具体 Service，但不得包含业务规则，也不与具体业务 Handler 相互依赖。
 
-所有成功/失败响应都经 `handler/httpresp` 输出；只有该包可以定义 `apperr.Kind → HTTP status` 映射。Handler 与 Middleware 不得各自复制响应结构或状态映射。
+所有成功外壳（`Envelope[T]`）、错误模型与 `apperr.Kind → HTTP status` 映射都定义在 `handler/httpresp`；`httpresp.UseHumaError` 把该错误模型装配为 huma 的错误工厂（校验失败 422 降为 400，spec 的 `components.schemas.Error` 亦由该模型派生）。Handler 与 Middleware 不得各自复制响应结构或状态映射。
 
 ### 4.5 apperr 与 infra
 
