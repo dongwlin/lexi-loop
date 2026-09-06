@@ -88,7 +88,12 @@ go test -race ./internal/infra/... ./internal/repo/... ./internal/service/... ./
 
 ## 下一步（按依赖顺序）
 
-（当前无待办。）
+1. **接入 huma**（[Go 技术栈](../../docs/specs/backend/Go%20技术栈.md)「API 文档」选型，当前未引入）：以 gin 适配器接入 huma v2，替代 `handler/v1` 手写参数绑定与校验，并离线生成 OpenAPI 3.1 spec 到 `docs/openapi/`（不挂载到线上系统）。接入时须保住现有 HTTP 契约（[HTTP API 设计规范](../../docs/specs/backend/HTTP%20API%20设计规范.md)），定制点：
+
+   - 覆盖 `huma.NewErrorWithContext` 返回自定义错误模型：校验失败默认 422 须降为 400（`BASE.PARAM.VALIDATION_FAILED`，项目 422 已被 `FailedPrecondition` 业务前置条件占用）；错误体保持 `{code, message, data}` 与字段级错误 `data.fieldErrors [{field, reason}]`——huma 默认为 RFC 9457 `application/problem+json` 的 `{title, status, detail, errors: [{message, location, value}]}`，无业务 code 概念；Content-Type 保持 `application/json`；`RateLimited` 透传 `Retry-After` 头。
+   - 成功响应用泛型 `Envelope[T]` 包装每个 operation 的 output，保证 `{code: "OK", message: "success", data}` 外壳与空值语义（无数据渲染 `{}`、空列表 `[]`，规范 §5）。
+   - 同步改写 spec 中 `components.schemas.Error` 的定义使文档与实际错误响应一致——huma 默认让所有 422 / default 响应引用 RFC 9457 `ErrorModel` schema，仅覆盖 `NewErrorWithContext` 不会改文档。
+   - 生成方式为离线命令（如 `openapi` 子命令），产物落盘 `docs/openapi/` 后不手改；落地时同步登记 `docs/README.md` 目录树与本文档地图。
 
 ## 模块
 
