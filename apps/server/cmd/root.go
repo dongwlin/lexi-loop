@@ -6,6 +6,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+
+	"github.com/dongwlin/lexi-loop/apps/server/internal/infra/logger"
 )
 
 // Execute 执行根命令；出错时以非零退出码结束进程。
@@ -21,6 +23,11 @@ func newRootCmd() *cobra.Command {
 		Short:        "LexiLoop 后端服务",
 		Long:         "LexiLoop（词环）英语生词复习系统后端。运行 lexi-loop serve 启动 HTTP API。",
 		SilenceUsage: true,
+		// 各子命令启动前用 ConsoleWriter 接管全局日志，使 migrations 等
+		// 直接使用全局 log 的包输出一致的控制台格式。
+		PersistentPreRun: func(*cobra.Command, []string) {
+			logger.Init(logger.Options{Level: logger.DefaultLevel})
+		},
 	}
 	root.AddCommand(newServeCommand())
 	root.AddCommand(newMigrateCommand())
