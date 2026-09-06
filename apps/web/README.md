@@ -48,6 +48,10 @@ MVP 完成度评估（2026-09-06）：工程骨架、设计系统主题层、API
 - [ ] 列表 / 详情 DTO 返回掌握程度与复习优先级（PRD §11 统计、review-flow §4 表格列；权重 / mastery 公式权威在 review/algorithm.md，由服务端动态计算，见 D011）——契约扩展前生词库与详情不展示这两项
 - [ ] 导入接口返回逐词结果（review-flow §3 的「ambiguous 新增 / constrain 已存在 +2」反馈）——契约扩展前导入反馈只用聚合统计（created / updated / encounters）
 
+### 体验待办
+
+- [ ] 复习结果页「再来一轮」的行为定义（2026-09-07 浏览器回归登记；review-flow §9 只规定结果页提供该按钮，未定义点击后的走向）：当前回到 `/review` 数量配置页并保留上次选择，可调整数量后再开局；待定是否改为按上一轮配置直接开始新一轮。落地前先在 review-flow.md §9 定稿行为（根 AGENTS.md 整理约定：先改权威文档，再同步实现）。
+
 ### 质量与品牌
 
 - [ ] 引入剩余质量设施：ESLint + Prettier、MSW、Playwright、组件测试环境（jsdom + Testing Library）、`@storybook/addon-vitest` 与 `addon-a11y` 等（见《前端技术栈》§10/§11；Vitest 与 Vue Router / Pinia / TanStack Query / Tailwind CSS v4 / Reka UI + Radix Colors 已随骨架引入，Storybook 10 + `@storybook/vue3-vite` 与 Button Story 已落地）
