@@ -3,5 +3,6 @@ packages:
   - packages/*
 allowBuilds:
   esbuild: true
+  msw: true
   unrs-resolver: true
   vue-demi: true

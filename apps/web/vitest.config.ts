@@ -21,6 +21,11 @@ export default mergeConfig(
       unstubGlobals: true,
       // 不用 retry 掩盖不稳定测试（前端测试规范 §8.3）。
       retry: 0,
+      env: {
+        // 测试环境显式指向保留假主机：node/jsdom 的 fetch 不接受相对路径，
+        // MSW 在网络边界按绝对 URL 拦截，不会发出真实请求。
+        VITE_API_BASE_URL: 'http://lexi-loop.test',
+      },
       coverage: {
         provider: 'v8',
         reporter: ['text', 'html'],
