@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watchEffect } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Button } from '@/components/ui'
 import { useImportWordsMutation } from '@/features/words/api/mutations'
@@ -45,10 +45,6 @@ function handleContinue() {
   errorText.value = null
 }
 
-// 《前端交互与可访问性规范》§6.1：页面标题随路由更新（路由 meta 基建落地前由页面自行设置）。
-watchEffect(() => {
-  document.title = '导入生词 · LexiLoop'
-})
 </script>
 
 <template>

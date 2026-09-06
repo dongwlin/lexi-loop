@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watchEffect } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { CheckCircle, XCircle } from 'lucide-vue-next'
 import { Button } from '@/components/ui'
@@ -289,10 +289,6 @@ function focusReviewArea() {
 
 const reviewAreaRef = ref<HTMLElement | null>(null)
 
-// 《前端交互与可访问性规范》§6.1：页面标题随路由更新。
-watchEffect(() => {
-  document.title = '复习 · LexiLoop'
-})
 </script>
 
 <template>

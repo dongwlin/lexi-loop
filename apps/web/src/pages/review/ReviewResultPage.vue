@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watchEffect } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { CheckCircle, RotateCcw } from 'lucide-vue-next'
 import { Button } from '@/components/ui'
@@ -38,10 +38,6 @@ function goToReview() {
   void router.push({ name: 'review' })
 }
 
-// 《前端交互与可访问性规范》§6.1：页面标题随路由更新。
-watchEffect(() => {
-  document.title = '复习结果 · LexiLoop'
-})
 </script>
 
 <template>

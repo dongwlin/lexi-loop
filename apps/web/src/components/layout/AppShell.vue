@@ -7,6 +7,13 @@ import ThemeSwitcher from './ThemeSwitcher.vue'
 
 <template>
   <div class="flex min-h-dvh flex-col">
+    <!-- 《前端交互与可访问性规范》§6.1：Skip Link——视觉隐藏，Tab 聚焦时显示，直达主内容。 -->
+    <a
+      href="#main-content"
+      class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-item focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+    >
+      跳到主内容
+    </a>
     <header class="border-b border-border bg-surface">
       <div class="mx-auto flex h-14 w-full max-w-2xl items-center px-4">
         <RouterLink
@@ -43,7 +50,8 @@ import ThemeSwitcher from './ThemeSwitcher.vue'
         </div>
       </div>
     </header>
-    <main class="mx-auto w-full max-w-2xl flex-1 px-4 py-6">
+    <!-- §6.1：唯一主内容 Landmark，skip link 目标。 -->
+    <main id="main-content" class="mx-auto w-full max-w-2xl flex-1 px-4 py-6">
       <slot />
     </main>
   </div>

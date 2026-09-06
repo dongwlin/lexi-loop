@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, watchEffect } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { Button } from '@/components/ui'
@@ -88,10 +88,6 @@ function goToPage(target: number) {
   pushQuery({ page: target, search: search.value })
 }
 
-// 《前端交互与可访问性规范》§6.1：页面标题随路由更新（路由 meta 基建落地前由页面自行设置）。
-watchEffect(() => {
-  document.title = '生词库 · LexiLoop'
-})
 </script>
 
 <template>

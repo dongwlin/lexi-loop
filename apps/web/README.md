@@ -41,7 +41,7 @@ MVP 完成度评估（2026-09-06）：工程骨架、设计系统主题层、API
 - [x] 生词详情 `/words/:id`（review-flow §5）：学习统计（无掌握度 / 优先级——D011 契约缺口）、生效释义逐条展示（D007 三层取值，自定义来源标注「自定义」）、编辑复习释义（Dialog，`meaningText` 文本 ⇄ 结构化释义，清空保存 = PATCH null 回退词典层，另设「清除自定义释义」）、删除生词（AlertDialog 确认，软删除语义 D004，删除成功回生词库）；已删 / 不存在 id 呈 404 态；生词库行内单词链接到详情；对话框提交中拦截关闭、失败聚焦错误摘要（§5.3 / §7.2）
 - [x] 复习页 `/review`（review-flow §6–§8、§10）：数量选择（10 / 20 / 30 / 50 + 自定义，超出词库时提示截断 D009）、active session 恢复（「继续复习 / 放弃本轮」由用户选择，D010；恢复进度用 GET session 逐词结果按 word join 本地快照）、状态机 idle → recalling → revealed → answered、键盘操作（Space 揭示释义，1 / ← 不记得，2 / → 记得）与焦点管理、完成跳转结果页。备注：无 abandon 端点，「放弃本轮」MVP 只清除本地快照，服务端旧 session 在下一轮开始时自动 abandon
 - [x] 复习结果页 `/review/result/:session`（review-flow §9）：汇总（总计 / 记得 / 不记得 / 正确率）、「需要加强」列表、再来一轮 / 回到生词库
-- [ ] 页面基础设施：路由 meta → `document.title` 随路由更新、AppShell skip link 与 `main` landmark、各页面 h1 与 Loading / Empty / Error 分支（《前端交互与可访问性规范》§6.1）
+- [x] 页面基础设施：路由 meta → `document.title` 随路由更新、AppShell skip link 与 `main` landmark、各页面 h1 与 Loading / Empty / Error 分支（《前端交互与可访问性规范》§6.1）
 - [ ] 纯逻辑单元测试：复习状态机迁移、session 快照存取、键盘映射（导入解析聚合已随导入页落地，生词库的分页窗口 / query 参数解析 / 释义格式化与生词详情的释义编辑文本编解码 / 时间格式化已随对应页面落地；组件 / 页面集成测试待下方质量设施落地后补）
 
 ### 依赖服务端契约扩展（先行登记，前端不自行复算公式）
