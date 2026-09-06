@@ -161,7 +161,7 @@ Service 从 Repo 获取领域模型，调用 Domain 方法，再通过 Repo 写�
 
 ### 4.4 handler、router 与 httpresp
 
-`app/server.go` 作为组合根创建 Gin Engine，并将日志、具体 Service 和版本化 Handler 传给 `handler.RegisterRoutes`。`handler/router.go` 是 HTTP 挂载的唯一入口：它构造并挂载全局 Middleware、注册 HTTP 兜底，再建立 `/api/v1` 业务路由组。这保留 LexiLoop 已有 API 契约的 `/api/v1/...` 路径，同时遵循通用规范中“中间件定义与挂载分离”的边界。
+`app/server.go` 作为组合根创建 Gin Engine，并将日志、CORS Origin 白名单、具体 Service 和版本化 Handler 传给 `handler.RegisterRoutes`。`handler/router.go` 是 HTTP 挂载的唯一入口：它构造并挂载全局 Middleware（自定义实现位于 `handler/middleware/`，CORS 封装官方 gin-contrib/cors）、注册 HTTP 兜底，再建立 `/api/v1` 业务路由组。这保留 LexiLoop 已有 API 契约的 `/api/v1/...` 路径，同时遵循通用规范中“中间件定义与挂载分离”的边界。
 
 版本化 Handler 持有具体 Service，只负责参数绑定、基础格式校验、DTO 转换和 Service 调用；Domain 可作为 DTO 转换的读取来源，但不是 JSON 契约。Middleware 在 `handler/middleware/` 中定义，可按需依赖具体 Service，但不得包含业务规则，也不与具体业务 Handler 相互依赖。
 

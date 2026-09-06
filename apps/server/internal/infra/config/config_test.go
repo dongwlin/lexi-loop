@@ -47,3 +47,27 @@ func TestLoad_EnvDoesNotAffectHTTP(t *testing.T) {
 	// 数据库环境变量不应影响 HTTP 配置（键互相独立）。
 	assert.Equal(t, DefaultHTTPAddr, cfg.HTTP.Addr)
 }
+
+func TestLoad_CORS默认本地开发源(t *testing.T) {
+	cfg, err := Load()
+	require.NoError(t, err)
+
+	assert.Equal(t, DefaultCORSAllowedOrigins, cfg.HTTP.CORSAllowedOrigins)
+}
+
+func TestLoad_CORSEnvOverrides(t *testing.T) {
+	t.Setenv("LEXI_HTTP_CORS_ALLOWED_ORIGINS", "https://lexi.example.com, http://localhost:5173 ,")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+
+	// 逗号分隔、逐项去首尾空白、丢弃空项。
+	assert.Equal(t, []string{"https://lexi.example.com", "http://localhost:5173"},
+		cfg.HTTP.CORSAllowedOrigins)
+}
+
+func TestLoad_ParseCSVList(t *testing.T) {
+	assert.Empty(t, parseCSVList(""))
+	assert.Equal(t, []string{"a", "b"}, parseCSVList(" a ,b"))
+	assert.Empty(t, parseCSVList(" , , "))
+}

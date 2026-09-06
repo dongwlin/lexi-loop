@@ -15,6 +15,14 @@ const (
 	EnvPrefix = "LEXI"
 )
 
+// DefaultCORSAllowedOrigins 是 CORS Origin 白名单缺省值：本地前端开发源
+// （Vite 默认端口 5173）。生产部署必须通过 LEXI_HTTP_CORS_ALLOWED_ORIGINS
+// 显式配置真实前端 Origin。
+var DefaultCORSAllowedOrigins = []string{
+	"http://localhost:5173",
+	"http://127.0.0.1:5173",
+}
+
 // Config 是服务端配置。
 type Config struct {
 	HTTP     HTTPConfig
@@ -25,6 +33,11 @@ type Config struct {
 type HTTPConfig struct {
 	// Addr 是 HTTP 监听地址，如 ":8080"。
 	Addr string
+
+	// CORSAllowedOrigins 是允许跨源访问 API 的前端 Origin 白名单
+	//（中间件层只做显式匹配，不支持通配符）。未配置时为本地开发源；
+	// 同源请求不受 CORS 影响。
+	CORSAllowedOrigins []string
 }
 
 // DatabaseConfig 是 PostgreSQL 连接与连接池配置。连接池参数 0 值表示
@@ -45,6 +58,18 @@ type DatabaseConfig struct {
 	MaxConnIdleTime time.Duration
 }
 
+// parseCSVList 把逗号分隔的环境变量值拆为列表：逐项去首尾空白并丢弃空项。
+func parseCSVList(s string) []string {
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
 // Load 从默认值与 LEXI_* 环境变量加载配置。
 func Load() (*Config, error) {
 	v := viper.New()
@@ -53,12 +78,16 @@ func Load() (*Config, error) {
 	v.AutomaticEnv()
 
 	v.SetDefault("http.addr", DefaultHTTPAddr)
+	// 默认值以逗号串形式给出：环境变量覆盖后经 parseCSVList 拆分，保证
+	// 「未配置」与「显式配置多个源」走同一条解析路径。
+	v.SetDefault("http.cors.allowed_origins", strings.Join(DefaultCORSAllowedOrigins, ","))
 
 	// 数据库配置键：database.url 对应环境变量 LEXI_DATABASE_URL；
 	// 连接池参数缺省为 0，语义为采用 pgx 默认值（见 DatabaseConfig 注释）。
 	return &Config{
 		HTTP: HTTPConfig{
-			Addr: v.GetString("http.addr"),
+			Addr:               v.GetString("http.addr"),
+			CORSAllowedOrigins: parseCSVList(v.GetString("http.cors.allowed_origins")),
 		},
 		Database: DatabaseConfig{
 			URL:             v.GetString("database.url"),

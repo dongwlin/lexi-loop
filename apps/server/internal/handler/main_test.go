@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -121,6 +122,7 @@ func resetTables(t *testing.T) {
 }
 
 // newTestServer 构造挂载真实 Service 的完整路由（固定随机源保证可复现）。
+// 组件测试关注端点契约：日志静默（Nop），不配置 CORS 白名单（同源直连）。
 func newTestServer(t *testing.T) *gin.Engine {
 	t.Helper()
 	db := requireTestDB(t)
@@ -129,7 +131,9 @@ func newTestServer(t *testing.T) *gin.Engine {
 	reviewSvc := service.NewReview(db, service.NewWeightedSampler(rand.NewPCG(7, 8)))
 
 	engine := gin.New()
-	RegisterRoutes(engine, v1.NewWordHandler(wordSvc), v1.NewReviewHandler(reviewSvc))
+	RegisterRoutes(engine, Options{
+		Log: zerolog.Nop(),
+	}, v1.NewWordHandler(wordSvc), v1.NewReviewHandler(reviewSvc))
 	return engine
 }
 

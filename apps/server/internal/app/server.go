@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	zerologlog "github.com/rs/zerolog/log"
 	"github.com/uptrace/bun"
 
 	"github.com/dongwlin/lexi-loop/apps/server/internal/handler"
@@ -46,7 +47,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	srv := &http.Server{
 		Addr:              cfg.HTTP.Addr,
-		Handler:           newEngine(db),
+		Handler:           newEngine(cfg, db),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -75,7 +76,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 // newEngine 创建 Gin Engine：组合根显式构造具体 Service 与版本化 Handler
 // （不创建接口），全局中间件与 /api/v1 业务路由统一经 handler.RegisterRoutes
 // 挂载，基础设施端点直接挂在根路径。
-func newEngine(db *bun.DB) *gin.Engine {
+func newEngine(cfg *config.Config, db *bun.DB) *gin.Engine {
 	dictionarySvc := service.NewDictionary(db)
 	wordSvc := service.NewWord(db, dictionarySvc)
 	reviewSvc := service.NewReview(db, service.NewWeightedSampler(service.NewTimeSeededSource()))
@@ -84,7 +85,12 @@ func newEngine(db *bun.DB) *gin.Engine {
 	reviewHandler := v1.NewReviewHandler(reviewSvc)
 
 	engine := gin.New()
-	handler.RegisterRoutes(engine, wordHandler, reviewHandler)
+	// 全局日志已由 cmd 根命令经 logger.Init 接管（ConsoleWriter 格式），
+	// 此处取全局 logger 传给中间件。
+	handler.RegisterRoutes(engine, handler.Options{
+		Log:                zerologlog.Logger,
+		CORSAllowedOrigins: cfg.HTTP.CORSAllowedOrigins,
+	}, wordHandler, reviewHandler)
 	// 健康检查属基础设施端点，不参与业务版本（docs/specs/backend/HTTP API 设计规范.md §2.4）。
 	engine.GET("/healthz", handleHealthz)
 	return engine
