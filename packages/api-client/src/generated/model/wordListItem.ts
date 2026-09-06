@@ -15,8 +15,10 @@ export interface WordListItem {
   id: string;
   /** @nullable */
   lastReviewedAt: string | null;
+  masteryScore: number;
   phonetic: string;
   rememberCount: number;
   reviewCount: number;
+  reviewWeight: number;
   word: string;
 }

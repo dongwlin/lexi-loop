@@ -8,6 +8,8 @@
 
 export * from './getSessionResponse';
 export * from './importWordInput';
+export * from './importWordItemResult';
+export * from './importWordItemResultResult';
 export * from './importWordsRequest';
 export * from './importWordsResponse';
 export * from './listWordsParams';

@@ -5,11 +5,11 @@
  * LexiLoop（词环）英语生词复习系统 /api/v1 接口。spec 由 `lexi-loop openapi` 离线生成至 docs/openapi/，请勿手改。
  * OpenAPI spec version: 1.0.0
  */
-import type { ImportWordItemResult } from './importWordItemResult';
 
-export interface ImportWordsResponse {
-  created: number;
-  encounters: number;
-  items: ImportWordItemResult[];
-  updated: number;
-}
+export type ImportWordItemResultResult = typeof ImportWordItemResultResult[keyof typeof ImportWordItemResultResult];
+
+
+export const ImportWordItemResultResult = {
+  created: 'created',
+  updated: 'updated',
+} as const;

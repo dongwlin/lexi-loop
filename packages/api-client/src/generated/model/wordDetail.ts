@@ -16,9 +16,11 @@ export interface WordDetail {
   id: string;
   /** @nullable */
   lastReviewedAt: string | null;
+  masteryScore: number;
   meaningSource: string;
   phonetic: string;
   rememberCount: number;
   reviewCount: number;
+  reviewWeight: number;
   word: string;
 }
