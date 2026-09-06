@@ -83,11 +83,11 @@ subtle       新增
 
 | Word | 释义 | 遇到 | 复习 | 遗忘 | 掌握度 | 优先级 |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| ambiguous | 模棱两可的 | 6 | 12 | 7 | 35% | 高 |
-| constrain | 限制 | 4 | 9 | 2 | 72% | 中 |
-| derive | 推导；获得 | 2 | 8 | 1 | 85% | 低 |
+| ambiguous | 模棱两可的 | 6 | 12 | 7 | 33% | 8.62 |
+| constrain | 限制 | 4 | 9 | 2 | 72% | 4.71 |
+| derive | 推导；获得 | 2 | 8 | 1 | 85% | 3.12 |
 
-行的主体是 `user_words`（遇词、复习、遗忘、掌握度），释义列展示 effective review meaning（取值规则见 [dictionary/data-model.md](../dictionary/data-model.md)），来自关联的 `dictionary_entries`。
+行的主体是 `user_words`（遇词、复习、遗忘、掌握度、优先级），释义列展示 effective review meaning（取值规则见 [dictionary/data-model.md](../dictionary/data-model.md)），来自关联的 `dictionary_entries`。掌握度与优先级两列的数据来自列表 DTO 的 `masteryScore` / `reviewWeight`（[api/words.md](../api/words.md) §3，D011：由服务端动态计算，前端只展示不复算），分别显示为百分比与权重数值。
 
 第一版只需要搜索、查看、编辑释义、删除。排序以后再加。
 
@@ -183,6 +183,8 @@ adj. 模棱两可的；含糊不清的；有歧义的
 ```
 
 重点展示「需要加强」的单词列表，并提供「再来一轮」「回到生词库」两个按钮。以后可以增加「只复习本轮忘记的单词」，作为 MVP 之后的第一个新增功能。
+
+「再来一轮」的行为（2026-09-07 定稿）：以上一轮的实际词数（结果页 session 汇总的 `total`）作为新一轮数量直接开始，等价于在 `/review` 输入该数量并开始（服务端仍按 `min(count, available)` 截断，D009）；开始成功后跳转 `/review` 直接进入第一题，不经数量配置页——用户刚完成一轮，此时点击该按钮的意图就是继续练，数量调整可通过导航进入 `/review` 配置页完成。开始请求失败时（如可复习生词为 0 的 `BASE.BIZ.USER_DISABLED`、网络异常）留在结果页展示错误与重试。开始后本轮中途刷新 / 退出再进入 `/review`，恢复仍按 §6 由用户选择继续或放弃。「回到生词库」跳转 `/words`。
 
 ## 10. 前端状态机与键盘操作
 

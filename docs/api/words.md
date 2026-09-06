@@ -43,7 +43,12 @@ POST /api/v1/words/import
   "data": {
     "encounters": 4,
     "created": 2,
-    "updated": 1
+    "updated": 1,
+    "items": [
+      { "word": "ambiguous", "count": 1, "result": "created" },
+      { "word": "constrain", "count": 2, "result": "updated" },
+      { "word": "derive", "count": 1, "result": "created" }
+    ]
   }
 }
 ```
@@ -53,6 +58,12 @@ POST /api/v1/words/import
 | `encounters` | int | 本次计入的遇词次数合计 |
 | `created` | int | 新建的 `user_words` 词条数 |
 | `updated` | int | 已存在、遇词次数被累计的词条数 |
+| `items` | array | 逐词结果，与聚合后的输入单词一一对应（按首次出现顺序） |
+| `items[].word` | string | 归一后的单词（服务端再做一次 trim / lowercase） |
+| `items[].count` | int | 该词本次计入的遇词次数 |
+| `items[].result` | string | `created`（本次新建）/ `updated`（已存在并累计，含软删除恢复） |
+
+`items` 是导入反馈（review-flow §3「ambiguous 新增 / constrain 已存在 +2」）的数据来源，为单词粒度：`result` 表达该单词在本次导入前是否已在用户词库中（`created` = 本次新建，`updated` = 已存在并累计，含软删除恢复）。`created` / `updated` 聚合统计则是词条行粒度（`user_words` 行数），两者计量单位不同——归一到同一新建词条的多个输入词形在 `items` 中都记 `created`。
 
 ### 服务端逻辑
 
@@ -106,7 +117,9 @@ GET /api/v1/words?page=1&pageSize=50&search=amb
         "rememberCount": 1,
         "forgetCount": 1,
         "currentStreak": -1,
-        "lastReviewedAt": "2026-09-01T10:30:00Z"
+        "lastReviewedAt": "2026-09-01T10:30:00Z",
+        "masteryScore": 33,
+        "reviewWeight": 4.62
       }
     ],
     "pagination": {
@@ -121,6 +134,13 @@ GET /api/v1/words?page=1&pageSize=50&search=amb
 ```
 
 列表过滤 `deleted_at IS NULL` 的 `user_words`，被删除的词不再出现。空列表时 `list` 返回 `[]`。
+
+列表项与详情（§4）都附带两个动态计算的派生指标（权重 / mastery 不落库、读取时按当前时间计算，公式权威见 [review/algorithm.md](../review/algorithm.md) §3–§6，冻结决策 D011）：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `masteryScore` | int | 掌握程度 0–100：`(remember_count + 1) / (review_count + 2) × 100` 四舍五入取整 |
+| `reviewWeight` | number | 复习优先级权重（algorithm.md §3–§4 公式），保留两位小数 |
 
 ## 4. 获取单词详情
 
@@ -148,12 +168,14 @@ GET /api/v1/words/:id
     "rememberCount": 1,
     "forgetCount": 1,
     "currentStreak": -1,
-    "lastReviewedAt": "2026-09-01T10:30:00Z"
+    "lastReviewedAt": "2026-09-01T10:30:00Z",
+    "masteryScore": 33,
+    "reviewWeight": 4.62
   }
 }
 ```
 
-返回 `user_words` 学习字段 + `dictionary_entries` 词典字段 + `effectiveReviewMeaning`（含是否来自用户自定义的标记）。取值规则见 [dictionary/data-model.md](../dictionary/data-model.md)。
+返回 `user_words` 学习字段 + `dictionary_entries` 词典字段 + `effectiveReviewMeaning`（含是否来自用户自定义的标记），并附带与列表项相同的 `masteryScore` / `reviewWeight`（见 §3）。取值规则见 [dictionary/data-model.md](../dictionary/data-model.md)。
 
 资源不存在时返回：
 
