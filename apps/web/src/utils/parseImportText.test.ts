@@ -58,4 +58,11 @@ describe('parseImportText', () => {
       { word: 'b', count: 1 },
     ])
   })
+
+  it('容忍 Windows 换行（CRLF）', () => {
+    expect(parseImportText('a\r\nb\r\n')).toEqual([
+      { word: 'a', count: 1 },
+      { word: 'b', count: 1 },
+    ])
+  })
 })

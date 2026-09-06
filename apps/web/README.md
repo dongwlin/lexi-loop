@@ -26,13 +26,13 @@ MVP 服务端暂无认证端点；认证落地后在 `src/lib/api.ts` 注入 `ge
 
 ## 结构
 
-按《前端应用架构规范》§3 组织：`src/app/` 应用装配（根组件、显式路由表、providers / pinia / query client 一次性安装），`src/pages/` 路由页面（当前为骨架占位，页面结构见 [docs/frontend/review-flow.md](../../docs/frontend/review-flow.md) §1），`src/components/ui/` 业务无关基础组件——每个组件独立文件夹（`button/Button.vue` + 同目录 Story），经 `components/ui/index.ts` 统一导出（Button 配方见《Vue 组件设计系统方案》§8.1），`src/components/layout/` 跨页面布局（AppShell、ThemeSwitcher），`src/stores/` 跨页面客户端状态，`src/lib/` 基础设施适配（env / api / storage），`src/styles/` 设计系统主题层（Tailwind CSS v4 + Radix Colors，见《Vue 组件设计系统方案》）。`src/features/` 按业务能力组织（当前 `words/`、`review/`），Query Key / Query / Mutation 置于各 Feature 的 `api/`（《前端应用架构规范》§8.1），DTO 直接使用 `@lexi-loop/api-client` 生成类型，queryFn 透传 `signal`。
+按《前端应用架构规范》§3 组织：`src/app/` 应用装配（根组件、显式路由表、providers / pinia / query client 一次性安装），`src/pages/` 路由页面（当前为骨架占位，页面结构见 [docs/frontend/review-flow.md](../../docs/frontend/review-flow.md) §1），`src/components/ui/` 业务无关基础组件——每个组件独立文件夹（`button/Button.vue` + 同目录 Story），经 `components/ui/index.ts` 统一导出（Button 配方见《Vue 组件设计系统方案》§8.1），`src/components/layout/` 跨页面布局（AppShell、ThemeSwitcher），`src/stores/` 跨页面客户端状态，`src/lib/` 基础设施适配（env / api / storage），`src/styles/` 设计系统主题层（Tailwind CSS v4 + Radix Colors，见《Vue 组件设计系统方案》）。`src/features/` 按业务能力组织（当前 `words/`、`review/`），Query Key / Query / Mutation 置于各 Feature 的 `api/`（《前端应用架构规范》§8.1），DTO 直接使用 `@lexi-loop/api-client` 生成类型，queryFn 透传 `signal`；`src/utils/` 存放无状态纯函数（《前端应用架构规范》§4.5 / §4.8，当前 `parseImportText`）。
 
 主题偏好为 Light / Dark / System（《Vue 组件设计系统方案》§11）：偏好持久化在 `localStorage`（`lexi-loop.theme`），解析后的主题类互斥挂在 `<html>`，`main.ts` 在应用挂载前初始化。
 
 ## 待办
 
-MVP 完成度评估（2026-09-06）：工程骨架、设计系统主题层、API Client（Orval 生成 + 统一 mutator）、Feature 层（words / review 的 api keys / queries / mutations）与后端 8 个端点已就绪；`src/pages/` 四个路由页面仍为占位卡片，MVP 业务未落地。以下按依赖顺序登记，完成后删除对应条目。
+MVP 完成度评估（2026-09-06）：工程骨架、设计系统主题层、API Client（Orval 生成 + 统一 mutator）、Feature 层（words / review 的 api keys / queries / mutations）与后端 8 个端点已就绪；`src/pages/` 四个路由页面中导入页已落地，其余仍为占位卡片。以下按依赖顺序登记，完成后删除对应条目。
 
 ### MVP 业务落地（review-flow.md §2–§10）
 
@@ -42,7 +42,7 @@ MVP 完成度评估（2026-09-06）：工程骨架、设计系统主题层、API
 - [ ] 复习页 `/review`（review-flow §6–§8、§10）：数量选择（10 / 20 / 30 / 50 + 自定义，超出词库时提示截断 D009）、active session 恢复（「继续复习 / 放弃本轮」由用户选择，D010；恢复进度用 GET session 逐词结果按 word join 本地快照）、状态机 idle → recalling → revealed → answered、键盘操作（Space 揭示释义，1 / ← 不记得，2 / → 记得）与焦点管理、完成跳转结果页。备注：无 abandon 端点，「放弃本轮」MVP 只清除本地快照，服务端旧 session 在下一轮开始时自动 abandon
 - [ ] 复习结果页 `/review/result/:session`（review-flow §9）：汇总（总计 / 记得 / 不记得 / 正确率）、「需要加强」列表、再来一轮 / 回到生词库
 - [ ] 页面基础设施：路由 meta → `document.title` 随路由更新、AppShell skip link 与 `main` landmark、各页面 h1 与 Loading / Empty / Error 分支（《前端交互与可访问性规范》§6.1）
-- [ ] 纯逻辑单元测试：导入解析聚合、复习状态机迁移、session 快照存取、键盘映射（组件 / 页面集成测试待下方质量设施落地后补）
+- [ ] 纯逻辑单元测试：复习状态机迁移、session 快照存取、键盘映射（导入解析聚合已随导入页落地；组件 / 页面集成测试待下方质量设施落地后补）
 
 ### 依赖服务端契约扩展（先行登记，前端不自行复算公式）
 
