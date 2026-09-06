@@ -4,7 +4,7 @@
 
 ## 当前状态：MVP 业务落地完成，页面基础设施就绪
 
-工程骨架（Vue 3 + vue-router + Pinia + TanStack Query + Tailwind CSS v4 + Reka UI / Radix Colors + Storybook 10）、设计系统主题层（`src/styles/`，Light / Dark / System）、API Client 装配（workspace 包 [`packages/api-client`](../../packages/api-client/)：Orval 生成请求函数与 DTO 类型 + 手写 mutator 统一传输、`{code, message, data}` 解包与 `ApiError` 分类；web 侧装配点为 `src/lib/api.ts`）、Feature 层（`src/features/words/`、`src/features/review/` 的 keys / queries / mutations）、五个路由页面（导入页 `/import`、生词库 `/words`、生词详情 `/words/:id`、复习页 `/review`、复习结果页 `/review/result/:session`）、页面基础设施（路由 meta → `document.title`、SPA 页面级导航后焦点移到新页面主标题、skip link、main landmark、各页面 h1 与状态分支）与质量设施（ESLint + Prettier、jsdom + Testing Library、MSW、@storybook/addon-vitest + addon-a11y、Playwright；细节见《前端技术栈》§10/§11 与 README「质量与品牌」）均已就绪。下一步清单（含服务端契约缺口登记）以 [README.md](README.md) 为准——完成里程碑后同步更新两处，避免状态失真。
+工程骨架（Vue 3 + vue-router + Pinia + TanStack Query + Tailwind CSS v4 + Reka UI / Radix Colors + Storybook 10）、设计系统主题层（`src/styles/`，Light / Dark / System）、API Client 装配（workspace 包 [`packages/api-client`](../../packages/api-client/)：Orval 生成请求函数与 DTO 类型 + 手写 mutator 统一传输、`{code, message, data}` 解包与 `ApiError` 分类；web 侧装配点为 `src/lib/api.ts`）、Feature 层（`src/features/words/`、`src/features/review/` 的 keys / queries / mutations）、五个路由页面（导入页 `/import`、生词库 `/words`、生词详情 `/words/:id`、复习页 `/review`、复习结果页 `/review/result/:session`）、页面基础设施（路由 meta → `document.title`、SPA 页面级导航后焦点移到新页面主标题、skip link、main landmark、各页面 h1 与状态分支）、质量设施（ESLint + Prettier、jsdom + Testing Library、MSW、@storybook/addon-vitest + addon-a11y、Playwright；细节见《前端技术栈》§10/§11 与 README「质量与品牌」）与页面集成测试（`tests/integration/`，真实 Router + 全新 QueryClient + MSW）均已就绪。服务端契约缺口已补齐（2026-09-07）：列表 / 详情 DTO 返回 `masteryScore` / `reviewWeight`（D011 服务端动态计算，前端只展示），导入接口返回逐词结果，复习结果页「再来一轮」按 review-flow §9 定稿（以上一轮实际词数直接开始）。下一步清单以 [README.md](README.md) 为准——完成里程碑后同步更新两处，避免状态失真。
 
 改动本子树任何代码前：先读 [docs/agent-log/](../../docs/agent-log/) 当月文件的最近记录了解上下文，再核对下表对应文档与当前代码。
 
@@ -42,7 +42,7 @@ pnpm -F @lexi-loop/api-client generate  # 后端契约变更（docs/openapi/ 更
 pnpm -F @lexi-loop/api-client test:run  # api-client mutator / 生成端点单测
 ```
 
-纯逻辑单元测试已覆盖 `lib/env`、`lib/storage/local-storage`、`stores/theme`、`utils/`（parseImportText / buildPageItems / parsePositiveInt / formatMeanings / meaningText / formatDateTime / review-snapshot / review-resume / review-state-machine / review-keyboard / isPageLevelNavigation）与两个 Feature 的 query keys。质量设施已落地（《前端技术栈》§10/§11、测试规范 §15）：vitest.config.ts 按 projects 拆分——`web`（jsdom + tests/setup.ts 全局设施 + MSW 边界）与 `storybook`（Story 即浏览器测试 + addon-a11y 门禁，全局 `a11y.test: 'error'`，豁免须注释登记）；MSW handler 工厂在 `tests/mocks/`，集成测试在 `tests/integration/`（现覆盖 api-client 经 MSW 的 HTTP 边界）；Playwright 用例在 `e2e/`。组件 / 页面集成测试按《前端测试规范》§4 优先级陆续补充——新增组件与页面行为须带对应层级的测试，不再有「设施未落地」的豁免理由。
+纯逻辑单元测试已覆盖 `lib/env`、`lib/storage/local-storage`、`stores/theme`、`utils/`（parseImportText / buildPageItems / parsePositiveInt / formatMeanings / meaningText / formatDateTime / review-snapshot / review-resume / review-state-machine / review-keyboard / review-errors / isPageLevelNavigation）与两个 Feature 的 query keys。质量设施已落地（《前端技术栈》§10/§11、测试规范 §15）：vitest.config.ts 按 projects 拆分——`web`（jsdom + tests/setup.ts 全局设施 + MSW 边界）与 `storybook`（Story 即浏览器测试 + addon-a11y 门禁，全局 `a11y.test: 'error'`，豁免须注释登记）；MSW handler 工厂在 `tests/mocks/`（按 api-client 生成类型构造的响应工厂），页面集成测试在 `tests/integration/`（`helpers.ts` 装配真实 Router + 全新 QueryClient + MSW，现覆盖生词库 / 详情 / 导入反馈 / 复习结果「再来一轮」跨页行为与 api-client HTTP 边界）；Playwright 用例在 `e2e/`。组件 / 页面集成测试按《前端测试规范》§4 优先级随新增行为补充——新增组件与页面行为须带对应层级的测试，不再有「设施未落地」的豁免理由。
 
 ## 架构与实现要点
 
@@ -62,7 +62,7 @@ pnpm -F @lexi-loop/api-client test:run  # api-client mutator / 生成端点单�
 
 冻结决策索引见根 [AGENTS.md](../../AGENTS.md) 与 [docs/decisions/README.md](../../docs/decisions/README.md)。前端落地时的硬约束（细节以对应权威文档为准，这里不展开）：
 
-- D011：权重 / mastery 由服务端动态计算，前端不复算公式；列表 / 详情 DTO 未返回掌握度前，生词库 / 详情不展示这两项（README 已登记契约缺口）。
+- D011：权重 / mastery 由服务端动态计算，前端不复算公式；列表 / 详情 DTO 已返回 `masteryScore` / `reviewWeight`（api/words.md §3–§4），生词库 / 详情只做展示（掌握度百分比、优先级权重数值）。
 - D009：复习数量截断 `min(count, available)` 由服务端保证；前端开始前用 GET /words 分页 total（与复习候选集同为未删除生词）做不足提示，不自行复算公式。
 - D010：全库至多一个 active session，恢复由用户选择（继续 / 放弃）；服务端无 abandon 端点，「放弃本轮」只清本地快照，旧 session 由下一轮开始时自动 abandon（api/reviews.md）。
 - D007：释义展示取值 `custom ?? review ?? raw` 语义以 dictionary/data-model.md 为准；清除自定义释义（PATCH null）后回退三层取值。
