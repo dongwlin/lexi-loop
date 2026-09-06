@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { CheckCircle, RotateCcw } from 'lucide-vue-next'
 import { Button } from '@/components/ui'
 import { isApiError } from '@/lib/api'
+import { useStartReviewSessionMutation } from '@/features/review/api/mutations'
 import { useReviewSessionQuery } from '@/features/review/api/queries'
+import { describeReviewStartError } from '@/utils/review-errors'
+import { saveReviewSnapshot } from '@/utils/review-snapshot'
 
 // review-flow.md §9：本轮复习结果（汇总 / 需要加强列表 / 再来一轮 / 回到生词库）。
+// 「再来一轮」以上一轮实际词数直接开始新一轮（服务端 D009 截断仍生效），
+// 经本地快照 autoResume 标记让 /review 跳过恢复询问直接进入；开始失败留在
+// 结果页展示错误与重试。
 
 const route = useRoute()
 const router = useRouter()
@@ -55,6 +61,34 @@ const notCompletedText = computed(() =>
 
 function goToReview() {
   void router.push({ name: 'review' })
+}
+
+// ---- 再来一轮（review-flow §9 定稿：按上一轮实际词数直接开始）----
+
+const startMutation = useStartReviewSessionMutation()
+const isStarting = computed(() => startMutation.isPending.value)
+const startError = ref<string | null>(null)
+const startErrorRef = ref<HTMLElement | null>(null)
+
+async function handleReplay() {
+  const previousTotal = session.value?.total ?? 0
+  if (previousTotal < 1 || isStarting.value) return
+
+  startError.value = null
+  try {
+    const response = await startMutation.mutateAsync({ count: previousTotal })
+    saveReviewSnapshot({
+      sessionId: response.sessionId,
+      totalCount: response.totalCount,
+      items: response.items,
+      autoResume: true,
+    })
+    void router.push({ name: 'review' })
+  } catch (err) {
+    startError.value = describeReviewStartError(err)
+    await nextTick()
+    startErrorRef.value?.focus()
+  }
 }
 </script>
 
@@ -183,9 +217,25 @@ function goToReview() {
         </ul>
       </template>
 
+      <!-- 开始失败：错误 + 重试入口留在结果页（交互与可访问性规范 §9.3） -->
+      <p
+        v-if="startError"
+        ref="startErrorRef"
+        tabindex="-1"
+        role="alert"
+        class="mt-4 text-sm text-danger-text"
+      >
+        {{ startError }}
+      </p>
+
       <!-- 操作按钮 -->
       <div class="mt-6 flex gap-3">
-        <Button class="gap-2" @click="goToReview">
+        <Button
+          class="gap-2"
+          :disabled="isStarting || session.total < 1"
+          :pending="isStarting"
+          @click="handleReplay"
+        >
           <RotateCcw class="size-4 shrink-0" aria-hidden="true" />
           再来一轮
         </Button>

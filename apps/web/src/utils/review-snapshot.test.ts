@@ -62,6 +62,13 @@ describe('saveReviewSnapshot', () => {
     expect(parsed.totalCount).toBe(sampleSnapshot.totalCount)
     expect(parsed.items).toEqual(sampleSnapshot.items)
   })
+
+  it('stores the one-shot autoResume flag when set', () => {
+    saveReviewSnapshot({ ...sampleSnapshot, autoResume: true })
+
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY)!)
+    expect(parsed.autoResume).toBe(true)
+  })
 })
 
 describe('loadReviewSnapshot', () => {
@@ -73,6 +80,27 @@ describe('loadReviewSnapshot', () => {
     saveReviewSnapshot(sampleSnapshot)
     const loaded = loadReviewSnapshot()
     expect(loaded).toEqual(sampleSnapshot)
+  })
+
+  it('loads autoResume=true when the one-shot flag is set', () => {
+    saveReviewSnapshot({ ...sampleSnapshot, autoResume: true })
+    expect(loadReviewSnapshot()?.autoResume).toBe(true)
+  })
+
+  it('defaults autoResume to unset for snapshots saved without it', () => {
+    saveReviewSnapshot({ ...sampleSnapshot, autoResume: false })
+    const loaded = loadReviewSnapshot()
+    expect(loaded?.autoResume).toBeUndefined()
+  })
+
+  it('ignores a non-boolean autoResume field instead of rejecting the snapshot', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ ...sampleSnapshot, version: 1, autoResume: 'yes' }),
+    )
+    const loaded = loadReviewSnapshot()
+    expect(loaded).not.toBeNull()
+    expect(loaded?.autoResume).toBeUndefined()
   })
 
   it('returns null for corrupted JSON', () => {

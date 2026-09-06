@@ -12,6 +12,7 @@ import {
 import { reviewSessionQueryOptions } from '@/features/review/api/queries'
 import { wordsListQueryOptions } from '@/features/words/api/queries'
 import { formatMeanings } from '@/utils/formatMeanings'
+import { describeReviewStartError } from '@/utils/review-errors'
 import { resolveReviewKeyAction } from '@/utils/review-keyboard'
 import { computeResumeProgress } from '@/utils/review-resume'
 import {
@@ -149,6 +150,15 @@ async function checkActiveSession() {
       return
     }
 
+    if (snapshot.autoResume) {
+      // 「再来一轮」经结果页显式开始的本轮（review-flow §9）：跳过询问直接
+      // 进入第一题；进入即消费一次性标记，之后的刷新 / 重进恢复仍由用户选择（D010）。
+      saveReviewSnapshot({ ...snapshot, autoResume: false })
+      recoveryState.value = 'idle'
+      enterWithSnapshot(snapshot)
+      return
+    }
+
     // 服务端逐词结果按 word 对齐本地快照，恢复到首个未答项（review-flow §6「回到原进度」）。
     const progress = computeResumeProgress(
       snapshot.items.map((item) => item.word),
@@ -180,6 +190,17 @@ function discardSnapshot() {
   savedProgress.value = null
 }
 
+// 以快照进入复习：从 resumeIndex（钳制后）的 recalling 开始，焦点移入复习区域。
+// 「继续复习」恢复与「再来一轮」的自动进入（review-flow §9）共用。
+function enterWithSnapshot(snapshot: ReviewSnapshot, resumeIndex = 0) {
+  items.value = snapshot.items
+  sessionId.value = snapshot.sessionId
+  const entry = enterReview(snapshot.items.length, resumeIndex)
+  currentIndex.value = entry.currentIndex
+  currentMode.value = entry.mode
+  void nextTick(() => focusReviewArea())
+}
+
 function handleResume() {
   const snapshot = savedSnapshot.value
   if (!snapshot || snapshot.items.length === 0) {
@@ -190,13 +211,8 @@ function handleResume() {
   // 从首个未答项续答（review-flow §6）；对齐失败时回退第 1 题，已答题的重复提交
   // 经服务端幂等短路不重复计数（api/reviews.md §3），只是多做无效操作。
   const resumeIndex = savedProgress.value?.resumeIndex ?? 0
-  items.value = snapshot.items
-  sessionId.value = snapshot.sessionId
-  const entry = enterReview(snapshot.items.length, resumeIndex)
-  currentIndex.value = entry.currentIndex
-  currentMode.value = entry.mode
+  enterWithSnapshot(snapshot, resumeIndex)
   recoveryState.value = 'idle'
-  void nextTick(() => focusReviewArea())
 }
 
 function handleAbandon() {
@@ -240,21 +256,8 @@ async function startNewSession(count: number) {
     await nextTick()
     focusReviewArea()
   } catch (err) {
-    startError.value = describeStartError(err)
+    startError.value = describeReviewStartError(err)
   }
-}
-
-// 服务端 message 面向排查（英文原文），界面按错误分类给可读文案。
-function describeStartError(err: unknown): string {
-  if (isApiError(err)) {
-    if (err.code === 'BASE.BIZ.USER_DISABLED')
-      return '当前没有可复习的生词，请先导入生词。'
-    if (err.kind === 'network' || err.kind === 'timeout')
-      return '网络异常，请检查连接后重试。'
-    if (err.kind === 'http' && (err.httpStatus ?? 0) >= 500)
-      return '服务暂时不可用，请稍后重试。'
-  }
-  return '开始复习失败，请稍后重试'
 }
 
 // ---- 复习状态机 ----
