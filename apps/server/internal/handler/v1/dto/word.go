@@ -9,6 +9,7 @@
 package dto
 
 import (
+	"math"
 	"time"
 
 	"github.com/dongwlin/lexi-loop/apps/server/internal/domain"
@@ -68,14 +69,36 @@ type ImportWordsResponse struct {
 	Encounters int `json:"encounters"`
 	Created    int `json:"created"`
 	Updated    int `json:"updated"`
+	// Items 逐词结果（api/words.md §2），与聚合后的输入单词一一对应。
+	Items []ImportWordItemResult `json:"items" nullable:"false"`
+}
+
+// ImportWordItemResult 是单个输入单词的导入结果。
+type ImportWordItemResult struct {
+	Word   string `json:"word"`
+	Count  int    `json:"count"`
+	Result string `json:"result" enum:"created,updated"`
 }
 
 // NewImportWordsResponse 转换导入结果。
 func NewImportWordsResponse(r *service.ImportWordsResult) ImportWordsResponse {
+	items := make([]ImportWordItemResult, 0, len(r.Items))
+	for _, item := range r.Items {
+		result := "updated"
+		if item.Created {
+			result = "created"
+		}
+		items = append(items, ImportWordItemResult{
+			Word:   item.Word,
+			Count:  item.Count,
+			Result: result,
+		})
+	}
 	return ImportWordsResponse{
 		Encounters: r.Encounters,
 		Created:    r.Created,
 		Updated:    r.Updated,
+		Items:      items,
 	}
 }
 
@@ -89,7 +112,9 @@ type ListWordsQuery struct {
 	Search   string `query:"search"`
 }
 
-// WordListItem 是列表项（api/words.md §3 字段）。
+// WordListItem 是列表项（api/words.md §3 字段）。masteryScore / reviewWeight
+// 为服务端动态计算的派生指标（D011），契约舍入：掌握程度四舍五入取整，
+// 权重保留两位小数。
 type WordListItem struct {
 	ID                     string     `json:"id"`
 	Word                   string     `json:"word"`
@@ -101,6 +126,8 @@ type WordListItem struct {
 	ForgetCount            int        `json:"forgetCount"`
 	CurrentStreak          int        `json:"currentStreak"`
 	LastReviewedAt         *time.Time `json:"lastReviewedAt"`
+	MasteryScore           int        `json:"masteryScore"`
+	ReviewWeight           float64    `json:"reviewWeight"`
 }
 
 // WordDetail 是单词详情（api/words.md §4 字段：列表字段 + definition 与
@@ -125,6 +152,8 @@ func NewWordListItem(item *service.WordItem) WordListItem {
 		ForgetCount:            item.UserWord.ForgetCount,
 		CurrentStreak:          item.UserWord.CurrentStreak,
 		LastReviewedAt:         item.UserWord.LastReviewedAt,
+		MasteryScore:           int(math.Round(item.MasteryScore)),
+		ReviewWeight:           math.Round(item.ReviewWeight*100) / 100,
 	}
 }
 

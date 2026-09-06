@@ -167,6 +167,24 @@ components:
         - word
         - count
       type: object
+    ImportWordItemResult:
+      additionalProperties: false
+      properties:
+        count:
+          format: int64
+          type: integer
+        result:
+          enum:
+            - created
+            - updated
+          type: string
+        word:
+          type: string
+      required:
+        - word
+        - count
+        - result
+      type: object
     ImportWordsRequest:
       additionalProperties: false
       properties:
@@ -187,6 +205,10 @@ components:
         encounters:
           format: int64
           type: integer
+        items:
+          items:
+            $ref: "#/components/schemas/ImportWordItemResult"
+          type: array
         updated:
           format: int64
           type: integer
@@ -194,6 +216,7 @@ components:
         - encounters
         - created
         - updated
+        - items
       type: object
     ListWordsResponse:
       additionalProperties: false
@@ -354,6 +377,9 @@ components:
           type:
             - string
             - "null"
+        masteryScore:
+          format: int64
+          type: integer
         meaningSource:
           type: string
         phonetic:
@@ -364,6 +390,9 @@ components:
         reviewCount:
           format: int64
           type: integer
+        reviewWeight:
+          format: double
+          type: number
         word:
           type: string
       required:
@@ -379,6 +408,8 @@ components:
         - forgetCount
         - currentStreak
         - lastReviewedAt
+        - masteryScore
+        - reviewWeight
       type: object
     WordListItem:
       additionalProperties: false
@@ -403,6 +434,9 @@ components:
           type:
             - string
             - "null"
+        masteryScore:
+          format: int64
+          type: integer
         phonetic:
           type: string
         rememberCount:
@@ -411,6 +445,9 @@ components:
         reviewCount:
           format: int64
           type: integer
+        reviewWeight:
+          format: double
+          type: number
         word:
           type: string
       required:
@@ -424,6 +461,8 @@ components:
         - forgetCount
         - currentStreak
         - lastReviewedAt
+        - masteryScore
+        - reviewWeight
       type: object
 info:
   description: LexiLoop（词环）英语生词复习系统 /api/v1 接口。spec 由 `lexi-loop openapi` 离线生成至 docs/openapi/，请勿手改。

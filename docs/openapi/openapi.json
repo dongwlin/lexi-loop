@@ -237,6 +237,31 @@
         ],
         "type": "object"
       },
+      "ImportWordItemResult": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "result": {
+            "enum": [
+              "created",
+              "updated"
+            ],
+            "type": "string"
+          },
+          "word": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "word",
+          "count",
+          "result"
+        ],
+        "type": "object"
+      },
       "ImportWordsRequest": {
         "additionalProperties": false,
         "properties": {
@@ -264,6 +289,12 @@
             "format": "int64",
             "type": "integer"
           },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ImportWordItemResult"
+            },
+            "type": "array"
+          },
           "updated": {
             "format": "int64",
             "type": "integer"
@@ -272,7 +303,8 @@
         "required": [
           "encounters",
           "created",
-          "updated"
+          "updated",
+          "items"
         ],
         "type": "object"
       },
@@ -500,6 +532,10 @@
               "null"
             ]
           },
+          "masteryScore": {
+            "format": "int64",
+            "type": "integer"
+          },
           "meaningSource": {
             "type": "string"
           },
@@ -513,6 +549,10 @@
           "reviewCount": {
             "format": "int64",
             "type": "integer"
+          },
+          "reviewWeight": {
+            "format": "double",
+            "type": "number"
           },
           "word": {
             "type": "string"
@@ -530,7 +570,9 @@
           "rememberCount",
           "forgetCount",
           "currentStreak",
-          "lastReviewedAt"
+          "lastReviewedAt",
+          "masteryScore",
+          "reviewWeight"
         ],
         "type": "object"
       },
@@ -565,6 +607,10 @@
               "null"
             ]
           },
+          "masteryScore": {
+            "format": "int64",
+            "type": "integer"
+          },
           "phonetic": {
             "type": "string"
           },
@@ -575,6 +621,10 @@
           "reviewCount": {
             "format": "int64",
             "type": "integer"
+          },
+          "reviewWeight": {
+            "format": "double",
+            "type": "number"
           },
           "word": {
             "type": "string"
@@ -590,7 +640,9 @@
           "rememberCount",
           "forgetCount",
           "currentStreak",
-          "lastReviewedAt"
+          "lastReviewedAt",
+          "masteryScore",
+          "reviewWeight"
         ],
         "type": "object"
       }

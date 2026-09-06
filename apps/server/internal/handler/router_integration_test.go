@@ -38,6 +38,11 @@ type importData struct {
 	Encounters int `json:"encounters"`
 	Created    int `json:"created"`
 	Updated    int `json:"updated"`
+	Items      []struct {
+		Word   string `json:"word"`
+		Count  int    `json:"count"`
+		Result string `json:"result"`
+	} `json:"items"`
 }
 
 type pagination struct {
@@ -50,8 +55,10 @@ type pagination struct {
 
 type listData struct {
 	List []struct {
-		ID   string `json:"id"`
-		Word string `json:"word"`
+		ID           string  `json:"id"`
+		Word         string  `json:"word"`
+		MasteryScore int     `json:"masteryScore"`
+		ReviewWeight float64 `json:"reviewWeight"`
 	} `json:"list"`
 	Pagination pagination `json:"pagination"`
 }
@@ -99,6 +106,13 @@ func TestIntegration_WordRoutes(t *testing.T) {
 		assert.Equal(t, 3, data.Encounters)
 		assert.Equal(t, 2, data.Created)
 		assert.Equal(t, 0, data.Updated)
+		require.Len(t, data.Items, 2, "逐词结果与输入对应")
+		assert.Equal(t, "ambiguous", data.Items[0].Word)
+		assert.Equal(t, 2, data.Items[0].Count)
+		assert.Equal(t, "created", data.Items[0].Result)
+		assert.Equal(t, "constrain", data.Items[1].Word)
+		assert.Equal(t, 1, data.Items[1].Count)
+		assert.Equal(t, "created", data.Items[1].Result)
 
 		// 大小写归一后命中同一词条 → updated；已存在词条继续累计。
 		rec = doJSON(t, engine, "POST", "/api/v1/words/import", map[string]any{
@@ -109,6 +123,8 @@ func TestIntegration_WordRoutes(t *testing.T) {
 		assert.Equal(t, 0, data.Created)
 		assert.Equal(t, 1, data.Updated)
 		assert.Equal(t, 1, data.Encounters)
+		require.Len(t, data.Items, 1)
+		assert.Equal(t, "updated", data.Items[0].Result)
 	})
 
 	t.Run("导入请求非法时返回 400 校验错误", func(t *testing.T) {
@@ -179,6 +195,10 @@ func TestIntegration_WordRoutes(t *testing.T) {
 		assert.Equal(t, 2, data.Pagination.TotalPages)
 		assert.False(t, data.Pagination.HasMore, "末页没有更多")
 
+		// 派生指标随列表项返回（D011）：新词 review=0 → mastery 50、weight 6。
+		assert.Equal(t, 50, data.List[0].MasteryScore)
+		assert.InDelta(t, 6.0, data.List[0].ReviewWeight, 1e-9)
+
 		rec = doJSON(t, engine, "GET", "/api/v1/words?page=1&pageSize=500", nil)
 		require.Equal(t, http.StatusOK, rec.Code)
 		require.NoError(t, json.Unmarshal(decodeEnvelope(t, rec.Body.Bytes()).Data, &data))
@@ -204,6 +224,11 @@ func TestIntegration_WordRoutes(t *testing.T) {
 		assert.Equal(t, "", detail["meaningSource"], "最小词条三层皆空，来源标记为空串")
 		assert.Contains(t, detail, "definition", "详情含 definition 字段（MVP 恒为空串）")
 		assert.Equal(t, "", detail["definition"])
+
+		// 派生指标（D011 服务端动态计算）：新词 review=0 → mastery 50、
+		// weight = 1 + log2(1+1) + 0.5×4 + 2 = 6。
+		assert.Equal(t, float64(50), detail["masteryScore"])
+		assert.InDelta(t, 6.0, detail["reviewWeight"].(float64), 1e-9)
 
 		// PATCH 自定义释义后 meaningSource 变为 custom，响应 data 为 {}。
 		rec = doJSON(t, engine, "PATCH", "/api/v1/words/"+id, map[string]any{

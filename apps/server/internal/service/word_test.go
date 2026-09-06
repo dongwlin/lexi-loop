@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -34,6 +35,11 @@ func TestIntegration_WordService_ImportWords(t *testing.T) {
 		assert.Equal(t, 3, res.Encounters)
 		assert.Equal(t, 2, res.Created)
 		assert.Equal(t, 0, res.Updated)
+
+		// 逐词结果与输入对应（word 归一为小写）。
+		require.Len(t, res.Items, 2)
+		assert.Equal(t, ImportWordOutcome{Word: wordA, Count: 2, Created: true}, res.Items[0])
+		assert.Equal(t, ImportWordOutcome{Word: wordB, Count: 1, Created: true}, res.Items[1])
 
 		// 词条与学习行：最小词条 lemma 保留原词，遇词次数按输入累计。
 		entry, err := repo.NewDictionaryRepo(testDB).FindByHeadword(ctx, wordA)
@@ -65,6 +71,7 @@ func TestIntegration_WordService_ImportWords(t *testing.T) {
 		assert.Equal(t, 0, second.Created)
 		assert.Equal(t, 1, second.Updated)
 		assert.Equal(t, 3, second.Encounters)
+		assert.Equal(t, []ImportWordOutcome{{Word: word, Count: 3, Created: false}}, second.Items)
 
 		words, total, err := repo.NewUserWordRepo(testDB).List(ctx, repo.ListParams{Page: 1, PageSize: 100})
 		require.NoError(t, err)
@@ -89,6 +96,12 @@ func TestIntegration_WordService_ImportWords(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 6, res.Encounters)
 		assert.Equal(t, 1, res.Created, "两种输入归一到同一词条，只建一行学习数据")
+
+		// 逐词结果是单词粒度：归一到同一新建词条的输入词形都记 created，
+		// 与行粒度的聚合统计（created=1）计量单位不同（api/words.md §2）。
+		require.Len(t, res.Items, 2)
+		assert.Equal(t, ImportWordOutcome{Word: base, Count: 3, Created: true}, res.Items[0])
+		assert.Equal(t, ImportWordOutcome{Word: inflected, Count: 3, Created: true}, res.Items[1])
 
 		words, _, err := repo.NewUserWordRepo(testDB).List(ctx, repo.ListParams{Page: 1, PageSize: 100})
 		require.NoError(t, err)
@@ -115,6 +128,8 @@ func TestIntegration_WordService_ImportWords(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 0, second.Created)
 		assert.Equal(t, 1, second.Updated)
+		assert.Equal(t, []ImportWordOutcome{{Word: word, Count: 2, Created: false}}, second.Items,
+			"恢复软删除在逐词结果中记 updated")
 
 		restored, err := repo.NewUserWordRepo(testDB).FindByID(ctx, wordID)
 		require.NoError(t, err)
@@ -287,6 +302,11 @@ func TestIntegration_WordService_GetWord(t *testing.T) {
 		assert.Equal(t, "/uk/", detail.Phonetic)
 		assert.Equal(t, 3, detail.UserWord.EncounterCount)
 
+		// 派生指标（D011 动态计算）：新词 review=0 → mastery 50、
+		// weight = 1 + log2(3+1) + 0.5×4 + 2 = 7（新词无时间因素，确定性成立）。
+		assert.Equal(t, 50.0, detail.MasteryScore)
+		assert.InDelta(t, 7.0, detail.ReviewWeight, 1e-9)
+
 		// 自定义后：取 custom 层。
 		custom := []domain.Meaning{{Pos: "adjective", Translations: []string{"我的记忆方式"}}}
 		require.NoError(t, svc.UpdateReviewMeaning(ctx, id, UpdateReviewMeaningRequest{CustomReviewMeaning: custom}))
@@ -311,6 +331,40 @@ func TestIntegration_WordService_GetWord(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, domain.MeaningSourceRaw, detail.MeaningSource)
 		assert.Equal(t, raw, detail.EffectiveMeaning)
+	})
+
+	t.Run("派生指标按当前时间动态计算", func(t *testing.T) {
+		resetTables(t)
+		svc := newTestWord(t)
+		word := uniqWord(t, "metrics")
+		_, err := svc.ImportWords(ctx, importReq(word, 1))
+		require.NoError(t, err)
+		list, err := svc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 100})
+		require.NoError(t, err)
+		require.Len(t, list.Items, 1)
+		id := list.Items[0].UserWord.ID
+
+		// 模拟已有复习记录：remember 1 / forget 2，1 小时前复习过。
+		w, err := repo.NewUserWordRepo(testDB).FindByID(ctx, id)
+		require.NoError(t, err)
+		w.ReviewCount, w.RememberCount, w.ForgetCount = 3, 1, 2
+		w.CurrentStreak = -1
+		reviewedAt := time.Now().Add(-time.Hour)
+		w.LastReviewedAt = &reviewedAt
+		w.UpdatedAt = time.Now()
+		require.NoError(t, repo.NewUserWordRepo(testDB).UpdateReviewCounters(ctx, w))
+
+		detail, err := svc.GetWord(ctx, id)
+		require.NoError(t, err)
+		// mastery = (1+1)/(3+2)×100 = 40；weight 与领域公式按当前时刻一致
+		// （两次取 now 的间隔远小于容差）。
+		assert.InDelta(t, 40.0, detail.MasteryScore, 1e-9)
+		assert.InDelta(t, w.ReviewWeight(time.Now()), detail.ReviewWeight, 0.01)
+
+		again, err := svc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 100})
+		require.NoError(t, err)
+		assert.InDelta(t, detail.ReviewWeight, again.Items[0].ReviewWeight, 0.01,
+			"列表与详情同口径动态计算")
 	})
 
 	t.Run("不存在或已软删除时返回未找到", func(t *testing.T) {

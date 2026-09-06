@@ -49,6 +49,19 @@ type ImportWordsResult struct {
 	Created int
 	// Updated 已存在、遇词次数被累计的词条数。
 	Updated int
+	// Items 逐词结果（与聚合后的输入单词一一对应），导入反馈的数据来源。
+	Items []ImportWordOutcome
+}
+
+// ImportWordOutcome 是单个输入单词的导入结果。
+type ImportWordOutcome struct {
+	// Word 归一后的单词。
+	Word string
+	// Count 该词本次计入的遇词次数。
+	Count int
+	// Created 报告该词命中的 user_words 行是否本次新建（false = 已存在并累计，
+	// 含软删除恢复）。
+	Created bool
 }
 
 // ListWordsRequest 是生词库列表用例的请求（api/words.md §3）。
@@ -76,6 +89,11 @@ type WordItem struct {
 	MeaningSource    domain.MeaningSource
 	// Phonetic 为展示音标（单值字段，优先英式、缺失回退美式）。
 	Phonetic string
+	// MasteryScore / ReviewWeight 为动态计算的派生指标（D011 不落库，
+	// 公式权威 docs/review/algorithm.md §3–§6），组装读模型时按当前时间
+	// 计算；JSON 契约的舍入由 DTO 层处理。
+	MasteryScore float64
+	ReviewWeight float64
 }
 
 // UpdateReviewMeaningRequest 是更新复习释义用例的请求。
@@ -117,6 +135,7 @@ func (s *Word) ImportWords(ctx context.Context, req ImportWordsRequest) (*Import
 	err := runReplayableTx(ctx, s.db, func(ctx context.Context, tx bun.Tx) error {
 		entryCounts := make(map[uuid.UUID]int, len(order))
 		entryOrder := make([]uuid.UUID, 0, len(order))
+		wordEntries := make(map[string]uuid.UUID, len(order))
 		for _, word := range order {
 			entry, err := s.dictionary.lookup(ctx, tx, word)
 			if err != nil {
@@ -126,6 +145,7 @@ func (s *Word) ImportWords(ctx context.Context, req ImportWordsRequest) (*Import
 				entryOrder = append(entryOrder, entry.ID)
 			}
 			entryCounts[entry.ID] += counts[word]
+			wordEntries[word] = entry.ID
 		}
 
 		now := time.Now()
@@ -142,7 +162,9 @@ func (s *Word) ImportWords(ctx context.Context, req ImportWordsRequest) (*Import
 			return err
 		}
 		var created, updated int
+		entryCreated := make(map[uuid.UUID]bool, len(results))
 		for _, r := range results {
+			entryCreated[r.DictionaryEntryID] = r.Created
 			if r.Created {
 				created++
 			} else {
@@ -150,6 +172,19 @@ func (s *Word) ImportWords(ctx context.Context, req ImportWordsRequest) (*Import
 			}
 		}
 		result.Created, result.Updated = created, updated
+
+		// 逐词结果按输入顺序输出，单词粒度（api/words.md §2）：命中词条
+		// 本次新建则该词记 created（归一到同一新建词条的多个词形都记
+		// created），已存在 / 恢复则记 updated；与行粒度的聚合统计计量
+		// 单位不同。
+		result.Items = make([]ImportWordOutcome, 0, len(order))
+		for _, word := range order {
+			result.Items = append(result.Items, ImportWordOutcome{
+				Word:    word,
+				Count:   counts[word],
+				Created: entryCreated[wordEntries[word]],
+			})
+		}
 		return nil
 	})
 	if err != nil {
@@ -264,6 +299,9 @@ func newWordItem(userWord *domain.UserWord, entry *domain.DictionaryEntry) *Word
 		EffectiveMeaning: meaning,
 		MeaningSource:    source,
 		Phonetic:         displayPhonetic(entry),
+		// 派生指标按当前时间计算（D011）：列表 / 详情的每次读取都是最新值。
+		MasteryScore: userWord.MasteryScore(),
+		ReviewWeight: userWord.ReviewWeight(time.Now()),
 	}
 }
 
