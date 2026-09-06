@@ -381,12 +381,13 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
         今天想复习多少个单词？
       </p>
 
-      <!-- 预设数量按钮 -->
+      <!-- 预设数量按钮：选中态经 aria-pressed 同步表达（交互与可访问性规范 §10.2，不只依赖颜色） -->
       <div class="mt-4 flex flex-wrap gap-2">
         <Button
           v-for="count in PRESET_COUNTS"
           :key="count"
           :variant="selectedCount === count && !customCountInput ? 'secondary' : 'ghost'"
+          :aria-pressed="selectedCount === count && !customCountInput"
           @click="selectPreset(count)"
         >
           {{ count }}
