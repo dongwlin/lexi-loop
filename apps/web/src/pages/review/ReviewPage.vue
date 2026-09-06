@@ -332,7 +332,7 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
 
 <template>
   <section class="rounded-card bg-surface p-6 shadow-surface">
-    <h1 class="text-lg font-semibold text-foreground">开始复习</h1>
+    <h1 tabindex="-1" class="text-lg font-semibold text-foreground">开始复习</h1>
 
     <!-- 加载恢复状态中 -->
     <div v-if="recoveryState === 'checking'" class="mt-4">

@@ -49,7 +49,7 @@ function handleContinue() {
 
 <template>
   <section class="rounded-card bg-surface p-6 shadow-surface">
-    <h1 class="text-lg font-semibold text-foreground">导入生词</h1>
+    <h1 tabindex="-1" class="text-lg font-semibold text-foreground">导入生词</h1>
 
     <!-- 输入模式：review-flow.md §2 -->
     <template v-if="isInputMode">

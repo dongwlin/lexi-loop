@@ -1,4 +1,7 @@
+import { nextTick } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
+
+import { isPageLevelNavigation } from '@/utils/isPageLevelNavigation'
 
 const BRAND = 'LexiLoop'
 
@@ -49,7 +52,15 @@ export const router = createRouter({
 })
 
 // 《前端交互与可访问性规范》§6.1：每次路由导航后同步更新 document.title。
-router.afterEach((to) => {
+// §5.3：页面级导航完成后把焦点移到新页面主标题（各页 h1 带 tabindex="-1"），
+// 兜底主内容入口；搜索 / 分页等局部 query 更新与初次加载不移动焦点。
+router.afterEach((to, from) => {
   const title = to.meta.title
   document.title = typeof title === 'string' ? title : BRAND
+  if (!isPageLevelNavigation(to, from)) return
+  void nextTick(() => {
+    const main = document.getElementById('main-content')
+    const target = main?.querySelector<HTMLElement>('h1') ?? main
+    target?.focus()
+  })
 })

@@ -185,7 +185,7 @@ watchEffect(() => {
 
     <!-- 页面级 Error：区分「不存在」（软删除 / 链接失效）与其他加载失败（§9.3） -->
     <template v-if="isNotFound">
-      <h1 class="mt-4 text-lg font-semibold text-foreground">没有找到这个单词</h1>
+      <h1 tabindex="-1" class="mt-4 text-lg font-semibold text-foreground">没有找到这个单词</h1>
       <p class="mt-2 text-sm text-muted-foreground">
         它可能已被删除，或链接不正确。重新导入同一单词可恢复其学习记录。
       </p>
@@ -206,7 +206,7 @@ watchEffect(() => {
     </template>
 
     <template v-else-if="isError">
-      <h1 class="mt-4 text-lg font-semibold text-foreground">单词详情</h1>
+      <h1 tabindex="-1" class="mt-4 text-lg font-semibold text-foreground">单词详情</h1>
       <p role="alert" class="mt-4 text-sm text-danger-text">
         {{ errorMessage }}
       </p>
@@ -222,7 +222,7 @@ watchEffect(() => {
 
     <!-- Loading：骨架形状接近最终结构（§9.1），仅首次加载展示 -->
     <template v-else-if="isPending">
-      <h1 class="mt-4 text-lg font-semibold text-foreground">单词详情</h1>
+      <h1 tabindex="-1" class="mt-4 text-lg font-semibold text-foreground">单词详情</h1>
       <p role="status" class="mt-2 text-sm text-muted-foreground">
         正在加载单词详情…
       </p>
@@ -239,7 +239,7 @@ watchEffect(() => {
 
     <template v-else-if="detail">
       <div class="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h1 class="break-words text-2xl font-semibold text-foreground">
+        <h1 tabindex="-1" class="break-words text-2xl font-semibold text-foreground">
           {{ detail.word }}
         </h1>
         <span v-if="detail.phonetic" class="text-sm text-muted-foreground">

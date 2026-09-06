@@ -4,7 +4,7 @@
 
 <template>
   <section class="rounded-card bg-surface p-6 shadow-surface">
-    <h1 class="text-lg font-semibold text-foreground">页面不存在</h1>
+    <h1 tabindex="-1" class="text-lg font-semibold text-foreground">页面不存在</h1>
     <p class="mt-2 text-sm text-muted-foreground">访问的地址不存在或已被移动。</p>
     <RouterLink
       to="/"

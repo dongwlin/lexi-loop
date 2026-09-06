@@ -57,7 +57,7 @@ function goToReview() {
 
 <template>
   <section class="rounded-card bg-surface p-6 shadow-surface">
-    <h1 class="text-lg font-semibold text-foreground">复习结果</h1>
+    <h1 tabindex="-1" class="text-lg font-semibold text-foreground">复习结果</h1>
 
     <!-- Session 不存在（含手工输入不存在的地址）：404 需先于通用 Error 判断 -->
     <template v-if="isPending">

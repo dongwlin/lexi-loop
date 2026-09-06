@@ -92,7 +92,7 @@ function goToPage(target: number) {
 
 <template>
   <section class="rounded-card bg-surface p-6 shadow-surface">
-    <h1 class="text-lg font-semibold text-foreground">生词库</h1>
+    <h1 tabindex="-1" class="text-lg font-semibold text-foreground">生词库</h1>
 
     <!-- 搜索：提交后才写入 URL，输入过程不触发请求 -->
     <form
