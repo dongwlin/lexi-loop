@@ -11,7 +11,7 @@ import { parsePositiveInt } from '@/utils/parsePositiveInt'
 // review-flow.md §4：生词库（搜索 / 分页 / 语义表格）。
 // 可分享状态写入 URL（前端应用架构规范 §6.2）：page 与 search 的权威来源是路由
 // query，输入框里未提交的值留在本地；默认值不写入 URL，保持分享链接干净。
-// 掌握度 / 优先级列依赖服务端契约扩展（README 待办），落地前不展示（D011）。
+// 掌握度 / 优先级为服务端动态计算的派生指标（D011），分别展示为百分比与权重数值。
 
 const PAGE_SIZE = 20
 
@@ -166,6 +166,8 @@ function goToPage(target: number) {
               class="h-5 flex-1 rounded-field bg-surface-tertiary motion-safe:animate-pulse"
             />
             <div
+              v-for="cell in 6"
+              :key="cell"
               class="h-5 w-10 rounded-field bg-surface-tertiary motion-safe:animate-pulse"
             />
           </div>
@@ -210,9 +212,21 @@ function goToPage(target: number) {
               </th>
               <th
                 scope="col"
-                class="py-2.5 pl-3 text-right font-medium whitespace-nowrap text-muted-foreground"
+                class="px-3 py-2.5 text-right font-medium whitespace-nowrap text-muted-foreground"
               >
                 忘记
+              </th>
+              <th
+                scope="col"
+                class="px-3 py-2.5 text-right font-medium whitespace-nowrap text-muted-foreground"
+              >
+                掌握度
+              </th>
+              <th
+                scope="col"
+                class="py-2.5 pl-3 text-right font-medium whitespace-nowrap text-muted-foreground"
+              >
+                优先级
               </th>
             </tr>
           </thead>
@@ -261,9 +275,19 @@ function goToPage(target: number) {
                 {{ row.rememberCount }}
               </td>
               <td
-                class="py-3 pl-3 text-right align-top text-muted-foreground tabular-nums"
+                class="px-3 py-3 text-right align-top text-muted-foreground tabular-nums"
               >
                 {{ row.forgetCount }}
+              </td>
+              <td
+                class="px-3 py-3 text-right align-top text-muted-foreground tabular-nums"
+              >
+                {{ row.masteryScore }}%
+              </td>
+              <td
+                class="py-3 pl-3 text-right align-top text-muted-foreground tabular-nums"
+              >
+                {{ row.reviewWeight }}
               </td>
             </tr>
           </tbody>

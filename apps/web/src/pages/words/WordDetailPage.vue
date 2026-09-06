@@ -21,8 +21,8 @@ import type { Meaning } from '@lexi-loop/api-client'
 
 // review-flow.md §5：单词详情。展示学习统计与生效释义（三层取值 custom ?? review ?? raw，
 // D007），自定义来源标注「自定义」；编辑复习释义走 PATCH customReviewMeaning（清空保存 =
-// null 清除并回退词典层），删除为软删除确认（D004，重新导入可恢复）。掌握度 / 优先级依赖
-// 服务端契约扩展（README 待办），落地前不展示（D011）。
+// null 清除并回退词典层），删除为软删除确认（D004，重新导入可恢复）。掌握度 / 优先级为
+// 服务端动态计算的派生指标（D011），分别展示为百分比与权重数值。
 
 const route = useRoute()
 const router = useRouter()
@@ -69,6 +69,8 @@ const stats = computed(() => {
     { label: '复习次数', value: String(word.reviewCount) },
     { label: '记得次数', value: String(word.rememberCount) },
     { label: '忘记次数', value: String(word.forgetCount) },
+    { label: '当前掌握度', value: `${word.masteryScore}%` },
+    { label: '当前复习优先级', value: String(word.reviewWeight) },
     { label: '上次复习', value: formatDateTime(word.lastReviewedAt) ?? '—' },
   ]
 })
@@ -289,7 +291,7 @@ watchEffect(() => {
 
       <hr class="my-6 border-t border-border" />
 
-      <!-- 学习统计（review-flow §5；无掌握度 / 优先级，D011 契约缺口） -->
+      <!-- 学习统计（review-flow §5；掌握度 / 优先级为 D011 服务端派生指标） -->
       <dl class="space-y-2.5 text-sm">
         <div
           v-for="stat in stats"
