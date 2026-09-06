@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { CheckCircle, RotateCcw } from 'lucide-vue-next'
 import { Button } from '@/components/ui'
+import { isApiError } from '@/lib/api'
 import { useReviewSessionQuery } from '@/features/review/api/queries'
 
 // review-flow.md §9：本轮复习结果（汇总 / 需要加强列表 / 再来一轮 / 回到生词库）。
@@ -30,8 +31,22 @@ const forgottenWords = computed(() =>
   (session.value?.items ?? []).filter((item) => item.result === 'forgotten'),
 )
 
-const errorMessage = computed(() =>
-  error.value instanceof Error ? error.value.message : '复习结果加载失败，请稍后重试',
+const isNotFound = computed(
+  () => isApiError(error.value) && error.value.httpStatus === 404,
+)
+
+// 服务端 message 面向排查（英文原文），界面按错误分类给可读文案。
+const errorMessage = computed(() => {
+  const err = error.value
+  if (isApiError(err)) {
+    if (err.kind === 'network' || err.kind === 'timeout') return '网络异常，请检查连接后重试。'
+    if (err.kind === 'http' && (err.httpStatus ?? 0) >= 500) return '服务暂时不可用，请稍后重试。'
+  }
+  return '复习结果加载失败，请稍后重试'
+})
+
+const notCompletedText = computed(() =>
+  session.value?.status === 'abandoned' ? '本轮复习已放弃。' : '该复习轮次尚未完成。',
 )
 
 function goToReview() {
@@ -44,9 +59,9 @@ function goToReview() {
   <section class="rounded-card bg-surface p-6 shadow-surface">
     <h1 class="text-lg font-semibold text-foreground">复习结果</h1>
 
-    <!-- Loading -->
-    <div v-if="isPending" class="mt-4">
-      <p role="status" class="text-sm text-muted-foreground">
+    <!-- Session 不存在（含手工输入不存在的地址）：404 需先于通用 Error 判断 -->
+    <template v-if="isPending">
+      <p role="status" class="mt-4 text-sm text-muted-foreground">
         正在加载复习结果…
       </p>
       <div aria-hidden="true" class="mt-4 space-y-4 py-1">
@@ -55,7 +70,20 @@ function goToReview() {
         <div class="h-5 w-32 rounded-field bg-surface-tertiary motion-safe:animate-pulse" />
         <div class="h-5 w-32 rounded-field bg-surface-tertiary motion-safe:animate-pulse" />
       </div>
-    </div>
+    </template>
+
+    <template v-else-if="isNotFound">
+      <p class="mt-4 text-sm text-muted-foreground">没有找到这轮复习。</p>
+      <div class="mt-4 flex gap-3">
+        <Button @click="goToReview">去复习</Button>
+        <RouterLink
+          to="/words"
+          class="inline-flex min-h-11 items-center justify-center rounded-control border border-border-strong bg-transparent px-4 py-2 text-sm font-medium text-foreground transition-colors duration-150 ease-out hover:bg-default"
+        >
+          回到生词库
+        </RouterLink>
+      </div>
+    </template>
 
     <!-- Error -->
     <template v-else-if="isError">
@@ -72,10 +100,10 @@ function goToReview() {
       </Button>
     </template>
 
-    <!-- Session 不存在或未完成 -->
+    <!-- Session 未完成 / 已放弃 -->
     <template v-else-if="session && session.status !== 'completed'">
       <p class="mt-4 text-sm text-muted-foreground">
-        该复习轮次尚未完成。
+        {{ notCompletedText }}
       </p>
       <div class="mt-4 flex gap-3">
         <Button @click="goToReview">去复习</Button>

@@ -50,8 +50,8 @@ import ThemeSwitcher from './ThemeSwitcher.vue'
         </div>
       </div>
     </header>
-    <!-- §6.1：唯一主内容 Landmark，skip link 目标。 -->
-    <main id="main-content" class="mx-auto w-full max-w-2xl flex-1 px-4 py-6">
+    <!-- §6.1：唯一主内容 Landmark，skip link 目标。tabindex=-1 使跳转后焦点真正落入主内容。 -->
+    <main id="main-content" tabindex="-1" class="mx-auto w-full max-w-2xl flex-1 px-4 py-6">
       <slot />
     </main>
   </div>

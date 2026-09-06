@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useQueryClient } from '@tanstack/vue-query'
 import { CheckCircle, XCircle } from 'lucide-vue-next'
 import { Button } from '@/components/ui'
+import { isApiError } from '@/lib/api'
 import { useStartReviewSessionMutation, useSubmitReviewResultMutation } from '@/features/review/api/mutations'
+import { reviewSessionQueryOptions } from '@/features/review/api/queries'
+import { wordsListQueryOptions } from '@/features/words/api/queries'
 import { formatMeanings } from '@/utils/formatMeanings'
+import { computeResumeProgress } from '@/utils/review-resume'
 import {
   clearReviewSnapshot,
   loadReviewSnapshot,
@@ -14,10 +19,12 @@ import {
 
 // review-flow.md §6–§8、§10：复习页。
 // 状态机 idle → recalling → revealed → answered → recalling → ... → finished（跳转结果页）。
-// 键盘操作 Space 揭示释义；1 / ← 不记得；2 / → 记得（§10）。
+// 键盘操作绑定在复习区域：Space 揭示释义；1 / ← 不记得；2 / → 记得（§10、§5.4）。
 // D010：进入时检测 active session，由用户选择继续 / 放弃；无 abandon 端点，MVP 只清本地快照。
+// 恢复检查复用 Feature 层查询（queryClient.fetchQuery），按 ApiError 区分 404 与瞬时失败。
 
 const router = useRouter()
+const queryClient = useQueryClient()
 
 // ---- 数量选择 ----
 
@@ -26,9 +33,9 @@ const selectedCount = ref<number>(30)
 const customCountInput = ref('')
 const customCountError = ref<string | null>(null)
 
-// 词库总数由服务端返回；开始后服务端按 min(count, available) 截断（D009）。
-// 页面在 count > totalCount 时给出提示，但不阻止开始。
-const totalCount = ref<number | null>(null)
+// 可复习生词量取自 GET /words 分页 total（服务端候选集同为 deleted_at IS NULL 的生词），
+// 仅用于开始前的 D009 提示；截断本身由服务端 min(count, available) 保证。
+const availableCount = ref<number | null>(null)
 
 function selectPreset(count: number) {
   selectedCount.value = count
@@ -56,23 +63,33 @@ function handleCountKeydown(event: KeyboardEvent) {
 
 // ---- Active session 恢复（D010） ----
 
-type RecoveryState = 'idle' | 'checking' | 'recoverable' | 'recovering'
+type RecoveryState = 'idle' | 'checking' | 'recoverable' | 'error'
 
 const recoveryState = ref<RecoveryState>('idle')
 const savedSnapshot = ref<ReviewSnapshot | null>(null)
-const savedProgress = ref<{ answered: number; total: number } | null>(null)
+const savedProgress = ref<{ answered: number; total: number; resumeIndex: number } | null>(null)
 
-const hasTruncationWarning = computed(() => {
-  if (totalCount.value === null) return false
-  return selectedCount.value > totalCount.value
-})
+// 开始前读取可复习生词量（D009 提示）；取不到就放弃提示，截断仍由服务端保证。
+async function loadAvailableCount() {
+  try {
+    const data = await queryClient.fetchQuery(wordsListQueryOptions({ page: 1, pageSize: 1 }))
+    availableCount.value = data.pagination.total
+  } catch {
+    // 网络等瞬时失败不阻塞页面，开始复习时由服务端截断兜底。
+  }
+}
 
-const truncatedCount = computed(() => {
-  if (totalCount.value === null) return selectedCount.value
-  return Math.min(selectedCount.value, totalCount.value)
-})
+const hasTruncationWarning = computed(() =>
+  availableCount.value !== null && selectedCount.value > availableCount.value,
+)
 
-// 检查是否有可恢复的 active session（进入时 + 路由变化）。
+const truncatedCount = computed(() =>
+  availableCount.value === null
+    ? selectedCount.value
+    : Math.min(selectedCount.value, availableCount.value),
+)
+
+// 进入页面时检查是否有可恢复的 active session（D010，由用户决定继续 / 放弃）。
 async function checkActiveSession() {
   const snapshot = loadReviewSnapshot()
   if (!snapshot) {
@@ -84,55 +101,76 @@ async function checkActiveSession() {
   savedSnapshot.value = snapshot
 
   try {
-    // useReviewSessionQuery 需要手动触发——直接用 queryClient 获取或 fetch
-    const response = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL || ''}/api/v1/reviews/${snapshot.sessionId}`,
-    )
-    if (!response.ok) throw new Error('fetch failed')
-    const body = (await response.json()) as { code: string; data?: { status: string; items?: Array<{ result: string }> } }
+    // 复用 Feature 层查询并强制取新：恢复检查不能拿到 30s 内的旧状态。
+    const session = await queryClient.fetchQuery({
+      ...reviewSessionQueryOptions(snapshot.sessionId),
+      staleTime: 0,
+    })
 
-    if (body.code !== 'OK' || !body.data) {
-      clearReviewSnapshot()
-      recoveryState.value = 'idle'
-      return
-    }
-
-    const status = body.data.status
-    if (status === 'completed') {
-      clearReviewSnapshot()
+    if (session.status === 'completed') {
+      discardSnapshot()
       void router.push({ name: 'review-result', params: { session: snapshot.sessionId } })
       return
     }
 
-    if (status !== 'active') {
-      clearReviewSnapshot()
+    if (session.status !== 'active') {
+      // abandoned：服务端轮次已废弃，本地快照失效。
+      discardSnapshot()
       recoveryState.value = 'idle'
       return
     }
 
-    // 计算已回答数量：服务端 items 中 result !== 'pending' 的数量
-    const answered = (body.data.items ?? []).filter(
-      (item) => item.result !== 'pending',
-    ).length
-    savedProgress.value = { answered, total: snapshot.totalCount }
+    // 服务端逐词结果按 word 对齐本地快照，恢复到首个未答项（review-flow §6「回到原进度」）。
+    const progress = computeResumeProgress(
+      snapshot.items.map((item) => item.word),
+      session.items,
+    )
+    savedProgress.value = {
+      answered: progress
+        ? progress.answered
+        : session.items.filter((item) => item.result !== 'pending').length,
+      total: snapshot.totalCount,
+      resumeIndex: progress ? progress.firstPendingIndex : 0,
+    }
     recoveryState.value = 'recoverable'
-  } catch {
-    clearReviewSnapshot()
-    recoveryState.value = 'idle'
+  } catch (err) {
+    // 404：session 在服务端已不存在，快照失效；其余（网络 / 超时 / 5xx）为瞬时失败，
+    // 保留快照供重试——不能因一次请求失败销毁恢复入口。
+    if (isApiError(err) && err.httpStatus === 404) {
+      discardSnapshot()
+      recoveryState.value = 'idle'
+      return
+    }
+    recoveryState.value = 'error'
   }
 }
 
-function handleResume() {
-  if (!savedSnapshot.value || !savedProgress.value) return
-  const snapshot = savedSnapshot.value
-  // 恢复时 count 等于 snapshot.totalCount（服务端返回的实际抽取数）
-  startSessionDirectly(snapshot.totalCount, snapshot)
-}
-
-function handleAbandon() {
+function discardSnapshot() {
   clearReviewSnapshot()
   savedSnapshot.value = null
   savedProgress.value = null
+}
+
+function handleResume() {
+  const snapshot = savedSnapshot.value
+  if (!snapshot || snapshot.items.length === 0) {
+    discardSnapshot()
+    recoveryState.value = 'idle'
+    return
+  }
+  // 从首个未答项续答（review-flow §6）；对齐失败时回退第 1 题，已答题的重复提交
+  // 经服务端幂等短路不重复计数（api/reviews.md §3），只是多做无效操作。
+  const resumeIndex = savedProgress.value?.resumeIndex ?? 0
+  items.value = snapshot.items
+  sessionId.value = snapshot.sessionId
+  currentIndex.value = Math.min(Math.max(resumeIndex, 0), snapshot.items.length - 1)
+  currentMode.value = 'recalling'
+  recoveryState.value = 'idle'
+  void nextTick(() => focusReviewArea())
+}
+
+function handleAbandon() {
+  discardSnapshot()
   recoveryState.value = 'idle'
 }
 
@@ -143,36 +181,25 @@ const isStarting = computed(() => startMutation.isPending.value)
 const startError = ref<string | null>(null)
 
 async function handleStart() {
-  await startSessionDirectly(selectedCount.value)
+  // 自定义输入未点「确认」就直接开始时，先应用输入值，避免按旧预设数量开局。
+  if (customCountInput.value.trim()) {
+    applyCustomCount()
+    if (customCountError.value) return
+  }
+  await startNewSession(selectedCount.value)
 }
 
-async function startSessionDirectly(
-  count: number,
-  existingSnapshot?: ReviewSnapshot,
-) {
+async function startNewSession(count: number) {
   startError.value = null
-
-  // 如果有 existingSnapshot 且 count 匹配，直接用它
-  if (existingSnapshot && existingSnapshot.totalCount === count) {
-    const snapshot = existingSnapshot
-    items.value = snapshot.items
-    currentIndex.value = snapshot.items.length > 0 ? 0 : -1
-    currentMode.value = 'recalling'
-    totalCount.value = snapshot.totalCount
-    await nextTick()
-    focusReviewArea()
-    return
-  }
 
   try {
     const response = await startMutation.mutateAsync({ count })
 
     items.value = response.items
+    sessionId.value = response.sessionId
     currentIndex.value = response.items.length > 0 ? 0 : -1
-    totalCount.value = response.totalCount
     currentMode.value = response.items.length > 0 ? 'recalling' : 'idle'
 
-    // 保存快照
     saveReviewSnapshot({
       sessionId: response.sessionId,
       totalCount: response.totalCount,
@@ -182,9 +209,18 @@ async function startSessionDirectly(
     await nextTick()
     focusReviewArea()
   } catch (err) {
-    startError.value =
-      err instanceof Error ? err.message : '开始复习失败，请稍后重试'
+    startError.value = describeStartError(err)
   }
+}
+
+// 服务端 message 面向排查（英文原文），界面按错误分类给可读文案。
+function describeStartError(err: unknown): string {
+  if (isApiError(err)) {
+    if (err.code === 'BASE.BIZ.USER_DISABLED') return '当前没有可复习的生词，请先导入生词。'
+    if (err.kind === 'network' || err.kind === 'timeout') return '网络异常，请检查连接后重试。'
+    if (err.kind === 'http' && (err.httpStatus ?? 0) >= 500) return '服务暂时不可用，请稍后重试。'
+  }
+  return '开始复习失败，请稍后重试'
 }
 
 // ---- 复习状态机 ----
@@ -194,7 +230,7 @@ type ReviewMode = 'idle' | 'recalling' | 'revealed'
 const currentMode = ref<ReviewMode>('idle')
 const items = ref<ReviewSnapshot['items']>([])
 const currentIndex = ref(0)
-const answeredCount = ref(0)
+const sessionId = ref<string | null>(null)
 
 const currentItem = computed(() => {
   if (currentIndex.value < 0 || currentIndex.value >= items.value.length) return null
@@ -206,9 +242,12 @@ const currentMeaning = computed(() => {
   return formatMeanings(currentItem.value.effectiveReviewMeaning)
 })
 
-function handleReveal() {
+async function handleReveal() {
   if (currentMode.value !== 'recalling' || !currentItem.value) return
   currentMode.value = 'revealed'
+  // 揭示后「查看释义」按钮随分支卸载会把焦点丢到 body，移回复习区域保住键盘操作（§5.3）。
+  await nextTick()
+  focusReviewArea()
 }
 
 const submitMutation = useSubmitReviewResultMutation()
@@ -216,18 +255,15 @@ const isSubmitting = computed(() => submitMutation.isPending.value)
 
 async function handleAnswer(result: 'remembered' | 'forgotten') {
   if (currentMode.value !== 'revealed' || !currentItem.value || isSubmitting.value) return
-
-  const snapshot = loadReviewSnapshot()
-  if (!snapshot) return
+  if (!sessionId.value) return
 
   try {
     await submitMutation.mutateAsync({
-      sessionId: snapshot.sessionId,
+      sessionId: sessionId.value,
       itemId: currentItem.value.itemId,
       result,
     })
 
-    answeredCount.value++
     const nextIndex = currentIndex.value + 1
 
     if (nextIndex < items.value.length) {
@@ -240,7 +276,7 @@ async function handleAnswer(result: 'remembered' | 'forgotten') {
       clearReviewSnapshot()
       void router.push({
         name: 'review-result',
-        params: { session: snapshot.sessionId },
+        params: { session: sessionId.value },
       })
     }
   } catch {
@@ -250,14 +286,21 @@ async function handleAnswer(result: 'remembered' | 'forgotten') {
 
 // ---- 键盘操作 ----
 
+// 绑定在复习区域元素上（代替 document 级监听）：快捷键只在复习区域持有焦点时生效，
+// 不抢占页头导航 / 主题菜单等处的按键（交互与可访问性规范 §5.4）。
 function handleKeydown(event: KeyboardEvent) {
-  // 只在复习阶段响应快捷键，忽略输入框焦点
   if (currentMode.value === 'idle') return
-  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return
+
+  // 焦点落在按钮 / 链接等控件上时，Space / Enter 保留原生激活行为，不拦截。
+  const target = event.target
+  const onControl =
+    target instanceof HTMLElement &&
+    target.closest('button, a, input, textarea, select, [contenteditable]')
 
   if (event.key === ' ' || event.code === 'Space') {
+    if (onControl) return
     event.preventDefault()
-    handleReveal()
+    void handleReveal()
   } else if (
     currentMode.value === 'revealed' &&
     (event.key === '1' || event.key === 'ArrowLeft')
@@ -274,12 +317,8 @@ function handleKeydown(event: KeyboardEvent) {
 }
 
 onMounted(() => {
-  document.addEventListener('keydown', handleKeydown)
   void checkActiveSession()
-})
-
-onUnmounted(() => {
-  document.removeEventListener('keydown', handleKeydown)
+  void loadAvailableCount()
 })
 
 function focusReviewArea() {
@@ -300,6 +339,16 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
       <p role="status" class="text-sm text-muted-foreground">
         正在检查复习进度…
       </p>
+    </div>
+
+    <!-- 恢复检查失败（瞬时错误：快照保留，可重试） -->
+    <div v-else-if="recoveryState === 'error'" class="mt-4">
+      <p role="alert" class="text-sm text-danger-text">
+        检查复习进度失败，请重试。
+      </p>
+      <Button variant="outline" class="mt-3" @click="checkActiveSession">
+        重试
+      </Button>
     </div>
 
     <!-- 可恢复的 active session -->
@@ -361,9 +410,9 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
         </Button>
       </div>
 
-      <!-- 截断提示（D009） -->
+      <!-- 截断提示（D009）：开始前提示可用量不足，截断由服务端 min(count, available) 保证 -->
       <p v-if="hasTruncationWarning" class="mt-3 text-sm text-muted-foreground">
-        当前只有 {{ totalCount }} 个可复习生词，本轮将复习全部 {{ truncatedCount }} 个。
+        当前只有 {{ availableCount }} 个可复习生词，本轮将复习全部 {{ truncatedCount }} 个。
       </p>
 
       <!-- 错误提示 -->
@@ -388,11 +437,12 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
         {{ currentIndex + 1 }} / {{ items.length }}
       </p>
 
-      <!-- 单词展示区 -->
+      <!-- 单词展示区：键盘快捷键绑定在此区域（§5.4 作用域），焦点经 tabindex=-1 承接 -->
       <div
         ref="reviewAreaRef"
         tabindex="-1"
         class="mt-8 flex flex-col items-center gap-6 text-center outline-hidden"
+        @keydown="handleKeydown"
       >
         <h2 class="break-words text-3xl font-semibold text-foreground">
           {{ currentItem.word }}
@@ -414,7 +464,7 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
         <!-- revealed：显示释义 + 作答按钮 -->
         <template v-else-if="currentMode === 'revealed'">
           <p class="text-base text-foreground">
-            {{ currentMeaning || '暂无释义' }}
+            {{ currentMeaning }}
           </p>
           <div class="mt-4 flex gap-4">
             <Button
