@@ -1,0 +1,20 @@
+{
+  "name": "@lexi-loop/api-client",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "node scripts/unwrap-envelope.mjs && orval --config ./orval.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run"
+  },
+  "devDependencies": {
+    "orval": "^8.28.1",
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.11"
+  }
+}
