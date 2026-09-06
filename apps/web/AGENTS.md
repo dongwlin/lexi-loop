@@ -2,9 +2,9 @@
 
 `apps/web` 是 LexiLoop 的 Vue 3 + TypeScript + Vite 前端应用。本文件是 web 子树内 Agent 的补充工作指引；仓库级纪律（改动前读 agent-log、冲突裁决、改动后记录）以根目录 [AGENTS.md](../../AGENTS.md) 为准，前端目录结构与职责权威见 [docs/specs/frontend/前端应用架构规范.md](../../docs/specs/frontend/前端应用架构规范.md)。本文件不维护 schema、公式或决策结论，只引用。
 
-## 当前状态：骨架就绪，导入页与生词库已落地
+## 当前状态：骨架就绪，导入页 / 生词库 / 生词详情已落地
 
-工程骨架（Vue 3 + vue-router + Pinia + TanStack Query + Tailwind CSS v4 + Reka UI / Radix Colors + Storybook 10）、设计系统主题层（`src/styles/`，Light / Dark / System）、API Client 装配（workspace 包 [`packages/api-client`](../../packages/api-client/)：Orval 生成请求函数与 DTO 类型 + 手写 mutator 统一传输、`{code, message, data}` 解包与 `ApiError` 分类；web 侧装配点为 `src/lib/api.ts`）、Feature 层（`src/features/words/`、`src/features/review/` 的 keys / queries / mutations）均已就绪；四个路由页面中导入页 `/import` 与生词库 `/words` 已完整落地，生词详情 / 复习 / 复习结果页仍为占位卡片。下一步清单（含服务端契约缺口登记）以 [README.md](README.md) 为准——完成里程碑后同步更新两处，避免状态失真。
+工程骨架（Vue 3 + vue-router + Pinia + TanStack Query + Tailwind CSS v4 + Reka UI / Radix Colors + Storybook 10）、设计系统主题层（`src/styles/`，Light / Dark / System）、API Client 装配（workspace 包 [`packages/api-client`](../../packages/api-client/)：Orval 生成请求函数与 DTO 类型 + 手写 mutator 统一传输、`{code, message, data}` 解包与 `ApiError` 分类；web 侧装配点为 `src/lib/api.ts`）、Feature 层（`src/features/words/`、`src/features/review/` 的 keys / queries / mutations）均已就绪；四个路由页面中导入页 `/import`、生词库 `/words` 与生词详情 `/words/:id` 已完整落地，复习 / 复习结果页仍为占位卡片。下一步清单（含服务端契约缺口登记）以 [README.md](README.md) 为准——完成里程碑后同步更新两处，避免状态失真。
 
 改动本子树任何代码前：先读 [docs/agent-log/](../../docs/agent-log/) 当月文件的最近记录了解上下文，再核对下表对应文档与当前代码。
 
@@ -37,7 +37,7 @@ pnpm -F @lexi-loop/api-client generate  # 后端契约变更（docs/openapi/ 更
 pnpm -F @lexi-loop/api-client test:run  # api-client mutator / 生成端点单测
 ```
 
-纯逻辑单元测试已覆盖 `lib/env`、`lib/storage/local-storage`、`stores/theme`、`utils/parseImportText` 与两个 Feature 的 query keys；组件 / 页面级测试待质量设施（jsdom + Testing Library、MSW、Playwright 等，见 README 待办与《前端技术栈》§10/§11）落地后补——设施未引入不构成跳过纯逻辑单测的理由。
+纯逻辑单元测试已覆盖 `lib/env`、`lib/storage/local-storage`、`stores/theme`、`utils/`（parseImportText / buildPageItems / parsePositiveInt / formatMeanings / meaningText / formatDateTime）与两个 Feature 的 query keys；组件 / 页面级测试待质量设施（jsdom + Testing Library、MSW、Playwright 等，见 README 待办与《前端技术栈》§10/§11）落地后补——设施未引入不构成跳过纯逻辑单测的理由。
 
 ## 架构与实现要点
 
