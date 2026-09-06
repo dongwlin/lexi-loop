@@ -1,0 +1,17 @@
+/*
+ * 全局样式入口（前端应用架构规范 §4.8）：只在应用入口引入一次。
+ * reset 由 Tailwind preflight 提供，Design Token 见 ./theme.css。
+ */
+@import 'tailwindcss';
+@import './theme.css';
+
+/* 主题类挂在 html（.light / .dark，设计系统方案 §11）；dark: 变体只保留给
+ * 确实需要不同行为的元素（如图片亮度），常规表面一律走语义 Token。 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  body {
+    background: var(--background);
+    color: var(--foreground);
+  }
+}

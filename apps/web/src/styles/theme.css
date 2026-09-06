@@ -1,0 +1,174 @@
+/*
+ * Design Token 层（设计系统方案 §5）：Radix 色阶 → Semantic Tokens → Tailwind Utilities。
+ * 组件只使用 bg-surface / text-foreground 等语义类，不直接引用色板或具体色值。
+ */
+
+/* 浅色文件必须写在深色文件之前：浅色 :root 与深色 .dark 对同一根元素同时匹配，
+ * 覆盖关系完全由源顺序决定（设计系统方案 §5.2）。 */
+@import "@radix-ui/colors/gray.css";
+@import "@radix-ui/colors/gray-dark.css";
+@import "@radix-ui/colors/blue.css";
+@import "@radix-ui/colors/blue-dark.css";
+@import "@radix-ui/colors/green.css";
+@import "@radix-ui/colors/green-dark.css";
+@import "@radix-ui/colors/amber.css";
+@import "@radix-ui/colors/amber-dark.css";
+@import "@radix-ui/colors/red.css";
+@import "@radix-ui/colors/red-dark.css";
+
+@layer base {
+  :root,
+  .light,
+  .dark {
+    --foreground: var(--gray-12);
+    --muted-foreground: var(--gray-11);
+
+    --surface-secondary: var(--gray-3);
+    --surface-tertiary: var(--gray-4);
+    --surface-hover: var(--gray-3);
+    --surface-active: var(--gray-4);
+
+    --default: var(--gray-3);
+    --default-hover: var(--gray-4);
+    --default-foreground: var(--foreground);
+
+    --border: var(--gray-6);
+    --border-hover: var(--gray-7);
+    --border-strong: var(--gray-10);
+    --field-border: var(--border-strong);
+
+    --primary: #0072e2;
+    --primary-hover: #0068d8;
+    --primary-active: #005fcd;
+    --primary-foreground: #ffffff;
+    --primary-subtle: var(--blue-3);
+    --primary-subtle-hover: var(--blue-4);
+    --primary-text: color-mix(in srgb, var(--blue-11) 80%, var(--blue-12) 20%);
+
+    --success: var(--green-9);
+    --success-foreground: #111111;
+    --success-subtle: var(--green-3);
+    --success-text: color-mix(in srgb, var(--green-11) 80%, var(--green-12) 20%);
+
+    --warning: var(--amber-9);
+    --warning-foreground: #111111;
+    --warning-subtle: var(--amber-3);
+    --warning-text: color-mix(in srgb, var(--amber-11) 80%, var(--amber-12) 20%);
+
+    --danger: color-mix(in srgb, var(--red-9) 85%, black 15%);
+    --danger-hover: color-mix(in srgb, var(--red-9) 78%, black 22%);
+    --danger-foreground: #ffffff;
+    --danger-subtle: var(--red-3);
+    --danger-subtle-hover: var(--red-4);
+    --danger-text: color-mix(in srgb, var(--red-11) 80%, var(--red-12) 20%);
+
+    --ring: var(--blue-11);
+  }
+
+  :root,
+  .light {
+    color-scheme: light;
+
+    --background: #f5f5f5;
+    --surface: #ffffff;
+    --overlay: #ffffff;
+    --field: #ffffff;
+    --field-hover: var(--gray-2);
+    --backdrop: rgb(0 0 0 / 40%);
+
+    --surface-shadow: 0 1px 2px rgb(0 0 0 / 6%),
+      0 2px 6px rgb(0 0 0 / 4%);
+    --overlay-shadow: 0 4px 12px rgb(0 0 0 / 8%),
+      0 12px 28px rgb(0 0 0 / 10%);
+    --field-shadow: 0 1px 2px rgb(0 0 0 / 6%);
+  }
+
+  .dark {
+    color-scheme: dark;
+
+    --background: #0b0b0d;
+    --surface: var(--gray-2);
+    --overlay: var(--gray-3);
+    --field: var(--gray-3);
+    --field-hover: var(--gray-4);
+    --backdrop: rgb(0 0 0 / 60%);
+
+    --surface-shadow: 0 0 0 0 transparent;
+    --overlay-shadow: inset 0 0 0 1px rgb(255 255 255 / 10%);
+    --field-shadow: 0 0 0 0 transparent;
+  }
+}
+
+/* @theme inline：utility 在使用位置解析当前主题的语义变量（设计系统方案 §5.3）。 */
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-tertiary: var(--surface-tertiary);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-active: var(--surface-active);
+  --color-overlay: var(--overlay);
+  --color-backdrop: var(--backdrop);
+
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-default: var(--default);
+  --color-default-hover: var(--default-hover);
+  --color-default-foreground: var(--default-foreground);
+
+  --color-border: var(--border);
+  --color-border-hover: var(--border-hover);
+  --color-border-strong: var(--border-strong);
+  --color-field: var(--field);
+  --color-field-hover: var(--field-hover);
+  --color-field-border: var(--field-border);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-primary-subtle-hover: var(--primary-subtle-hover);
+  --color-primary-text: var(--primary-text);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-subtle: var(--success-subtle);
+  --color-success-text: var(--success-text);
+
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-warning-text: var(--warning-text);
+
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-danger-subtle-hover: var(--danger-subtle-hover);
+  --color-danger-text: var(--danger-text);
+
+  --color-ring: var(--ring);
+
+  --shadow-surface: var(--surface-shadow);
+  --shadow-overlay: var(--overlay-shadow);
+  --shadow-field: var(--field-shadow);
+}
+
+@theme {
+  /* 圆角按组件角色命名（设计系统方案 §6.1），不覆盖 Tailwind 内置的 rounded-sm/md/lg。 */
+  --radius-control: 1.5rem;
+  --radius-field: 0.75rem;
+  --radius-item: 0.5rem;
+  --radius-popover: 1rem;
+  --radius-card: 1.5rem;
+  --radius-dialog: 1.5rem;
+
+  /* 系统无衬线字体栈并补齐中文回退（设计系统方案 §6.3）。 */
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Noto Sans CJK SC", sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji";
+}
