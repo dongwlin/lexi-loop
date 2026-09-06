@@ -11,6 +11,9 @@ pnpm preview    # 预览生产构建
 pnpm typecheck  # vue-tsc 类型检查
 pnpm test       # vitest（watch）
 pnpm test:run   # vitest（单次执行）
+
+pnpm storybook        # Storybook 组件工作台（localhost:6006）
+pnpm storybook:build  # Storybook 静态构建（产物 storybook-static/，不入库）
 ```
 
 ## API Client
@@ -23,7 +26,7 @@ MVP 服务端暂无认证端点；认证落地后在 `src/lib/api.ts` 注入 `ge
 
 ## 结构
 
-按《前端应用架构规范》§3 组织：`src/app/` 应用装配（根组件、显式路由表、providers / pinia / query client 一次性安装），`src/pages/` 路由页面（当前为骨架占位，页面结构见 [docs/frontend/review-flow.md](../../docs/frontend/review-flow.md) §1），`src/components/ui/` 业务无关基础组件（Button，配方见《Vue 组件设计系统方案》§8.1），`src/components/layout/` 跨页面布局（AppShell），`src/stores/` 跨页面客户端状态，`src/lib/` 基础设施适配（env / api / storage），`src/styles/` 设计系统主题层（Tailwind CSS v4 + Radix Colors，见《Vue 组件设计系统方案》）。业务能力出现时按 Feature 组织进 `src/features/`。
+按《前端应用架构规范》§3 组织：`src/app/` 应用装配（根组件、显式路由表、providers / pinia / query client 一次性安装），`src/pages/` 路由页面（当前为骨架占位，页面结构见 [docs/frontend/review-flow.md](../../docs/frontend/review-flow.md) §1），`src/components/ui/` 业务无关基础组件——每个组件独立文件夹（`button/Button.vue` + 同目录 Story），经 `components/ui/index.ts` 统一导出（Button 配方见《Vue 组件设计系统方案》§8.1），`src/components/layout/` 跨页面布局（AppShell），`src/stores/` 跨页面客户端状态，`src/lib/` 基础设施适配（env / api / storage），`src/styles/` 设计系统主题层（Tailwind CSS v4 + Radix Colors，见《Vue 组件设计系统方案》）。业务能力出现时按 Feature 组织进 `src/features/`。
 
 主题偏好为 Light / Dark / System（《Vue 组件设计系统方案》§11）：偏好持久化在 `localStorage`（`lexi-loop.theme`），解析后的主题类互斥挂在 `<html>`，`main.ts` 在应用挂载前初始化。
 
@@ -49,5 +52,5 @@ MVP 完成度评估（2026-09-06）：工程骨架、设计系统主题层、API
 
 ### 质量与品牌
 
-- [ ] 引入剩余质量设施：ESLint + Prettier、MSW、Storybook、Playwright、组件测试环境（jsdom + Testing Library）等（见《前端技术栈》§10/§11；Vitest 与 Vue Router / Pinia / TanStack Query / Tailwind CSS v4 / Reka UI + Radix Colors 已随骨架引入）
+- [ ] 引入剩余质量设施：ESLint + Prettier、MSW、Playwright、组件测试环境（jsdom + Testing Library）、`@storybook/addon-vitest` 与 `addon-a11y` 等（见《前端技术栈》§10/§11；Vitest 与 Vue Router / Pinia / TanStack Query / Tailwind CSS v4 / Reka UI + Radix Colors 已随骨架引入，Storybook 10 + `@storybook/vue3-vite` 与 Button Story 已落地）
 - [ ] 品牌设计产出 favicon 后放入 `public/`，并在 `index.html` 补 `<link rel="icon">`（create-vite 模板 favicon 已删除）

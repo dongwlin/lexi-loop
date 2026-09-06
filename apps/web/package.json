@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "storybook": "storybook dev -p 6006",
+    "storybook:build": "storybook build"
   },
   "dependencies": {
     "@lexi-loop/api-client": "workspace:*",
@@ -23,9 +25,11 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
+    "@storybook/vue3-vite": "^10.6.0",
     "@types/node": "^24.13.3",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/tsconfig": "^0.9.1",
+    "storybook": "^10.6.0",
     "typescript": "~6.0.2",
     "vite": "^8.2.2",
     "vitest": "^4.1.11",
