@@ -1,0 +1,11 @@
+{
+  "name": "lexi-loop",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@11.13.1",
+  "scripts": {
+    "dev": "pnpm -F @lexi-loop/web dev",
+    "build": "pnpm -F @lexi-loop/web build",
+    "typecheck": "pnpm -F @lexi-loop/web typecheck"
+  }
+}
