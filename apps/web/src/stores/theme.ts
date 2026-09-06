@@ -56,7 +56,9 @@ function systemPrefersDark(): ResolvedTheme {
   if (typeof globalThis.matchMedia !== 'function') {
     return 'light'
   }
-  return globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  return globalThis.matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light'
 }
 
 export const useThemeStore = defineStore('theme', () => {

@@ -5,7 +5,10 @@ import { useQueryClient } from '@tanstack/vue-query'
 import { CheckCircle, XCircle } from 'lucide-vue-next'
 import { Button } from '@/components/ui'
 import { isApiError } from '@/lib/api'
-import { useStartReviewSessionMutation, useSubmitReviewResultMutation } from '@/features/review/api/mutations'
+import {
+  useStartReviewSessionMutation,
+  useSubmitReviewResultMutation,
+} from '@/features/review/api/mutations'
 import { reviewSessionQueryOptions } from '@/features/review/api/queries'
 import { wordsListQueryOptions } from '@/features/words/api/queries'
 import { formatMeanings } from '@/utils/formatMeanings'
@@ -83,20 +86,27 @@ type RecoveryState = 'idle' | 'checking' | 'recoverable' | 'error'
 
 const recoveryState = ref<RecoveryState>('idle')
 const savedSnapshot = ref<ReviewSnapshot | null>(null)
-const savedProgress = ref<{ answered: number; total: number; resumeIndex: number } | null>(null)
+const savedProgress = ref<{
+  answered: number
+  total: number
+  resumeIndex: number
+} | null>(null)
 
 // 开始前读取可复习生词量（D009 提示）；取不到就放弃提示，截断仍由服务端保证。
 async function loadAvailableCount() {
   try {
-    const data = await queryClient.fetchQuery(wordsListQueryOptions({ page: 1, pageSize: 1 }))
+    const data = await queryClient.fetchQuery(
+      wordsListQueryOptions({ page: 1, pageSize: 1 }),
+    )
     availableCount.value = data.pagination.total
   } catch {
     // 网络等瞬时失败不阻塞页面，开始复习时由服务端截断兜底。
   }
 }
 
-const hasTruncationWarning = computed(() =>
-  availableCount.value !== null && selectedCount.value > availableCount.value,
+const hasTruncationWarning = computed(
+  () =>
+    availableCount.value !== null && selectedCount.value > availableCount.value,
 )
 
 const truncatedCount = computed(() =>
@@ -125,7 +135,10 @@ async function checkActiveSession() {
 
     if (session.status === 'completed') {
       discardSnapshot()
-      void router.push({ name: 'review-result', params: { session: snapshot.sessionId } })
+      void router.push({
+        name: 'review-result',
+        params: { session: snapshot.sessionId },
+      })
       return
     }
 
@@ -234,9 +247,12 @@ async function startNewSession(count: number) {
 // 服务端 message 面向排查（英文原文），界面按错误分类给可读文案。
 function describeStartError(err: unknown): string {
   if (isApiError(err)) {
-    if (err.code === 'BASE.BIZ.USER_DISABLED') return '当前没有可复习的生词，请先导入生词。'
-    if (err.kind === 'network' || err.kind === 'timeout') return '网络异常，请检查连接后重试。'
-    if (err.kind === 'http' && (err.httpStatus ?? 0) >= 500) return '服务暂时不可用，请稍后重试。'
+    if (err.code === 'BASE.BIZ.USER_DISABLED')
+      return '当前没有可复习的生词，请先导入生词。'
+    if (err.kind === 'network' || err.kind === 'timeout')
+      return '网络异常，请检查连接后重试。'
+    if (err.kind === 'http' && (err.httpStatus ?? 0) >= 500)
+      return '服务暂时不可用，请稍后重试。'
   }
   return '开始复习失败，请稍后重试'
 }
@@ -249,7 +265,8 @@ const currentIndex = ref(0)
 const sessionId = ref<string | null>(null)
 
 const currentItem = computed(() => {
-  if (currentIndex.value < 0 || currentIndex.value >= items.value.length) return null
+  if (currentIndex.value < 0 || currentIndex.value >= items.value.length)
+    return null
   return items.value[currentIndex.value]
 })
 
@@ -271,7 +288,12 @@ const submitMutation = useSubmitReviewResultMutation()
 const isSubmitting = computed(() => submitMutation.isPending.value)
 
 async function handleAnswer(result: 'remembered' | 'forgotten') {
-  if (currentMode.value !== 'revealed' || !currentItem.value || isSubmitting.value) return
+  if (
+    currentMode.value !== 'revealed' ||
+    !currentItem.value ||
+    isSubmitting.value
+  )
+    return
   if (!sessionId.value) return
 
   try {
@@ -310,7 +332,8 @@ function handleKeydown(event: KeyboardEvent) {
   const target = event.target
   const onControl =
     target instanceof HTMLElement &&
-    target.closest('button, a, input, textarea, select, [contenteditable]') !== null
+    target.closest('button, a, input, textarea, select, [contenteditable]') !==
+      null
 
   const action = resolveReviewKeyAction(
     { key: event.key, code: event.code },
@@ -340,12 +363,13 @@ function focusReviewArea() {
 }
 
 const reviewAreaRef = ref<HTMLElement | null>(null)
-
 </script>
 
 <template>
   <section class="rounded-card bg-surface p-6 shadow-surface">
-    <h1 tabindex="-1" class="text-lg font-semibold text-foreground">开始复习</h1>
+    <h1 tabindex="-1" class="text-lg font-semibold text-foreground">
+      开始复习
+    </h1>
 
     <!-- 加载恢复状态中 -->
     <div v-if="recoveryState === 'checking'" class="mt-4">
@@ -365,9 +389,13 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
     </div>
 
     <!-- 可恢复的 active session -->
-    <div v-else-if="recoveryState === 'recoverable' && savedProgress" class="mt-4">
+    <div
+      v-else-if="recoveryState === 'recoverable' && savedProgress"
+      class="mt-4"
+    >
       <p class="text-sm text-foreground">
-        上次复习未完成（{{ savedProgress.answered }} / {{ savedProgress.total }}）。
+        上次复习未完成（{{ savedProgress.answered }} /
+        {{ savedProgress.total }}）。
       </p>
       <div class="mt-4 flex gap-3">
         <Button @click="handleResume">继续复习</Button>
@@ -377,16 +405,16 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
 
     <!-- 设置阶段：数量选择 -->
     <template v-else-if="currentMode === 'idle'">
-      <p class="mt-4 text-sm text-muted-foreground">
-        今天想复习多少个单词？
-      </p>
+      <p class="mt-4 text-sm text-muted-foreground">今天想复习多少个单词？</p>
 
       <!-- 预设数量按钮：选中态经 aria-pressed 同步表达（交互与可访问性规范 §10.2，不只依赖颜色） -->
       <div class="mt-4 flex flex-wrap gap-2">
         <Button
           v-for="count in PRESET_COUNTS"
           :key="count"
-          :variant="selectedCount === count && !customCountInput ? 'secondary' : 'ghost'"
+          :variant="
+            selectedCount === count && !customCountInput ? 'secondary' : 'ghost'
+          "
           :aria-pressed="selectedCount === count && !customCountInput"
           @click="selectPreset(count)"
         >
@@ -406,11 +434,15 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
             type="number"
             min="1"
             placeholder="例如 25"
-            class="mt-2 w-full min-h-11 rounded-field border border-field-border bg-field px-3 py-2 text-sm text-foreground shadow-field placeholder:text-muted-foreground enabled:hover:bg-field-hover outline-hidden focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            class="mt-2 min-h-11 w-full rounded-field border border-field-border bg-field px-3 py-2 text-sm text-foreground shadow-field outline-hidden placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid enabled:hover:bg-field-hover"
             @keydown="handleCountKeydown"
             @input="handleCountInput"
           />
-          <p v-if="customCountError" role="alert" class="mt-1 text-xs text-danger-text">
+          <p
+            v-if="customCountError"
+            role="alert"
+            class="mt-1 text-xs text-danger-text"
+          >
             {{ customCountError }}
           </p>
         </div>
@@ -426,15 +458,12 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
 
       <!-- 截断提示（D009）：开始前提示可用量不足，截断由服务端 min(count, available) 保证 -->
       <p v-if="hasTruncationWarning" class="mt-3 text-sm text-muted-foreground">
-        当前只有 {{ availableCount }} 个可复习生词，本轮将复习全部 {{ truncatedCount }} 个。
+        当前只有 {{ availableCount }} 个可复习生词，本轮将复习全部
+        {{ truncatedCount }} 个。
       </p>
 
       <!-- 错误提示 -->
-      <p
-        v-if="startError"
-        role="alert"
-        class="mt-3 text-sm text-danger-text"
-      >
+      <p v-if="startError" role="alert" class="mt-3 text-sm text-danger-text">
         {{ startError }}
       </p>
 
@@ -451,28 +480,23 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
         {{ currentIndex + 1 }} / {{ items.length }}
       </p>
 
-      <!-- 单词展示区：键盘快捷键绑定在此区域（§5.4 作用域），焦点经 tabindex=-1 承接 -->
+      <!-- 单词展示区：键盘快捷键绑定在此区域（§5.4 作用域），焦点经 tabindex=-1 承接。
+           keydown 捕获容器是程序化焦点目标而非交互控件，豁免静态元素交互规则。 -->
+      <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
       <div
         ref="reviewAreaRef"
         tabindex="-1"
         class="mt-8 flex flex-col items-center gap-6 text-center outline-hidden"
         @keydown="handleKeydown"
       >
-        <h2 class="break-words text-3xl font-semibold text-foreground">
+        <h2 class="text-3xl font-semibold break-words text-foreground">
           {{ currentItem.word }}
         </h2>
 
         <!-- recalling：提示回忆 -->
         <template v-if="currentMode === 'recalling'">
-          <p class="text-sm text-muted-foreground">
-            先回忆这个单词的意思
-          </p>
-          <Button
-            class="mt-4"
-            @click="handleReveal"
-          >
-            查看释义
-          </Button>
+          <p class="text-sm text-muted-foreground">先回忆这个单词的意思</p>
+          <Button class="mt-4" @click="handleReveal"> 查看释义 </Button>
         </template>
 
         <!-- revealed：显示释义 + 作答按钮 -->
@@ -505,15 +529,34 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
       <!-- 快捷键提示 -->
       <p class="mt-8 text-center text-xs text-muted-foreground">
         <template v-if="currentMode === 'recalling'">
-          按 <kbd class="rounded-field bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs">Space</kbd> 查看释义
+          按
+          <kbd
+            class="rounded-field bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs"
+            >Space</kbd
+          >
+          查看释义
         </template>
         <template v-else-if="currentMode === 'revealed'">
-          <kbd class="rounded-field bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs">1</kbd> /
-          <kbd class="rounded-field bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs">←</kbd>
+          <kbd
+            class="rounded-field bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs"
+            >1</kbd
+          >
+          /
+          <kbd
+            class="rounded-field bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs"
+            >←</kbd
+          >
           不记得
           <span class="mx-2">·</span>
-          <kbd class="rounded-field bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs">2</kbd> /
-          <kbd class="rounded-field bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs">→</kbd>
+          <kbd
+            class="rounded-field bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs"
+            >2</kbd
+          >
+          /
+          <kbd
+            class="rounded-field bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs"
+            >→</kbd
+          >
           记得
         </template>
       </p>

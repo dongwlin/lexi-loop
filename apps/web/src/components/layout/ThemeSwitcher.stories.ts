@@ -21,7 +21,8 @@ function renderWithPreference(preference: ThemePreference) {
       setActivePinia(createPinia())
       useThemeStore().setPreference(preference)
     },
-    template: '<div class="flex min-h-40 items-start justify-end p-2"><ThemeSwitcher /></div>',
+    template:
+      '<div class="flex min-h-40 items-start justify-end p-2"><ThemeSwitcher /></div>',
   })
 }
 
@@ -42,14 +43,12 @@ export const DarkMenuOpen: Story = {
     await userEvent.click(canvas.getByRole('button', { name: '界面主题' }))
     // 菜单挂在 body 的 Portal 上，需从 document 查询（不局限于 canvas 容器）。
     const menu = within(document.body)
-    await expect(menu.getByRole('menuitemradio', { name: '深色' })).toHaveAttribute(
-      'aria-checked',
-      'true',
-    )
-    await expect(menu.getByRole('menuitemradio', { name: '跟随系统' })).toHaveAttribute(
-      'aria-checked',
-      'false',
-    )
+    await expect(
+      menu.getByRole('menuitemradio', { name: '深色' }),
+    ).toHaveAttribute('aria-checked', 'true')
+    await expect(
+      menu.getByRole('menuitemradio', { name: '跟随系统' }),
+    ).toHaveAttribute('aria-checked', 'false')
   },
 }
 
@@ -58,10 +57,16 @@ export const SwitchToDark: Story = {
   parameters: { controls: { disable: true } },
   render: renderWithPreference('light'),
   play: async ({ canvas, userEvent }) => {
-    await expect(document.documentElement.classList.contains('dark')).toBe(false)
+    await expect(document.documentElement.classList.contains('dark')).toBe(
+      false,
+    )
     await userEvent.click(canvas.getByRole('button', { name: '界面主题' }))
-    await userEvent.click(within(document.body).getByRole('menuitemradio', { name: '深色' }))
+    await userEvent.click(
+      within(document.body).getByRole('menuitemradio', { name: '深色' }),
+    )
     await expect(document.documentElement.classList.contains('dark')).toBe(true)
-    await expect(document.documentElement.classList.contains('light')).toBe(false)
+    await expect(document.documentElement.classList.contains('light')).toBe(
+      false,
+    )
   },
 }

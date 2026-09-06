@@ -12,7 +12,8 @@ import { reviewKeys } from './keys'
 export function reviewSessionQueryOptions(id: string) {
   return {
     queryKey: reviewKeys.session(id),
-    queryFn: ({ signal }: { signal: AbortSignal }) => getReviewSession(id, { signal }),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      getReviewSession(id, { signal }),
   }
 }
 

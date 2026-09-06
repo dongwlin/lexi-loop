@@ -91,7 +91,12 @@ describe('loadReviewSnapshot', () => {
   it('returns null for wrong version', () => {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ version: 999, sessionId: 'x', totalCount: 1, items: [] }),
+      JSON.stringify({
+        version: 999,
+        sessionId: 'x',
+        totalCount: 1,
+        items: [],
+      }),
     )
     expect(loadReviewSnapshot()).toBeNull()
   })
@@ -107,7 +112,12 @@ describe('loadReviewSnapshot', () => {
   it('returns null for non-array items', () => {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ version: 1, sessionId: 'x', totalCount: 1, items: 'not-array' }),
+      JSON.stringify({
+        version: 1,
+        sessionId: 'x',
+        totalCount: 1,
+        items: 'not-array',
+      }),
     )
     expect(loadReviewSnapshot()).toBeNull()
   })
@@ -115,7 +125,12 @@ describe('loadReviewSnapshot', () => {
   it('returns null for non-number totalCount', () => {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ version: 1, sessionId: 'x', totalCount: 'not-number', items: [] }),
+      JSON.stringify({
+        version: 1,
+        sessionId: 'x',
+        totalCount: 'not-number',
+        items: [],
+      }),
     )
     expect(loadReviewSnapshot()).toBeNull()
   })
@@ -123,7 +138,12 @@ describe('loadReviewSnapshot', () => {
   it('returns null when an item is not an object', () => {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ version: 1, sessionId: 'x', totalCount: 1, items: ['ambiguous'] }),
+      JSON.stringify({
+        version: 1,
+        sessionId: 'x',
+        totalCount: 1,
+        items: ['ambiguous'],
+      }),
     )
     expect(loadReviewSnapshot()).toBeNull()
   })
@@ -131,7 +151,12 @@ describe('loadReviewSnapshot', () => {
   it('returns null when an item misses itemId', () => {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ version: 1, sessionId: 'x', totalCount: 1, items: [{ word: 'ambiguous' }] }),
+      JSON.stringify({
+        version: 1,
+        sessionId: 'x',
+        totalCount: 1,
+        items: [{ word: 'ambiguous' }],
+      }),
     )
     expect(loadReviewSnapshot()).toBeNull()
   })
@@ -139,7 +164,12 @@ describe('loadReviewSnapshot', () => {
   it('returns null when an item misses word', () => {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ version: 1, sessionId: 'x', totalCount: 1, items: [{ itemId: 'i1' }] }),
+      JSON.stringify({
+        version: 1,
+        sessionId: 'x',
+        totalCount: 1,
+        items: [{ itemId: 'i1' }],
+      }),
     )
     expect(loadReviewSnapshot()).toBeNull()
   })

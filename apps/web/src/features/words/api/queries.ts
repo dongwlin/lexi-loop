@@ -13,7 +13,8 @@ import { wordsKeys } from './keys'
 export function wordsListQueryOptions(params: ListWordsParams) {
   return {
     queryKey: wordsKeys.list(params),
-    queryFn: ({ signal }: { signal: AbortSignal }) => listWords(params, { signal }),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      listWords(params, { signal }),
   }
 }
 

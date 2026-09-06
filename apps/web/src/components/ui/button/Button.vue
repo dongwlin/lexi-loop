@@ -40,7 +40,8 @@ const variantClasses: Record<ButtonVariant, string> = {
     'bg-default text-default-foreground enabled:hover:bg-default-hover enabled:active:bg-default-hover',
   outline:
     'border border-border-strong bg-transparent text-foreground enabled:hover:bg-default enabled:active:bg-default',
-  ghost: 'bg-transparent text-foreground enabled:hover:bg-default enabled:active:bg-default',
+  ghost:
+    'bg-transparent text-foreground enabled:hover:bg-default enabled:active:bg-default',
   danger:
     'bg-danger text-danger-foreground enabled:hover:bg-danger-hover enabled:active:bg-danger-hover',
   'danger-soft':
@@ -55,7 +56,7 @@ const isDisabled = computed(() => props.disabled || props.pending)
     :type="type"
     :disabled="isDisabled"
     :aria-busy="pending || undefined"
-    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-control px-4 py-2 text-sm font-medium transition-[background-color,scale] duration-150 ease-out motion-safe:enabled:active:scale-97 motion-reduce:transition-none outline-hidden focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50"
+    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-control px-4 py-2 text-sm font-medium outline-hidden transition-[background-color,scale] duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid disabled:cursor-not-allowed disabled:opacity-50 motion-safe:enabled:active:scale-97 motion-reduce:transition-none"
     :class="variantClasses[variant]"
   >
     <svg
@@ -65,7 +66,14 @@ const isDisabled = computed(() => props.disabled || props.pending)
       fill="none"
       class="size-4 shrink-0 motion-safe:animate-spin"
     >
-      <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" class="opacity-25" />
+      <circle
+        cx="12"
+        cy="12"
+        r="9"
+        stroke="currentColor"
+        stroke-width="3"
+        class="opacity-25"
+      />
       <path
         d="M21 12a9 9 0 0 0-9-9"
         stroke="currentColor"

@@ -34,9 +34,9 @@ const emit = defineEmits<{ 'update:open': [open: boolean] }>()
     <AlertDialogPortal>
       <AlertDialogOverlay class="fixed inset-0 z-40 bg-black/50" />
       <AlertDialogContent
-        class="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col overflow-y-auto rounded-dialog bg-overlay p-6 text-foreground shadow-overlay forced-colors:outline-solid! forced-colors:outline-1 forced-colors:outline-[CanvasText]!"
+        class="fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col overflow-y-auto rounded-dialog bg-overlay p-6 text-foreground shadow-overlay forced-colors:outline-1 forced-colors:outline-[CanvasText]! forced-colors:outline-solid!"
       >
-        <AlertDialogTitle class="text-base font-semibold leading-6">
+        <AlertDialogTitle class="text-base leading-6 font-semibold">
           {{ title }}
         </AlertDialogTitle>
         <AlertDialogDescription class="mt-1.5 text-sm text-muted-foreground">

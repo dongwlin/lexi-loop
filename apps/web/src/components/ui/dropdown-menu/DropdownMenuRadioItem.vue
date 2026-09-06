@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { DropdownMenuItemIndicator, DropdownMenuRadioItem, type AcceptableValue } from 'reka-ui'
+import {
+  DropdownMenuItemIndicator,
+  DropdownMenuRadioItem,
+  type AcceptableValue,
+} from 'reka-ui'
 import { Check } from 'lucide-vue-next'
 
 // 单选菜单项（Reka RadioGroup 三选一等偏好场景）：选中态由指示图标与语义角色
@@ -16,7 +20,7 @@ defineProps<DropdownMenuRadioItemProps>()
 <template>
   <DropdownMenuRadioItem
     :value="value"
-    class="group/item flex min-h-11 cursor-default select-none items-center gap-2.5 rounded-item px-3 py-2 text-sm outline-hidden data-highlighted:bg-default-hover focus-visible:outline-solid focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring data-disabled:pointer-events-none data-disabled:opacity-50"
+    class="group/item flex min-h-11 cursor-default items-center gap-2.5 rounded-item px-3 py-2 text-sm outline-hidden select-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid data-disabled:pointer-events-none data-disabled:opacity-50 data-highlighted:bg-default-hover"
   >
     <slot />
     <DropdownMenuItemIndicator class="ml-auto inline-flex">

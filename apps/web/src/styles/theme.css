@@ -5,16 +5,16 @@
 
 /* 浅色文件必须写在深色文件之前：浅色 :root 与深色 .dark 对同一根元素同时匹配，
  * 覆盖关系完全由源顺序决定（设计系统方案 §5.2）。 */
-@import "@radix-ui/colors/gray.css";
-@import "@radix-ui/colors/gray-dark.css";
-@import "@radix-ui/colors/blue.css";
-@import "@radix-ui/colors/blue-dark.css";
-@import "@radix-ui/colors/green.css";
-@import "@radix-ui/colors/green-dark.css";
-@import "@radix-ui/colors/amber.css";
-@import "@radix-ui/colors/amber-dark.css";
-@import "@radix-ui/colors/red.css";
-@import "@radix-ui/colors/red-dark.css";
+@import '@radix-ui/colors/gray.css';
+@import '@radix-ui/colors/gray-dark.css';
+@import '@radix-ui/colors/blue.css';
+@import '@radix-ui/colors/blue-dark.css';
+@import '@radix-ui/colors/green.css';
+@import '@radix-ui/colors/green-dark.css';
+@import '@radix-ui/colors/amber.css';
+@import '@radix-ui/colors/amber-dark.css';
+@import '@radix-ui/colors/red.css';
+@import '@radix-ui/colors/red-dark.css';
 
 @layer base {
   :root,
@@ -48,12 +48,20 @@
     --success: var(--green-9);
     --success-foreground: #111111;
     --success-subtle: var(--green-3);
-    --success-text: color-mix(in srgb, var(--green-11) 80%, var(--green-12) 20%);
+    --success-text: color-mix(
+      in srgb,
+      var(--green-11) 80%,
+      var(--green-12) 20%
+    );
 
     --warning: var(--amber-9);
     --warning-foreground: #111111;
     --warning-subtle: var(--amber-3);
-    --warning-text: color-mix(in srgb, var(--amber-11) 80%, var(--amber-12) 20%);
+    --warning-text: color-mix(
+      in srgb,
+      var(--amber-11) 80%,
+      var(--amber-12) 20%
+    );
 
     --danger: color-mix(in srgb, var(--red-9) 85%, black 15%);
     --danger-hover: color-mix(in srgb, var(--red-9) 78%, black 22%);
@@ -76,10 +84,8 @@
     --field-hover: var(--gray-2);
     --backdrop: rgb(0 0 0 / 40%);
 
-    --surface-shadow: 0 1px 2px rgb(0 0 0 / 6%),
-      0 2px 6px rgb(0 0 0 / 4%);
-    --overlay-shadow: 0 4px 12px rgb(0 0 0 / 8%),
-      0 12px 28px rgb(0 0 0 / 10%);
+    --surface-shadow: 0 1px 2px rgb(0 0 0 / 6%), 0 2px 6px rgb(0 0 0 / 4%);
+    --overlay-shadow: 0 4px 12px rgb(0 0 0 / 8%), 0 12px 28px rgb(0 0 0 / 10%);
     --field-shadow: 0 1px 2px rgb(0 0 0 / 6%);
   }
 
@@ -167,8 +173,8 @@
 
   /* 系统无衬线字体栈并补齐中文回退（设计系统方案 §6.3）。 */
   --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB",
-    "Microsoft YaHei", "Noto Sans CJK SC", sans-serif, "Apple Color Emoji",
-    "Segoe UI Emoji";
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji';
 }

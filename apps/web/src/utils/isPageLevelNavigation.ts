@@ -10,7 +10,10 @@ interface RouteLocationLike {
  * 仅 query / hash 变化（搜索、分页、筛选等局部 URL 更新）不移动焦点；
  * 路径（含路由参数）变化即页面主体变化，导航完成后应把焦点移到新页面主标题或主内容入口。
  */
-export function isPageLevelNavigation(to: RouteLocationLike, from: RouteLocationLike): boolean {
+export function isPageLevelNavigation(
+  to: RouteLocationLike,
+  from: RouteLocationLike,
+): boolean {
   if (from.matched.length === 0) return false
   return to.path !== from.path
 }

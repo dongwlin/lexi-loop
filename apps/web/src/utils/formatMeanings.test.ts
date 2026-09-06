@@ -27,7 +27,9 @@ describe('formatMeanings', () => {
   })
 
   it('缺词性时只展示翻译', () => {
-    expect(formatMeanings([{ translations: ['推导', '获得'] }])).toBe('推导；获得')
+    expect(formatMeanings([{ translations: ['推导', '获得'] }])).toBe(
+      '推导；获得',
+    )
   })
 
   it('translations 为 null 或空数组时只保留词性', () => {

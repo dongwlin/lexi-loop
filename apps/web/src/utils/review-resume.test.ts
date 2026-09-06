@@ -10,7 +10,11 @@ describe('computeResumeProgress', () => {
   it('returns first pending index when partially answered', () => {
     const progress = computeResumeProgress(
       ['ambiguous', 'constrain', 'derive'],
-      [serverItem('ambiguous', 'remembered'), serverItem('constrain', 'pending'), serverItem('derive', 'pending')],
+      [
+        serverItem('ambiguous', 'remembered'),
+        serverItem('constrain', 'pending'),
+        serverItem('derive', 'pending'),
+      ],
     )
     expect(progress).toEqual({ answered: 1, firstPendingIndex: 1 })
   })
@@ -18,7 +22,11 @@ describe('computeResumeProgress', () => {
   it('returns first pending index regardless of answer order', () => {
     const progress = computeResumeProgress(
       ['ambiguous', 'constrain', 'derive'],
-      [serverItem('ambiguous', 'pending'), serverItem('constrain', 'forgotten'), serverItem('derive', 'pending')],
+      [
+        serverItem('ambiguous', 'pending'),
+        serverItem('constrain', 'forgotten'),
+        serverItem('derive', 'pending'),
+      ],
     )
     expect(progress).toEqual({ answered: 1, firstPendingIndex: 0 })
   })
@@ -26,7 +34,10 @@ describe('computeResumeProgress', () => {
   it('returns localWords.length when all answered', () => {
     const progress = computeResumeProgress(
       ['ambiguous', 'constrain'],
-      [serverItem('ambiguous', 'remembered'), serverItem('constrain', 'forgotten')],
+      [
+        serverItem('ambiguous', 'remembered'),
+        serverItem('constrain', 'forgotten'),
+      ],
     )
     expect(progress).toEqual({ answered: 2, firstPendingIndex: 2 })
   })
@@ -58,7 +69,10 @@ describe('computeResumeProgress', () => {
   it('returns null when server items contain duplicate words', () => {
     const progress = computeResumeProgress(
       ['ambiguous', 'constrain'],
-      [serverItem('ambiguous', 'remembered'), serverItem('ambiguous', 'pending')],
+      [
+        serverItem('ambiguous', 'remembered'),
+        serverItem('ambiguous', 'pending'),
+      ],
     )
     expect(progress).toBeNull()
   })

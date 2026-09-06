@@ -30,9 +30,9 @@ const emit = defineEmits<{ 'update:open': [open: boolean] }>()
 // 标记时优先聚焦它（交互与可访问性规范 §5.3：打开 Dialog 移入合适的首个元素）。未标记则
 // 交给 Reka 默认行为。
 function handleOpenAutoFocus(event: Event) {
-  const initial = (event.currentTarget as HTMLElement | null)?.querySelector<HTMLElement>(
-    '[data-dialog-initial-focus]',
-  )
+  const initial = (
+    event.currentTarget as HTMLElement | null
+  )?.querySelector<HTMLElement>('[data-dialog-initial-focus]')
   if (initial) {
     event.preventDefault()
     initial.focus()
@@ -49,16 +49,16 @@ function handleOpenAutoFocus(event: Event) {
     <DialogPortal>
       <DialogOverlay class="fixed inset-0 z-40 bg-black/50" />
       <DialogContent
+        class="fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col overflow-y-auto rounded-dialog bg-overlay p-6 text-foreground shadow-overlay forced-colors:outline-1 forced-colors:outline-[CanvasText]! forced-colors:outline-solid!"
         @open-auto-focus="handleOpenAutoFocus"
-        class="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col overflow-y-auto rounded-dialog bg-overlay p-6 text-foreground shadow-overlay forced-colors:outline-solid! forced-colors:outline-1 forced-colors:outline-[CanvasText]!"
       >
         <div class="flex items-start justify-between gap-4">
-          <DialogTitle class="text-base font-semibold leading-6">
+          <DialogTitle class="text-base leading-6 font-semibold">
             {{ title }}
           </DialogTitle>
           <DialogClose
             aria-label="关闭"
-            class="-mr-2 -mt-1 flex size-9 shrink-0 items-center justify-center rounded-item text-muted-foreground transition-colors duration-150 ease-out hover:bg-default hover:text-foreground outline-hidden focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            class="-mt-1 -mr-2 flex size-9 shrink-0 items-center justify-center rounded-item text-muted-foreground outline-hidden transition-colors duration-150 ease-out hover:bg-default hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
           >
             <X class="size-4" aria-hidden="true" />
           </DialogClose>

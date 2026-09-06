@@ -33,10 +33,7 @@ describe('formatMeaningText', () => {
 
   it('过滤空串译文，无译文的义项整条跳过', () => {
     expect(
-      formatMeaningText([
-        { pos: 'noun' },
-        { translations: ['', '限制'] },
-      ]),
+      formatMeaningText([{ pos: 'noun' }, { translations: ['', '限制'] }]),
     ).toBe('限制')
   })
 })

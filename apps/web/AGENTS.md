@@ -10,18 +10,18 @@
 
 ## 权威文档速查（改动对象 → 先读）
 
-| 改动对象 | 先读 |
-| --- | --- |
-| 目录结构 / 职责边界 / 状态归属 | [docs/specs/frontend/前端应用架构规范.md](../../docs/specs/frontend/前端应用架构规范.md)（§2–§8、§11） |
-| 依赖与工具链选型 / 测试栈 | [docs/specs/frontend/前端技术栈.md](../../docs/specs/frontend/前端技术栈.md) |
-| API 调用 / 错误分类 / Token 与认证 | [docs/specs/frontend/前端 API 与认证集成规范.md](../../docs/specs/frontend/前端%20API%20与认证集成规范.md) |
-| 交互行为 / 焦点键盘 / 弹层表单 | [docs/specs/frontend/前端交互与可访问性规范.md](../../docs/specs/frontend/前端交互与可访问性规范.md) |
-| 设计令牌 / 主题 / 基础组件配方 | [docs/specs/frontend/Vue 组件设计系统方案.md](../../docs/specs/frontend/Vue%20组件设计系统方案.md) |
-| Query 缓存 / 数据流性能 | [docs/specs/frontend/Vue 性能与缓存优化.md](../../docs/specs/frontend/Vue%20性能与缓存优化.md) |
-| 测试方法与环境 | [docs/specs/frontend/前端测试规范.md](../../docs/specs/frontend/前端测试规范.md) |
-| 页面信息架构与复习状态机 | [docs/frontend/review-flow.md](../../docs/frontend/review-flow.md) |
-| HTTP 契约 | [docs/api/words.md](../../docs/api/words.md)、[docs/api/reviews.md](../../docs/api/reviews.md)（Orval 输入源头 `docs/openapi/` 由后端生成，不手改） |
-| 字段语义 | [docs/dictionary/data-model.md](../../docs/dictionary/data-model.md)、[docs/review/data-model.md](../../docs/review/data-model.md) |
+| 改动对象                           | 先读                                                                                                                                                |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 目录结构 / 职责边界 / 状态归属     | [docs/specs/frontend/前端应用架构规范.md](../../docs/specs/frontend/前端应用架构规范.md)（§2–§8、§11）                                              |
+| 依赖与工具链选型 / 测试栈          | [docs/specs/frontend/前端技术栈.md](../../docs/specs/frontend/前端技术栈.md)                                                                        |
+| API 调用 / 错误分类 / Token 与认证 | [docs/specs/frontend/前端 API 与认证集成规范.md](../../docs/specs/frontend/前端%20API%20与认证集成规范.md)                                          |
+| 交互行为 / 焦点键盘 / 弹层表单     | [docs/specs/frontend/前端交互与可访问性规范.md](../../docs/specs/frontend/前端交互与可访问性规范.md)                                                |
+| 设计令牌 / 主题 / 基础组件配方     | [docs/specs/frontend/Vue 组件设计系统方案.md](../../docs/specs/frontend/Vue%20组件设计系统方案.md)                                                  |
+| Query 缓存 / 数据流性能            | [docs/specs/frontend/Vue 性能与缓存优化.md](../../docs/specs/frontend/Vue%20性能与缓存优化.md)                                                      |
+| 测试方法与环境                     | [docs/specs/frontend/前端测试规范.md](../../docs/specs/frontend/前端测试规范.md)                                                                    |
+| 页面信息架构与复习状态机           | [docs/frontend/review-flow.md](../../docs/frontend/review-flow.md)                                                                                  |
+| HTTP 契约                          | [docs/api/words.md](../../docs/api/words.md)、[docs/api/reviews.md](../../docs/api/reviews.md)（Orval 输入源头 `docs/openapi/` 由后端生成，不手改） |
+| 字段语义                           | [docs/dictionary/data-model.md](../../docs/dictionary/data-model.md)、[docs/review/data-model.md](../../docs/review/data-model.md)                  |
 
 ## 常用命令
 

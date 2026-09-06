@@ -1,0 +1,6 @@
+# 构建产物与依赖不参与格式化（前端技术栈 §11.1：Prettier 只管源码与文档格式）。
+dist
+coverage
+storybook-static
+node_modules
+pnpm-lock.yaml

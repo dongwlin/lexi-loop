@@ -50,7 +50,12 @@ export const Default: Story = {
 export const RadioGroup: Story = {
   parameters: { controls: { disable: true } },
   render: () => ({
-    components: { Button, DropdownMenu, DropdownMenuRadioGroup, DropdownMenuRadioItem },
+    components: {
+      Button,
+      DropdownMenu,
+      DropdownMenuRadioGroup,
+      DropdownMenuRadioItem,
+    },
     setup: () => {
       const preference = ref('system')
       const options = [
@@ -82,15 +87,15 @@ export const RadioGroup: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole('button', { name: '界面主题' }))
     const menu = within(document.body)
-    await userEvent.click(await menu.findByRole('menuitemradio', { name: '深色' }))
+    await userEvent.click(
+      await menu.findByRole('menuitemradio', { name: '深色' }),
+    )
     await userEvent.click(canvas.getByRole('button', { name: '界面主题' }))
-    await expect(await menu.findByRole('menuitemradio', { name: '深色' })).toHaveAttribute(
-      'aria-checked',
-      'true',
-    )
-    await expect(menu.getByRole('menuitemradio', { name: '跟随系统' })).toHaveAttribute(
-      'aria-checked',
-      'false',
-    )
+    await expect(
+      await menu.findByRole('menuitemradio', { name: '深色' }),
+    ).toHaveAttribute('aria-checked', 'true')
+    await expect(
+      menu.getByRole('menuitemradio', { name: '跟随系统' }),
+    ).toHaveAttribute('aria-checked', 'false')
   },
 }

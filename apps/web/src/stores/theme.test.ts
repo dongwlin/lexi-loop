@@ -53,10 +53,16 @@ function stubMatchMedia(initialMatches: boolean) {
       get matches() {
         return matches
       },
-      addEventListener: (_type: string, listener: (event: { matches: boolean }) => void) => {
+      addEventListener: (
+        _type: string,
+        listener: (event: { matches: boolean }) => void,
+      ) => {
         listeners.add(listener)
       },
-      removeEventListener: (_type: string, listener: (event: { matches: boolean }) => void) => {
+      removeEventListener: (
+        _type: string,
+        listener: (event: { matches: boolean }) => void,
+      ) => {
         listeners.delete(listener)
       },
     })),
@@ -141,7 +147,9 @@ describe('theme store', () => {
     expect(store.resolvedTheme).toBe('dark')
     expect(classes.has('dark')).toBe(true)
     expect(classes.has('light')).toBe(false)
-    expect(storage.getItem(STORAGE_KEY)).toBe('{"version":1,"preference":"dark"}')
+    expect(storage.getItem(STORAGE_KEY)).toBe(
+      '{"version":1,"preference":"dark"}',
+    )
   })
 
   it('system 偏好下跟随系统主题变化并重新应用', () => {

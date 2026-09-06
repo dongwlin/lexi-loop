@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { DropdownMenuContent, DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from 'reka-ui'
+import {
+  DropdownMenuContent,
+  DropdownMenuPortal,
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
+} from 'reka-ui'
 
 // 下拉菜单容器（设计系统方案 §8.3 Dropdown / Popover 配方 + §9 Reka 状态接入）：固定
 // Root + Trigger + Portal + Content 组合，Content 套用弹层配方（不透明 Overlay、Forced
@@ -27,7 +32,7 @@ withDefaults(defineProps<DropdownMenuProps>(), { align: 'end', sideOffset: 8 })
       <DropdownMenuContent
         :align="align"
         :side-offset="sideOffset"
-        class="z-50 min-w-44 max-w-[calc(100vw-2rem)] max-h-(--reka-dropdown-menu-content-available-height) overflow-y-auto rounded-popover bg-overlay p-1 text-foreground shadow-overlay forced-colors:outline-solid! forced-colors:outline-1 forced-colors:outline-[CanvasText]!"
+        class="z-50 max-h-(--reka-dropdown-menu-content-available-height) max-w-[calc(100vw-2rem)] min-w-44 overflow-y-auto rounded-popover bg-overlay p-1 text-foreground shadow-overlay forced-colors:outline-1 forced-colors:outline-[CanvasText]! forced-colors:outline-solid!"
       >
         <slot />
       </DropdownMenuContent>

@@ -25,11 +25,14 @@ export function computeResumeProgress(
   if (serverWords.some((word) => !localWordsSet.has(word))) return null
 
   const pendingWords = new Set(
-    serverItems.filter((item) => item.result === 'pending').map((item) => item.word),
+    serverItems
+      .filter((item) => item.result === 'pending')
+      .map((item) => item.word),
   )
   const answered = serverItems.length - pendingWords.size
-  const firstPendingIndex = pendingWords.size === 0
-    ? localWords.length
-    : localWords.findIndex((word) => pendingWords.has(word))
+  const firstPendingIndex =
+    pendingWords.size === 0
+      ? localWords.length
+      : localWords.findIndex((word) => pendingWords.has(word))
   return { answered, firstPendingIndex }
 }

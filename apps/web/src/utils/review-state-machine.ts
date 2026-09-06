@@ -17,7 +17,10 @@ export interface ReviewCardEntry {
  * 空轮（防御分支）保持 idle、currentIndex -1（无当前卡）。
  * 开始复习与「继续复习」恢复（D010）共用：恢复进度对齐失败回退第 1 题（review-flow.md §6）。
  */
-export function enterReview(itemCount: number, resumeIndex = 0): ReviewCardEntry {
+export function enterReview(
+  itemCount: number,
+  resumeIndex = 0,
+): ReviewCardEntry {
   if (itemCount <= 0) return { mode: 'idle', currentIndex: -1 }
   return {
     mode: 'recalling',
@@ -29,7 +32,10 @@ export function enterReview(itemCount: number, resumeIndex = 0): ReviewCardEntry
  * 揭示释义迁移：仅 recalling 且当前卡在界时迁入 revealed；
  * 其余（idle、已 revealed、无当前卡）返回 null 表示不迁移，页面保持原状态。
  */
-export function revealCard(mode: ReviewMode, hasCurrentCard: boolean): 'revealed' | null {
+export function revealCard(
+  mode: ReviewMode,
+  hasCurrentCard: boolean,
+): 'revealed' | null {
   return mode === 'recalling' && hasCurrentCard ? 'revealed' : null
 }
 
@@ -43,7 +49,10 @@ export type ReviewAdvance =
  * recalling，最后一个提交完 → finished）。前提是调用方已确认处于 revealed 且提交成功；
  * 作答的入口守卫（revealed / 非提交中 / 有 session）在页面侧。
  */
-export function advanceAfterAnswer(currentIndex: number, itemCount: number): ReviewAdvance {
+export function advanceAfterAnswer(
+  currentIndex: number,
+  itemCount: number,
+): ReviewAdvance {
   const nextIndex = currentIndex + 1
   if (nextIndex < itemCount) {
     return { outcome: 'next', nextIndex, mode: 'recalling' }

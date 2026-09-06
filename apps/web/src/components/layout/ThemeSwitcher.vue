@@ -10,14 +10,20 @@ import { useThemeStore, type ThemePreference } from '@/stores/theme'
 // （menuitemradio）共同表达，不只靠颜色。
 const theme = useThemeStore()
 
-const themeOptions: Array<{ value: ThemePreference; label: string; icon: Component }> = [
+const themeOptions: Array<{
+  value: ThemePreference
+  label: string
+  icon: Component
+}> = [
   { value: 'light', label: '浅色', icon: Sun },
   { value: 'dark', label: '深色', icon: Moon },
   { value: 'system', label: '跟随系统', icon: Monitor },
 ]
 
 const triggerIcon = computed(
-  () => themeOptions.find((option) => option.value === theme.preference)?.icon ?? Monitor,
+  () =>
+    themeOptions.find((option) => option.value === theme.preference)?.icon ??
+    Monitor,
 )
 
 function setPreference(value: unknown): void {
@@ -33,9 +39,13 @@ function setPreference(value: unknown): void {
     <template #trigger>
       <button
         aria-label="界面主题"
-        class="inline-flex size-11 items-center justify-center rounded-item bg-transparent text-foreground transition-colors duration-150 ease-out hover:bg-default data-[state=open]:bg-default outline-hidden focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        class="inline-flex size-11 items-center justify-center rounded-item bg-transparent text-foreground outline-hidden transition-colors duration-150 ease-out hover:bg-default focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid data-[state=open]:bg-default"
       >
-        <component :is="triggerIcon" class="size-5 shrink-0" aria-hidden="true" />
+        <component
+          :is="triggerIcon"
+          class="size-5 shrink-0"
+          aria-hidden="true"
+        />
       </button>
     </template>
 

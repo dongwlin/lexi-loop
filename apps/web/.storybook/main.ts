@@ -2,7 +2,10 @@ import type { StorybookConfig } from '@storybook/vue3-vite'
 import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath } from 'node:url'
 
-const srcAlias = { find: '@', replacement: fileURLToPath(new URL('../src', import.meta.url)) }
+const srcAlias = {
+  find: '@',
+  replacement: fileURLToPath(new URL('../src', import.meta.url)),
+}
 
 const config: StorybookConfig = {
   framework: '@storybook/vue3-vite',

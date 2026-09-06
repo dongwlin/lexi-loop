@@ -1,10 +1,10 @@
 // review Feature 的 Mutation（前端应用架构规范 §8.3）。
 import { useMutation, useQueryClient } from '@tanstack/vue-query'
-import {
-  startReviewSession,
-  submitReviewResult,
+import { startReviewSession, submitReviewResult } from '@lexi-loop/api-client'
+import type {
+  StartSessionRequest,
+  SubmitResultRequestResult,
 } from '@lexi-loop/api-client'
-import type { StartSessionRequest, SubmitResultRequestResult } from '@lexi-loop/api-client'
 
 import { reviewKeys } from './keys'
 
@@ -29,6 +29,8 @@ export function useSubmitReviewResultMutation() {
     mutationFn: ({ sessionId, itemId, result }: SubmitReviewResultVariables) =>
       submitReviewResult(sessionId, itemId, { result }),
     onSuccess: (_data, { sessionId }) =>
-      queryClient.invalidateQueries({ queryKey: reviewKeys.session(sessionId) }),
+      queryClient.invalidateQueries({
+        queryKey: reviewKeys.session(sessionId),
+      }),
   })
 }

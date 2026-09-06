@@ -38,8 +38,8 @@ export function loadReviewSnapshot(): ReviewSnapshot | null {
       return null
     }
     return {
-      sessionId: parsed.sessionId as string,
-      totalCount: parsed.totalCount as number,
+      sessionId: parsed.sessionId,
+      totalCount: parsed.totalCount,
       items: parsed.items as SessionWordItem[],
     }
   } catch {

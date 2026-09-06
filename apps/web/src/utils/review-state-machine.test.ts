@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { advanceAfterAnswer, enterReview, revealCard } from './review-state-machine'
+import {
+  advanceAfterAnswer,
+  enterReview,
+  revealCard,
+} from './review-state-machine'
 
 describe('enterReview', () => {
   it('有卡时从第 0 张以 recalling 进入', () => {
@@ -42,8 +46,16 @@ describe('revealCard', () => {
 
 describe('advanceAfterAnswer', () => {
   it('非最后一张答完进入下一张 recalling', () => {
-    expect(advanceAfterAnswer(0, 3)).toEqual({ outcome: 'next', nextIndex: 1, mode: 'recalling' })
-    expect(advanceAfterAnswer(1, 3)).toEqual({ outcome: 'next', nextIndex: 2, mode: 'recalling' })
+    expect(advanceAfterAnswer(0, 3)).toEqual({
+      outcome: 'next',
+      nextIndex: 1,
+      mode: 'recalling',
+    })
+    expect(advanceAfterAnswer(1, 3)).toEqual({
+      outcome: 'next',
+      nextIndex: 2,
+      mode: 'recalling',
+    })
   })
 
   it('最后一张答完完成本轮（页面跳转结果页）', () => {

@@ -109,8 +109,7 @@ async function submitMeaning(customReviewMeaning: Meaning[] | null) {
     // 成功后由失效重取的详情证明更新（§9.2），焦点由 Reka 还原到触发按钮。
     setEditOpen(false)
   } catch (err) {
-    editError.value =
-      err instanceof Error ? err.message : '保存失败，请重试'
+    editError.value = err instanceof Error ? err.message : '保存失败，请重试'
     await nextTick()
     editErrorRef.value?.focus()
   }
@@ -158,8 +157,7 @@ async function handleDelete() {
     deleteOpen.value = false
     void router.push({ name: 'words' })
   } catch (err) {
-    deleteError.value =
-      err instanceof Error ? err.message : '删除失败，请重试'
+    deleteError.value = err instanceof Error ? err.message : '删除失败，请重试'
     await nextTick()
     deleteErrorRef.value?.focus()
   }
@@ -177,7 +175,7 @@ watchEffect(() => {
   <section class="rounded-card bg-surface p-6 shadow-surface">
     <RouterLink
       to="/words"
-      class="inline-flex min-h-11 items-center gap-1.5 rounded-item text-sm text-muted-foreground transition-colors duration-150 ease-out hover:bg-surface-hover hover:text-foreground outline-hidden focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      class="inline-flex min-h-11 items-center gap-1.5 rounded-item text-sm text-muted-foreground outline-hidden transition-colors duration-150 ease-out hover:bg-surface-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
     >
       <ArrowLeft class="size-4 shrink-0" aria-hidden="true" />
       返回生词库
@@ -185,7 +183,9 @@ watchEffect(() => {
 
     <!-- 页面级 Error：区分「不存在」（软删除 / 链接失效）与其他加载失败（§9.3） -->
     <template v-if="isNotFound">
-      <h1 tabindex="-1" class="mt-4 text-lg font-semibold text-foreground">没有找到这个单词</h1>
+      <h1 tabindex="-1" class="mt-4 text-lg font-semibold text-foreground">
+        没有找到这个单词
+      </h1>
       <p class="mt-2 text-sm text-muted-foreground">
         它可能已被删除，或链接不正确。重新导入同一单词可恢复其学习记录。
       </p>
@@ -206,7 +206,9 @@ watchEffect(() => {
     </template>
 
     <template v-else-if="isError">
-      <h1 tabindex="-1" class="mt-4 text-lg font-semibold text-foreground">单词详情</h1>
+      <h1 tabindex="-1" class="mt-4 text-lg font-semibold text-foreground">
+        单词详情
+      </h1>
       <p role="alert" class="mt-4 text-sm text-danger-text">
         {{ errorMessage }}
       </p>
@@ -222,24 +224,41 @@ watchEffect(() => {
 
     <!-- Loading：骨架形状接近最终结构（§9.1），仅首次加载展示 -->
     <template v-else-if="isPending">
-      <h1 tabindex="-1" class="mt-4 text-lg font-semibold text-foreground">单词详情</h1>
+      <h1 tabindex="-1" class="mt-4 text-lg font-semibold text-foreground">
+        单词详情
+      </h1>
       <p role="status" class="mt-2 text-sm text-muted-foreground">
         正在加载单词详情…
       </p>
       <div aria-hidden="true" class="mt-4 space-y-4 py-1">
-        <div class="h-7 w-40 rounded-field bg-surface-tertiary motion-safe:animate-pulse" />
-        <div class="h-5 w-64 rounded-field bg-surface-tertiary motion-safe:animate-pulse" />
+        <div
+          class="h-7 w-40 rounded-field bg-surface-tertiary motion-safe:animate-pulse"
+        />
+        <div
+          class="h-5 w-64 rounded-field bg-surface-tertiary motion-safe:animate-pulse"
+        />
         <div class="h-px bg-border" />
-        <div v-for="index in 5" :key="index" class="flex items-center justify-between">
-          <div class="h-5 w-16 rounded-field bg-surface-tertiary motion-safe:animate-pulse" />
-          <div class="h-5 w-10 rounded-field bg-surface-tertiary motion-safe:animate-pulse" />
+        <div
+          v-for="index in 5"
+          :key="index"
+          class="flex items-center justify-between"
+        >
+          <div
+            class="h-5 w-16 rounded-field bg-surface-tertiary motion-safe:animate-pulse"
+          />
+          <div
+            class="h-5 w-10 rounded-field bg-surface-tertiary motion-safe:animate-pulse"
+          />
         </div>
       </div>
     </template>
 
     <template v-else-if="detail">
       <div class="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h1 tabindex="-1" class="break-words text-2xl font-semibold text-foreground">
+        <h1
+          tabindex="-1"
+          class="text-2xl font-semibold break-words text-foreground"
+        >
           {{ detail.word }}
         </h1>
         <span v-if="detail.phonetic" class="text-sm text-muted-foreground">
@@ -268,7 +287,7 @@ watchEffect(() => {
         该单词暂无释义，可通过下方「编辑复习释义」添加自己的复习释义。
       </p>
 
-      <hr class="my-6 border-t border-border">
+      <hr class="my-6 border-t border-border" />
 
       <!-- 学习统计（review-flow §5；无掌握度 / 优先级，D011 契约缺口） -->
       <dl class="space-y-2.5 text-sm">
@@ -278,7 +297,9 @@ watchEffect(() => {
           class="flex items-baseline justify-between gap-6"
         >
           <dt class="text-muted-foreground">{{ stat.label }}</dt>
-          <dd class="font-medium tabular-nums text-foreground">{{ stat.value }}</dd>
+          <dd class="font-medium text-foreground tabular-nums">
+            {{ stat.value }}
+          </dd>
         </div>
       </dl>
 
@@ -306,9 +327,12 @@ watchEffect(() => {
             rows="4"
             aria-describedby="custom-meaning-help"
             placeholder="adj. 模棱两可的；含糊不清的"
-            class="mt-2 w-full resize-y rounded-field border border-field-border bg-field px-3 py-2 text-sm text-foreground shadow-field placeholder:text-muted-foreground enabled:hover:bg-field-hover outline-hidden focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            class="mt-2 w-full resize-y rounded-field border border-field-border bg-field px-3 py-2 text-sm text-foreground shadow-field outline-hidden placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid enabled:hover:bg-field-hover"
           />
-          <p id="custom-meaning-help" class="mt-2 text-xs text-muted-foreground">
+          <p
+            id="custom-meaning-help"
+            class="mt-2 text-xs text-muted-foreground"
+          >
             每行一条义项，可带词性前缀；清空并保存表示清除自定义释义、回退到词典释义。
           </p>
           <p
@@ -368,7 +392,11 @@ watchEffect(() => {
             <AlertDialogCancel as-child>
               <Button variant="outline" :disabled="isDeleting">取消</Button>
             </AlertDialogCancel>
-            <Button variant="danger" :pending="isDeleting" @click="handleDelete">
+            <Button
+              variant="danger"
+              :pending="isDeleting"
+              @click="handleDelete"
+            >
               删除生词
             </Button>
           </template>

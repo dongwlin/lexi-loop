@@ -39,25 +39,30 @@ const isNotFound = computed(
 const errorMessage = computed(() => {
   const err = error.value
   if (isApiError(err)) {
-    if (err.kind === 'network' || err.kind === 'timeout') return '网络异常，请检查连接后重试。'
-    if (err.kind === 'http' && (err.httpStatus ?? 0) >= 500) return '服务暂时不可用，请稍后重试。'
+    if (err.kind === 'network' || err.kind === 'timeout')
+      return '网络异常，请检查连接后重试。'
+    if (err.kind === 'http' && (err.httpStatus ?? 0) >= 500)
+      return '服务暂时不可用，请稍后重试。'
   }
   return '复习结果加载失败，请稍后重试'
 })
 
 const notCompletedText = computed(() =>
-  session.value?.status === 'abandoned' ? '本轮复习已放弃。' : '该复习轮次尚未完成。',
+  session.value?.status === 'abandoned'
+    ? '本轮复习已放弃。'
+    : '该复习轮次尚未完成。',
 )
 
 function goToReview() {
   void router.push({ name: 'review' })
 }
-
 </script>
 
 <template>
   <section class="rounded-card bg-surface p-6 shadow-surface">
-    <h1 tabindex="-1" class="text-lg font-semibold text-foreground">复习结果</h1>
+    <h1 tabindex="-1" class="text-lg font-semibold text-foreground">
+      复习结果
+    </h1>
 
     <!-- Session 不存在（含手工输入不存在的地址）：404 需先于通用 Error 判断 -->
     <template v-if="isPending">
@@ -65,10 +70,18 @@ function goToReview() {
         正在加载复习结果…
       </p>
       <div aria-hidden="true" class="mt-4 space-y-4 py-1">
-        <div class="h-7 w-48 rounded-field bg-surface-tertiary motion-safe:animate-pulse" />
-        <div class="h-5 w-32 rounded-field bg-surface-tertiary motion-safe:animate-pulse" />
-        <div class="h-5 w-32 rounded-field bg-surface-tertiary motion-safe:animate-pulse" />
-        <div class="h-5 w-32 rounded-field bg-surface-tertiary motion-safe:animate-pulse" />
+        <div
+          class="h-7 w-48 rounded-field bg-surface-tertiary motion-safe:animate-pulse"
+        />
+        <div
+          class="h-5 w-32 rounded-field bg-surface-tertiary motion-safe:animate-pulse"
+        />
+        <div
+          class="h-5 w-32 rounded-field bg-surface-tertiary motion-safe:animate-pulse"
+        />
+        <div
+          class="h-5 w-32 rounded-field bg-surface-tertiary motion-safe:animate-pulse"
+        />
       </div>
     </template>
 
@@ -120,7 +133,10 @@ function goToReview() {
     <template v-else-if="session">
       <!-- 完成标记 -->
       <div class="mt-4 flex items-center gap-2">
-        <CheckCircle class="size-5 shrink-0 text-success-text" aria-hidden="true" />
+        <CheckCircle
+          class="size-5 shrink-0 text-success-text"
+          aria-hidden="true"
+        />
         <span class="text-base font-medium text-foreground">本轮完成</span>
       </div>
 
@@ -128,25 +144,33 @@ function goToReview() {
       <dl class="mt-4 space-y-2 text-sm">
         <div class="flex items-baseline justify-between gap-6">
           <dt class="text-muted-foreground">总计</dt>
-          <dd class="font-medium tabular-nums text-foreground">{{ session.total }} 个单词</dd>
+          <dd class="font-medium text-foreground tabular-nums">
+            {{ session.total }} 个单词
+          </dd>
         </div>
         <div class="flex items-baseline justify-between gap-6">
           <dt class="text-muted-foreground">记得</dt>
-          <dd class="font-medium tabular-nums text-foreground">{{ session.remembered }}</dd>
+          <dd class="font-medium text-foreground tabular-nums">
+            {{ session.remembered }}
+          </dd>
         </div>
         <div class="flex items-baseline justify-between gap-6">
           <dt class="text-muted-foreground">不记得</dt>
-          <dd class="font-medium tabular-nums text-foreground">{{ session.forgotten }}</dd>
+          <dd class="font-medium text-foreground tabular-nums">
+            {{ session.forgotten }}
+          </dd>
         </div>
         <div class="flex items-baseline justify-between gap-6">
           <dt class="text-muted-foreground">正确率</dt>
-          <dd class="font-medium tabular-nums text-foreground">{{ accuracy }}%</dd>
+          <dd class="font-medium text-foreground tabular-nums">
+            {{ accuracy }}%
+          </dd>
         </div>
       </dl>
 
       <!-- 需要加强的单词列表 -->
       <template v-if="forgottenWords.length > 0">
-        <hr class="my-6 border-t border-border">
+        <hr class="my-6 border-t border-border" />
         <h2 class="text-sm font-medium text-foreground">需要加强</h2>
         <ul class="mt-2 space-y-1">
           <li

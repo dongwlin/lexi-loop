@@ -8,7 +8,7 @@ import { DropdownMenuItem } from 'reka-ui'
 
 <template>
   <DropdownMenuItem
-    class="flex min-h-11 cursor-default select-none items-center gap-2.5 rounded-item px-3 py-2 text-sm outline-hidden data-highlighted:bg-default-hover focus-visible:outline-solid focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring data-disabled:pointer-events-none data-disabled:opacity-50"
+    class="flex min-h-11 cursor-default items-center gap-2.5 rounded-item px-3 py-2 text-sm outline-hidden select-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid data-disabled:pointer-events-none data-disabled:opacity-50 data-highlighted:bg-default-hover"
   >
     <slot />
   </DropdownMenuItem>

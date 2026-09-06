@@ -44,12 +44,13 @@ function handleContinue() {
   isInputMode.value = true
   errorText.value = null
 }
-
 </script>
 
 <template>
   <section class="rounded-card bg-surface p-6 shadow-surface">
-    <h1 tabindex="-1" class="text-lg font-semibold text-foreground">导入生词</h1>
+    <h1 tabindex="-1" class="text-lg font-semibold text-foreground">
+      导入生词
+    </h1>
 
     <!-- 输入模式：review-flow.md §2 -->
     <template v-if="isInputMode">
@@ -68,7 +69,9 @@ function handleContinue() {
       />
 
       <p class="mt-2 text-sm text-muted-foreground">
-        共识别 <span class="font-medium text-foreground">{{ totalEncounters }}</span> 次
+        共识别
+        <span class="font-medium text-foreground">{{ totalEncounters }}</span>
+        次
         <template v-if="parsed.length > 0">
           （{{ parsed.length }} 个不同单词）
         </template>
@@ -128,9 +131,7 @@ function handleContinue() {
       </div>
 
       <div class="mt-6 flex gap-3">
-        <Button variant="secondary" @click="handleContinue">
-          继续导入
-        </Button>
+        <Button variant="secondary" @click="handleContinue"> 继续导入 </Button>
         <RouterLink
           to="/words"
           class="inline-flex min-h-11 items-center rounded-control px-4 py-2 text-sm font-medium text-primary-text transition-colors hover:bg-primary-subtle"

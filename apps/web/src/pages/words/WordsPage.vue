@@ -35,14 +35,8 @@ const queryParams = computed(() => ({
   search: search.value || undefined,
 }))
 
-const {
-  data,
-  isPending,
-  isError,
-  error,
-  isFetching,
-  refetch,
-} = useWordsListQuery(queryParams)
+const { data, isPending, isError, error, isFetching, refetch } =
+  useWordsListQuery(queryParams)
 
 const rows = computed(() =>
   (data.value?.list ?? []).map((item) => ({
@@ -62,7 +56,9 @@ const pageItems = computed(() =>
 )
 
 const errorMessage = computed(() =>
-  error.value instanceof Error ? error.value.message : '生词库加载失败，请稍后重试',
+  error.value instanceof Error
+    ? error.value.message
+    : '生词库加载失败，请稍后重试',
 )
 
 // 页码与搜索变化推入历史，后退 / 前进可回退到之前的列表状态（§6.2）。
@@ -87,7 +83,6 @@ function clearSearch() {
 function goToPage(target: number) {
   pushQuery({ page: target, search: search.value })
 }
-
 </script>
 
 <template>
@@ -111,7 +106,7 @@ function goToPage(target: number) {
           name="search"
           type="search"
           placeholder="例如：ambiguous 或 模棱两可"
-          class="min-h-11 w-full min-w-0 flex-1 rounded-field border border-field-border bg-field px-3 py-2 text-base text-foreground shadow-field placeholder:text-muted-foreground enabled:hover:bg-field-hover outline-hidden focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          class="min-h-11 w-full min-w-0 flex-1 rounded-field border border-field-border bg-field px-3 py-2 text-base text-foreground shadow-field outline-hidden placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid enabled:hover:bg-field-hover"
         />
         <Button type="submit" class="shrink-0">搜索</Button>
       </div>
@@ -119,7 +114,7 @@ function goToPage(target: number) {
         正在筛选「{{ search }}」的结果
         <button
           type="button"
-          class="rounded-item text-primary-text underline-offset-2 hover:underline outline-hidden focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          class="rounded-item text-primary-text underline-offset-2 outline-hidden hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
           @click="clearSearch"
         >
           清除搜索
@@ -132,7 +127,12 @@ function goToPage(target: number) {
       <p role="alert" class="mt-4 text-sm text-danger-text">
         {{ errorMessage }}
       </p>
-      <Button variant="outline" class="mt-3" :pending="isFetching" @click="refetch()">
+      <Button
+        variant="outline"
+        class="mt-3"
+        :pending="isFetching"
+        @click="refetch()"
+      >
         重试
       </Button>
     </template>
@@ -151,16 +151,13 @@ function goToPage(target: number) {
         role="status"
         class="mt-4 text-sm text-muted-foreground"
       >
-        共 {{ summary.total }} 个单词 · 第 {{ page }} / {{ summary.totalPages }} 页
+        共 {{ summary.total }} 个单词 · 第 {{ page }} /
+        {{ summary.totalPages }} 页
       </p>
 
       <div class="mt-3" :aria-busy="isFetching || undefined">
         <!-- Skeleton 形状接近最终表格结构（交互与可访问性规范 §9.1），仅首次加载展示 -->
-        <div
-          v-if="isPending"
-          aria-hidden="true"
-          class="space-y-4 py-2"
-        >
+        <div v-if="isPending" aria-hidden="true" class="space-y-4 py-2">
           <div v-for="index in 5" :key="index" class="flex items-center gap-4">
             <div
               class="h-5 w-24 rounded-field bg-surface-tertiary motion-safe:animate-pulse"
@@ -195,25 +192,25 @@ function goToPage(target: number) {
               </th>
               <th
                 scope="col"
-                class="whitespace-nowrap px-3 py-2.5 text-right font-medium text-muted-foreground"
+                class="px-3 py-2.5 text-right font-medium whitespace-nowrap text-muted-foreground"
               >
                 遇到
               </th>
               <th
                 scope="col"
-                class="whitespace-nowrap px-3 py-2.5 text-right font-medium text-muted-foreground"
+                class="px-3 py-2.5 text-right font-medium whitespace-nowrap text-muted-foreground"
               >
                 复习
               </th>
               <th
                 scope="col"
-                class="whitespace-nowrap px-3 py-2.5 text-right font-medium text-muted-foreground"
+                class="px-3 py-2.5 text-right font-medium whitespace-nowrap text-muted-foreground"
               >
                 记得
               </th>
               <th
                 scope="col"
-                class="whitespace-nowrap py-2.5 pl-3 text-right font-medium text-muted-foreground"
+                class="py-2.5 pl-3 text-right font-medium whitespace-nowrap text-muted-foreground"
               >
                 忘记
               </th>
@@ -229,7 +226,7 @@ function goToPage(target: number) {
                 <!-- review-flow §4：点击单词打开详情页；真实链接保留中键 / 新标签页（§6.2） -->
                 <RouterLink
                   :to="{ name: 'word-detail', params: { id: row.id } }"
-                  class="rounded-item font-medium text-foreground underline-offset-2 transition-colors duration-150 ease-out hover:text-primary-text hover:underline outline-hidden focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  class="rounded-item font-medium text-foreground underline-offset-2 outline-hidden transition-colors duration-150 ease-out hover:text-primary-text hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
                 >
                   {{ row.word }}
                   <span
@@ -242,20 +239,30 @@ function goToPage(target: number) {
               </td>
               <td
                 class="px-3 py-3 align-top"
-                :class="row.meaning ? 'text-foreground' : 'text-muted-foreground'"
+                :class="
+                  row.meaning ? 'text-foreground' : 'text-muted-foreground'
+                "
               >
                 {{ row.meaning || '—' }}
               </td>
-              <td class="px-3 py-3 text-right align-top tabular-nums text-muted-foreground">
+              <td
+                class="px-3 py-3 text-right align-top text-muted-foreground tabular-nums"
+              >
                 {{ row.encounterCount }}
               </td>
-              <td class="px-3 py-3 text-right align-top tabular-nums text-muted-foreground">
+              <td
+                class="px-3 py-3 text-right align-top text-muted-foreground tabular-nums"
+              >
                 {{ row.reviewCount }}
               </td>
-              <td class="px-3 py-3 text-right align-top tabular-nums text-muted-foreground">
+              <td
+                class="px-3 py-3 text-right align-top text-muted-foreground tabular-nums"
+              >
                 {{ row.rememberCount }}
               </td>
-              <td class="py-3 pl-3 text-right align-top tabular-nums text-muted-foreground">
+              <td
+                class="py-3 pl-3 text-right align-top text-muted-foreground tabular-nums"
+              >
                 {{ row.forgetCount }}
               </td>
             </tr>

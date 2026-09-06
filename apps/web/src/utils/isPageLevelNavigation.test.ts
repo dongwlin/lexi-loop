@@ -6,7 +6,9 @@ const at = (path: string) => ({ path, matched: [{}] })
 
 describe('isPageLevelNavigation', () => {
   it('初次加载（from 为 START_LOCATION）不移动焦点', () => {
-    expect(isPageLevelNavigation(at('/review'), { path: '/', matched: [] })).toBe(false)
+    expect(
+      isPageLevelNavigation(at('/review'), { path: '/', matched: [] }),
+    ).toBe(false)
   })
 
   it('同路径仅 query / hash 变化（搜索、分页、筛选）不移动焦点', () => {
