@@ -119,6 +119,30 @@ describe('loadReviewSnapshot', () => {
     )
     expect(loadReviewSnapshot()).toBeNull()
   })
+
+  it('returns null when an item is not an object', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ version: 1, sessionId: 'x', totalCount: 1, items: ['ambiguous'] }),
+    )
+    expect(loadReviewSnapshot()).toBeNull()
+  })
+
+  it('returns null when an item misses itemId', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ version: 1, sessionId: 'x', totalCount: 1, items: [{ word: 'ambiguous' }] }),
+    )
+    expect(loadReviewSnapshot()).toBeNull()
+  })
+
+  it('returns null when an item misses word', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ version: 1, sessionId: 'x', totalCount: 1, items: [{ itemId: 'i1' }] }),
+    )
+    expect(loadReviewSnapshot()).toBeNull()
+  })
 })
 
 describe('clearReviewSnapshot', () => {

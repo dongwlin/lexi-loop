@@ -9,6 +9,14 @@ import { computed, toValue } from 'vue'
 
 import { wordsKeys } from './keys'
 
+// 命令式取数（如复习页开始前读取可用生词量）与 useWordsListQuery 共用同一 key / queryFn。
+export function wordsListQueryOptions(params: ListWordsParams) {
+  return {
+    queryKey: wordsKeys.list(params),
+    queryFn: ({ signal }: { signal: AbortSignal }) => listWords(params, { signal }),
+  }
+}
+
 export function useWordsListQuery(params: MaybeRefOrGetter<ListWordsParams>) {
   return useQuery({
     queryKey: computed(() => wordsKeys.list(toValue(params))),

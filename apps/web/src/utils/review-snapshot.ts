@@ -32,7 +32,8 @@ export function loadReviewSnapshot(): ReviewSnapshot | null {
       parsed.version !== schemaVersion ||
       typeof parsed.sessionId !== 'string' ||
       typeof parsed.totalCount !== 'number' ||
-      !Array.isArray(parsed.items)
+      !Array.isArray(parsed.items) ||
+      !parsed.items.every(isValidSnapshotItem)
     ) {
       return null
     }
@@ -44,6 +45,16 @@ export function loadReviewSnapshot(): ReviewSnapshot | null {
   } catch {
     return null
   }
+}
+
+// 快照 items 至少校验渲染与提交依赖的字段（itemId / word），畸形数据整体回退 null。
+function isValidSnapshotItem(item: unknown): boolean {
+  return (
+    typeof item === 'object' &&
+    item !== null &&
+    typeof (item as Record<string, unknown>).itemId === 'string' &&
+    typeof (item as Record<string, unknown>).word === 'string'
+  )
 }
 
 export function clearReviewSnapshot(): void {
