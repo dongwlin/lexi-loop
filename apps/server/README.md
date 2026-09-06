@@ -4,7 +4,7 @@ LexiLoop（词环）英语生词复习系统后端。工程结构规范见 [docs
 
 ## 当前状态：MVP 骨架
 
-代码框架已按分层规范搭好，**业务用例尚未实现**（service / handler / apperr 仍为注释占位，见各文件 TODO）。当前交付物是「可启动的 Gin 服务器 + `/healthz` 健康检查」、`internal/domain` 领域模型与纯业务规则（按 dictionary / review 数据模型落四实体：工厂生成 UUID v7 与 UTC 时间戳、ApplyReview / Submit / Complete / Abandon 状态迁移、weight / mastery 动态计算，含单元测试）、`internal/infra/database` 数据库连接池（bun + pgx，含 testcontainers 集成测试）、`migrations/` 真实迁移 DDL（dictionary_entries / user_words / review_sessions / review_items 四表，含外键、唯一约束、CHECK、索引与「全库至多一个 active session」部分唯一索引）与 `internal/repo` 数据访问适配器（DictionaryRepo / UserWordRepo / ReviewRepo：CRUD、软删除、遇词累计 upsert、advisory lock / FOR UPDATE / 条件 UPDATE、SQLSTATE 错误归一化，均含 testcontainers 集成测试）；`import-ecdict` 命令已注册但报「尚未实现」。
+代码框架已按分层规范搭好，**业务用例尚未实现**（service / handler/v1 / middleware / importer 仍为注释占位，见各文件 TODO）。当前交付物是「可启动的 Gin 服务器 + `/healthz` 健康检查」、`internal/domain` 领域模型与纯业务规则（按 dictionary / review 数据模型落四实体：工厂生成 UUID v7 与 UTC 时间戳、ApplyReview / Submit / Complete / Abandon 状态迁移、weight / mastery 动态计算，含单元测试）、`internal/infra/database` 数据库连接池（bun + pgx，含 testcontainers 集成测试）、`migrations/` 真实迁移 DDL（dictionary_entries / user_words / review_sessions / review_items 四表，含外键、唯一约束、CHECK、索引与「全库至多一个 active session」部分唯一索引）、`internal/repo` 数据访问适配器（DictionaryRepo / UserWordRepo / ReviewRepo：CRUD、软删除、遇词累计 upsert、advisory lock / FOR UPDATE / 条件 UPDATE、SQLSTATE 错误归一化，均含 testcontainers 集成测试）、`internal/apperr` 类型化应用错误（Kind / 稳定业务 code / `New` / `Internal`，含单元测试）与 `internal/handler/httpresp` 统一响应（全站唯一的 `code` / `message` / `data` 结构与 `apperr.Kind → HTTP 状态` 映射，含 httptest 单元测试）；`import-ecdict` 命令已注册但报「尚未实现」。
 
 ```text
 apps/server/
@@ -17,8 +17,8 @@ apps/server/
    ├─ repo/                      数据访问适配器 + internal/schema（已实现，含集成测试）
    ├─ service/                   业务用例编排（占位）
    ├─ importer/ecdict/           ECDICT 离线导入（占位）
-   ├─ handler/                   router.go（/api/v1 挂载点）+ httpresp / v1 / middleware
-   ├─ apperr/                    类型化应用错误（占位）
+   ├─ handler/                   router.go（/api/v1 挂载点）+ httpresp（已实现，含单元测试）/ v1 / middleware
+   ├─ apperr/                    类型化应用错误（已实现，含单元测试）
    └─ infra/                     config（viper，已实现）/ database（连接池已实现）
 ```
 
@@ -75,10 +75,9 @@ go test -race ./internal/infra/... ./internal/repo/... ./migrations  # infra + r
 
 ## 下一步（按依赖顺序）
 
-1. `internal/apperr` + `httpresp`：类型化错误与统一响应（[HTTP API 设计规范](../../docs/specs/backend/HTTP%20API%20设计规范.md)）
-2. `internal/service` / `internal/handler/v1`：业务用例与版本化 Handler（structure.md §5 的事务与并发边界）
-3. `internal/importer/ecdict` + `import-ecdict` 命令：ECDICT 离线导入
-4. 中间件替换为 `handler/middleware` 自定义实现，`app/provider.go` 完成组合根组装
+1. `internal/service` / `internal/handler/v1`：业务用例与版本化 Handler（structure.md §5 的事务与并发边界）
+2. `internal/importer/ecdict` + `import-ecdict` 命令：ECDICT 离线导入
+3. 中间件替换为 `handler/middleware` 自定义实现，`app/provider.go` 完成组合根组装
 
 ## 模块
 

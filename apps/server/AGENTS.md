@@ -4,7 +4,7 @@
 
 ## 当前状态：MVP 骨架
 
-后端可启动，根路径 `/healthz` 可用；模块与命令形态已就位。`internal/domain`（四表领域模型、`NewXxx` 工厂、ApplyReview / Submit / Complete / Abandon 状态迁移、weight / mastery 纯函数，含单元测试）、`internal/infra/config`（viper + `LEXI_*` 环境变量）、`internal/infra/database`（bun + pgx/v5 连接池构造）、`migrations` 包（embed + golang-migrate 迁移执行入口，`migrate` 命令已接入，迁移 SQL 为四表真实 DDL）与 `internal/repo`（DictionaryRepo / UserWordRepo / ReviewRepo 数据访问适配器：schema ↔ domain 转换、SQLSTATE 错误归一化、软删除、遇词累计 upsert、advisory lock / FOR UPDATE / 条件 UPDATE；`internal/repo`、`infra/database` 与 `migrations` 均含 testcontainers 集成测试）已实现，其余包为 TODO 占位；`import-ecdict` 命令已注册但报「尚未实现」。分层现状与下一步清单以 [README.md](README.md) 为准——完成里程碑后同步更新两处，避免状态失真。
+后端可启动，根路径 `/healthz` 可用；模块与命令形态已就位。`internal/domain`（四表领域模型、`NewXxx` 工厂、ApplyReview / Submit / Complete / Abandon 状态迁移、weight / mastery 纯函数，含单元测试）、`internal/infra/config`（viper + `LEXI_*` 环境变量）、`internal/infra/database`（bun + pgx/v5 连接池构造）、`migrations` 包（embed + golang-migrate 迁移执行入口，`migrate` 命令已接入，迁移 SQL 为四表真实 DDL）与 `internal/repo`（DictionaryRepo / UserWordRepo / ReviewRepo 数据访问适配器：schema ↔ domain 转换、SQLSTATE 错误归一化、软删除、遇词累计 upsert、advisory lock / FOR UPDATE / 条件 UPDATE；`internal/repo`、`infra/database` 与 `migrations` 均含 testcontainers 集成测试）、`internal/apperr`（Kind / 稳定业务 code / `New` / `Internal` 类型化应用错误）与 `internal/handler/httpresp`（统一 `code` / `message` / `data` 响应结构与唯一的 `apperr.Kind → HTTP 状态` 映射，两者均含单元测试）已实现，其余包为 TODO 占位；`import-ecdict` 命令已注册但报「尚未实现」。分层现状与下一步清单以 [README.md](README.md) 为准——完成里程碑后同步更新两处，避免状态失真。
 
 改动本子树任何代码前：先读 [docs/agent-log/](../../docs/agent-log/) 当月文件的最近记录了解上下文，再核对下表对应文档与当前代码。
 
@@ -36,7 +36,7 @@ LEXI_DATABASE_URL='postgres://lexi:lexi@localhost:5432/lexi_loop?sslmode=disable
 LEXI_DATABASE_URL='...' go run . migrate down [steps]   # 回退指定步数（默认 1，超过可用数时截断）
 ```
 
-`infra/config`、`infra/database`、`internal/repo` 与 `migrations` 已有测试：`infra/database`、`internal/repo` 与 `migrations` 的集成测试各自在包级 `TestMain` 中启动一次共享的真实 PostgreSQL 容器（镜像 `postgres:18-alpine`，全部用例复用；repo 的 `TestMain` 会先应用全部迁移）；无 Docker 或传 `-short` 时集成用例跳过、单元测试仍运行。并发 / 回滚用例必须用 testcontainers + 真实 PostgreSQL 验证（structure.md §5.4 列出的四个场景：单 active session、同 item 并发提交只累计一次、最后两 item 并发提交后 session 必为 completed、提交中注入失败整体回滚；advisory lock 与条件 UPDATE 的 Repo 侧机制已有集成测试，用例级并发组合在 Service 层验证）。
+`infra/config`、`infra/database`、`internal/repo`、`migrations`、`internal/apperr` 与 `internal/handler/httpresp` 已有测试（apperr 与 httpresp 为纯单元测试，其余含集成）：`infra/database`、`internal/repo` 与 `migrations` 的集成测试各自在包级 `TestMain` 中启动一次共享的真实 PostgreSQL 容器（镜像 `postgres:18-alpine`，全部用例复用；repo 的 `TestMain` 会先应用全部迁移）；无 Docker 或传 `-short` 时集成用例跳过、单元测试仍运行。并发 / 回滚用例必须用 testcontainers + 真实 PostgreSQL 验证（structure.md §5.4 列出的四个场景：单 active session、同 item 并发提交只累计一次、最后两 item 并发提交后 session 必为 completed、提交中注入失败整体回滚；advisory lock 与条件 UPDATE 的 Repo 侧机制已有集成测试，用例级并发组合在 Service 层验证）。
 
 ## 分层实现要点
 
