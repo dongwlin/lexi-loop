@@ -12,6 +12,11 @@ export const router = createRouter({
       component: () => import('@/pages/words/WordsPage.vue'),
     },
     {
+      path: '/words/:id',
+      name: 'word-detail',
+      component: () => import('@/pages/words/WordDetailPage.vue'),
+    },
+    {
       path: '/import',
       name: 'import',
       component: () => import('@/pages/import/ImportPage.vue'),

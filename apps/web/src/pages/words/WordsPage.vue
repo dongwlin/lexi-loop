@@ -230,13 +230,19 @@ watchEffect(() => {
               class="border-b border-border last:border-b-0"
             >
               <td class="py-3 pr-3 align-top">
-                <span class="font-medium text-foreground">{{ row.word }}</span>
-                <span
-                  v-if="row.phonetic"
-                  class="mt-0.5 block text-xs text-muted-foreground"
+                <!-- review-flow §4：点击单词打开详情页；真实链接保留中键 / 新标签页（§6.2） -->
+                <RouterLink
+                  :to="{ name: 'word-detail', params: { id: row.id } }"
+                  class="rounded-item font-medium text-foreground underline-offset-2 transition-colors duration-150 ease-out hover:text-primary-text hover:underline outline-hidden focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                 >
-                  {{ row.phonetic }}
-                </span>
+                  {{ row.word }}
+                  <span
+                    v-if="row.phonetic"
+                    class="block text-xs font-normal text-muted-foreground"
+                  >
+                    {{ row.phonetic }}
+                  </span>
+                </RouterLink>
               </td>
               <td
                 class="px-3 py-3 align-top"
