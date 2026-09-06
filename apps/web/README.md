@@ -26,17 +26,16 @@ MVP 服务端暂无认证端点；认证落地后在 `src/lib/api.ts` 注入 `ge
 
 ## 结构
 
-按《前端应用架构规范》§3 组织：`src/app/` 应用装配（根组件、显式路由表、providers / pinia / query client 一次性安装），`src/pages/` 路由页面（当前为骨架占位，页面结构见 [docs/frontend/review-flow.md](../../docs/frontend/review-flow.md) §1），`src/components/ui/` 业务无关基础组件——每个组件独立文件夹（`button/Button.vue` + 同目录 Story），经 `components/ui/index.ts` 统一导出（Button 配方见《Vue 组件设计系统方案》§8.1），`src/components/layout/` 跨页面布局（AppShell、ThemeSwitcher），`src/stores/` 跨页面客户端状态，`src/lib/` 基础设施适配（env / api / storage），`src/styles/` 设计系统主题层（Tailwind CSS v4 + Radix Colors，见《Vue 组件设计系统方案》）。业务能力出现时按 Feature 组织进 `src/features/`。
+按《前端应用架构规范》§3 组织：`src/app/` 应用装配（根组件、显式路由表、providers / pinia / query client 一次性安装），`src/pages/` 路由页面（当前为骨架占位，页面结构见 [docs/frontend/review-flow.md](../../docs/frontend/review-flow.md) §1），`src/components/ui/` 业务无关基础组件——每个组件独立文件夹（`button/Button.vue` + 同目录 Story），经 `components/ui/index.ts` 统一导出（Button 配方见《Vue 组件设计系统方案》§8.1），`src/components/layout/` 跨页面布局（AppShell、ThemeSwitcher），`src/stores/` 跨页面客户端状态，`src/lib/` 基础设施适配（env / api / storage），`src/styles/` 设计系统主题层（Tailwind CSS v4 + Radix Colors，见《Vue 组件设计系统方案》）。`src/features/` 按业务能力组织（当前 `words/`、`review/`），Query Key / Query / Mutation 置于各 Feature 的 `api/`（《前端应用架构规范》§8.1），DTO 直接使用 `@lexi-loop/api-client` 生成类型，queryFn 透传 `signal`。
 
 主题偏好为 Light / Dark / System（《Vue 组件设计系统方案》§11）：偏好持久化在 `localStorage`（`lexi-loop.theme`），解析后的主题类互斥挂在 `<html>`，`main.ts` 在应用挂载前初始化。
 
 ## 待办
 
-MVP 完成度评估（2026-09-06）：工程骨架、设计系统主题层、API Client（Orval 生成 + 统一 mutator）与后端 8 个端点已就绪；`src/pages/` 四个路由页面仍为占位卡片，MVP 业务未落地。以下按依赖顺序登记，完成后删除对应条目。
+MVP 完成度评估（2026-09-06）：工程骨架、设计系统主题层、API Client（Orval 生成 + 统一 mutator）、Feature 层（words / review 的 api keys / queries / mutations）与后端 8 个端点已就绪；`src/pages/` 四个路由页面仍为占位卡片，MVP 业务未落地。以下按依赖顺序登记，完成后删除对应条目。
 
 ### MVP 业务落地（review-flow.md §2–§10）
 
-- [ ] Feature 层：`features/words/`、`features/review/` 的 api keys / queries / mutations（《前端应用架构规范》§8.1；DTO 直接使用 `@lexi-loop/api-client` 生成类型，queryFn 透传 `signal`）
 - [ ] 导入页 `/import`（review-flow §2–§3）：多行粘贴解析（trim / lowercase / 去空行，重复单词聚合成 count 不丢弃）、`importWords` 提交、导入结果反馈（聚合口径，见下方契约缺口）
 - [ ] 生词库 `/words`（review-flow §4）：搜索与分页写入 URL（《前端应用架构规范》§6.2）、语义表格（单词 / 释义 / 遇到 / 复习 / 记得 / 忘记）、Loading / Empty / Error 状态
 - [ ] 生词详情 `/words/:id`（review-flow §5）：学习统计展示、编辑复习释义（Dialog，PATCH `customReviewMeaning`，null 清除并回退三层取值 D007）、删除生词（AlertDialog 确认，软删除语义 D004，重新导入可恢复）
