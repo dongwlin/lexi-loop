@@ -1,0 +1,740 @@
+components:
+  schemas:
+    EnvelopeGetSessionResponse:
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        data:
+          $ref: "#/components/schemas/GetSessionResponse"
+        message:
+          type: string
+      required:
+        - code
+        - message
+        - data
+      type: object
+    EnvelopeImportWordsResponse:
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        data:
+          $ref: "#/components/schemas/ImportWordsResponse"
+        message:
+          type: string
+      required:
+        - code
+        - message
+        - data
+      type: object
+    EnvelopeListWordsResponse:
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        data:
+          $ref: "#/components/schemas/ListWordsResponse"
+        message:
+          type: string
+      required:
+        - code
+        - message
+        - data
+      type: object
+    EnvelopeNoData:
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        data:
+          $ref: "#/components/schemas/NoData"
+        message:
+          type: string
+      required:
+        - code
+        - message
+        - data
+      type: object
+    EnvelopeStartSessionResponse:
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        data:
+          $ref: "#/components/schemas/StartSessionResponse"
+        message:
+          type: string
+      required:
+        - code
+        - message
+        - data
+      type: object
+    EnvelopeWordDetail:
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        data:
+          $ref: "#/components/schemas/WordDetail"
+        message:
+          type: string
+      required:
+        - code
+        - message
+        - data
+      type: object
+    Error:
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        data:
+          $ref: "#/components/schemas/ErrorData"
+        message:
+          type: string
+      required:
+        - code
+        - message
+        - data
+      type: object
+    ErrorData:
+      additionalProperties: false
+      properties:
+        fieldErrors:
+          items:
+            $ref: "#/components/schemas/FieldError"
+          type:
+            - array
+            - "null"
+      type: object
+    FieldError:
+      additionalProperties: false
+      properties:
+        field:
+          type: string
+        reason:
+          type: string
+      required:
+        - field
+        - reason
+      type: object
+    GetSessionResponse:
+      additionalProperties: false
+      properties:
+        completedAt:
+          format: date-time
+          type:
+            - string
+            - "null"
+        forgotten:
+          format: int64
+          type: integer
+        items:
+          items:
+            $ref: "#/components/schemas/SessionResultItem"
+          type: array
+        remembered:
+          format: int64
+          type: integer
+        sessionId:
+          type: string
+        status:
+          type: string
+        total:
+          format: int64
+          type: integer
+      required:
+        - sessionId
+        - status
+        - total
+        - remembered
+        - forgotten
+        - completedAt
+        - items
+      type: object
+    ImportWordInput:
+      additionalProperties: false
+      properties:
+        count:
+          format: int64
+          minimum: 1
+          type: integer
+        word:
+          minLength: 1
+          type: string
+      required:
+        - word
+        - count
+      type: object
+    ImportWordsRequest:
+      additionalProperties: false
+      properties:
+        words:
+          items:
+            $ref: "#/components/schemas/ImportWordInput"
+          minItems: 1
+          type: array
+      required:
+        - words
+      type: object
+    ImportWordsResponse:
+      additionalProperties: false
+      properties:
+        created:
+          format: int64
+          type: integer
+        encounters:
+          format: int64
+          type: integer
+        updated:
+          format: int64
+          type: integer
+      required:
+        - encounters
+        - created
+        - updated
+      type: object
+    ListWordsResponse:
+      additionalProperties: false
+      properties:
+        list:
+          items:
+            $ref: "#/components/schemas/WordListItem"
+          type: array
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - list
+        - pagination
+      type: object
+    Meaning:
+      additionalProperties: false
+      properties:
+        pos:
+          type: string
+        translations:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+      type: object
+    NoData:
+      additionalProperties: false
+      type: object
+    Pagination:
+      additionalProperties: false
+      properties:
+        hasMore:
+          type: boolean
+        page:
+          format: int64
+          type: integer
+        pageSize:
+          format: int64
+          type: integer
+        total:
+          format: int64
+          type: integer
+        totalPages:
+          format: int64
+          type: integer
+      required:
+        - page
+        - pageSize
+        - total
+        - totalPages
+        - hasMore
+      type: object
+    SessionResultItem:
+      additionalProperties: false
+      properties:
+        result:
+          type: string
+        word:
+          type: string
+      required:
+        - word
+        - result
+      type: object
+    SessionWordItem:
+      additionalProperties: false
+      properties:
+        effectiveReviewMeaning:
+          items:
+            $ref: "#/components/schemas/Meaning"
+          type: array
+        itemId:
+          type: string
+        phonetic:
+          type: string
+        word:
+          type: string
+      required:
+        - itemId
+        - word
+        - phonetic
+        - effectiveReviewMeaning
+      type: object
+    StartSessionRequest:
+      additionalProperties: false
+      properties:
+        count:
+          format: int64
+          minimum: 1
+          type: integer
+      required:
+        - count
+      type: object
+    StartSessionResponse:
+      additionalProperties: false
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/SessionWordItem"
+          type: array
+        requestedCount:
+          format: int64
+          type: integer
+        sessionId:
+          type: string
+        totalCount:
+          format: int64
+          type: integer
+      required:
+        - sessionId
+        - requestedCount
+        - totalCount
+        - items
+      type: object
+    SubmitResultRequest:
+      additionalProperties: false
+      properties:
+        result:
+          enum:
+            - remembered
+            - forgotten
+          type: string
+      required:
+        - result
+      type: object
+    UpdateReviewMeaningRequest:
+      additionalProperties: false
+      properties:
+        customReviewMeaning:
+          items:
+            $ref: "#/components/schemas/Meaning"
+          type:
+            - array
+            - "null"
+      type: object
+    WordDetail:
+      additionalProperties: false
+      properties:
+        currentStreak:
+          format: int64
+          type: integer
+        definition:
+          type: string
+        effectiveReviewMeaning:
+          items:
+            $ref: "#/components/schemas/Meaning"
+          type: array
+        encounterCount:
+          format: int64
+          type: integer
+        forgetCount:
+          format: int64
+          type: integer
+        id:
+          type: string
+        lastReviewedAt:
+          format: date-time
+          type:
+            - string
+            - "null"
+        meaningSource:
+          type: string
+        phonetic:
+          type: string
+        rememberCount:
+          format: int64
+          type: integer
+        reviewCount:
+          format: int64
+          type: integer
+        word:
+          type: string
+      required:
+        - definition
+        - meaningSource
+        - id
+        - word
+        - phonetic
+        - effectiveReviewMeaning
+        - encounterCount
+        - reviewCount
+        - rememberCount
+        - forgetCount
+        - currentStreak
+        - lastReviewedAt
+      type: object
+    WordListItem:
+      additionalProperties: false
+      properties:
+        currentStreak:
+          format: int64
+          type: integer
+        effectiveReviewMeaning:
+          items:
+            $ref: "#/components/schemas/Meaning"
+          type: array
+        encounterCount:
+          format: int64
+          type: integer
+        forgetCount:
+          format: int64
+          type: integer
+        id:
+          type: string
+        lastReviewedAt:
+          format: date-time
+          type:
+            - string
+            - "null"
+        phonetic:
+          type: string
+        rememberCount:
+          format: int64
+          type: integer
+        reviewCount:
+          format: int64
+          type: integer
+        word:
+          type: string
+      required:
+        - id
+        - word
+        - phonetic
+        - effectiveReviewMeaning
+        - encounterCount
+        - reviewCount
+        - rememberCount
+        - forgetCount
+        - currentStreak
+        - lastReviewedAt
+      type: object
+info:
+  description: LexiLoop（词环）英语生词复习系统 /api/v1 接口。spec 由 `lexi-loop openapi` 离线生成至 docs/openapi/，请勿手改。
+  title: LexiLoop API
+  version: 1.0.0
+openapi: 3.1.0
+paths:
+  /api/v1/reviews:
+    post:
+      operationId: start-review-session
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartSessionRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStartSessionResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Bad Request
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: 业务前置条件不满足（无可复习生词，BASE.BIZ.USER_DISABLED）
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Internal Server Error
+      summary: 开始一轮复习（抽词 + 建 session）
+      tags:
+        - Reviews
+  /api/v1/reviews/{id}:
+    get:
+      operationId: get-review-session
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGetSessionResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Internal Server Error
+      summary: 获取一轮复习的汇总与逐词结果
+      tags:
+        - Reviews
+  /api/v1/reviews/{sessionId}/items/{itemId}:
+    post:
+      operationId: submit-review-result
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitResultRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNoData"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Internal Server Error
+      summary: 提交一个单词的复习结果（幂等）
+      tags:
+        - Reviews
+  /api/v1/words:
+    get:
+      operationId: list-words
+      parameters:
+        - explode: false
+          in: query
+          name: page
+          schema:
+            default: 1
+            format: int64
+            type: integer
+        - explode: false
+          in: query
+          name: pageSize
+          schema:
+            default: 20
+            format: int64
+            type: integer
+        - explode: false
+          in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeListWordsResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Internal Server Error
+      summary: 生词库分页列表（含搜索）
+      tags:
+        - Words
+  /api/v1/words/import:
+    post:
+      operationId: import-words
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportWordsRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeImportWordsResponse"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Internal Server Error
+      summary: 批量导入生词（累计遇词次数）
+      tags:
+        - Words
+  /api/v1/words/{id}:
+    delete:
+      operationId: delete-word
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNoData"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Internal Server Error
+      summary: 删除生词（软删除）
+      tags:
+        - Words
+    get:
+      operationId: get-word
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWordDetail"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Internal Server Error
+      summary: 单词详情
+      tags:
+        - Words
+    patch:
+      operationId: update-word-review-meaning
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateReviewMeaningRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNoData"
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Internal Server Error
+      summary: 更新用户自定义复习释义（传 null 清除）
+      tags:
+        - Words
