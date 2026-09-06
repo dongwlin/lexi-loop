@@ -39,7 +39,7 @@ MVP 服务端暂无认证端点；认证落地后在 `src/lib/api.ts` 注入 `ge
 
 ## 待办
 
-MVP 完成度评估（2026-09-06，2026-09-07 更新）：工程骨架、设计系统主题层、API Client（Orval 生成 + 统一 mutator）、Feature 层（words / review 的 api keys / queries / mutations）与后端 8 个端点已就绪；`src/pages/` 五个路由页面（导入、生词库、生词详情、复习、复习结果）已全部落地，页面基础设施（路由 meta → document.title、skip link、main landmark、h1 与状态分支）已就绪。质量设施（Lint / 格式化 / 组件测试环境 / MSW / Storybook 测试与 a11y 门禁 / Playwright）与原「依赖服务端契约扩展」两条（列表 / 详情掌握度与优先级、导入逐词结果）、「再来一轮」行为定稿均已于 2026-09-07 完成。剩余待办仅下方「质量与品牌」的 favicon 一条，完成后删除对应条目。
+MVP 完成度评估（2026-09-06，2026-09-07 更新）：工程骨架、设计系统主题层、API Client（Orval 生成 + 统一 mutator）、Feature 层（words / review 的 api keys / queries / mutations）与后端 8 个端点已就绪；`src/pages/` 五个路由页面（导入、生词库、生词详情、复习、复习结果）已全部落地，页面基础设施（路由 meta → document.title、skip link、main landmark、h1 与状态分支）已就绪。质量设施（Lint / 格式化 / 组件测试环境 / MSW / Storybook 测试与 a11y 门禁 / Playwright）、品牌 favicon、原「依赖服务端契约扩展」两条（列表 / 详情掌握度与优先级、导入逐词结果）与「再来一轮」行为定稿均已于 2026-09-07 完成；当前登记的 MVP 待办已全部完成。
 
 ### MVP 业务落地（review-flow.md §2–§10）
 
@@ -54,4 +54,4 @@ MVP 完成度评估（2026-09-06，2026-09-07 更新）：工程骨架、设计�
 
 质量设施已就位（2026-09-07）：ESLint Flat Config（类型感知 TS / Vue / vuejs-accessibility / TanStack Query / import-x 规则）+ Prettier（含 Tailwind class 排序，配置与脚本见《前端技术栈》§11）；组件测试环境 jsdom + Testing Library（`vitest.config.ts` 按《前端测试规范》§15 合并 vite 配置，`tests/` 为跨页面集成与共享设施）；MSW 在 HTTP 边界 Mock（`tests/mocks/`，`onUnhandledRequest: 'error'`，测试指向保留假主机）；Storybook 项目接入 `@storybook/addon-vitest`（Story 在真实 Chromium 中执行）与 `addon-a11y`（axe 检查为测试门禁，全局 `test: 'error'`）；Playwright E2E（`playwright.config.ts`，webServer 跑生产构建 + preview，`e2e/` 存放用例）。Story 以菜单打开收尾时的 `aria-hidden-focus` 豁免等例外均以注释登记在对应 Story。
 
-- [ ] 品牌设计产出 favicon 后放入 `public/`，并在 `index.html` 补 `<link rel="icon">`（create-vite 模板 favicon 已删除）
+品牌 favicon 已从 `docs/brand/logo.png` 的两个实心轮廓直接描摹为 `public/favicon.svg`：保留原图的双色开环、内嵌 L、开口位置与主色（`#242a34` / `#1771e4`），并裁去不适合标签页尺寸的外围留白；`index.html` 已声明 SVG favicon。
