@@ -32,7 +32,7 @@ MVP 服务端暂无认证端点；认证落地后在 `src/lib/api.ts` 注入 `ge
 
 ## 待办
 
-MVP 完成度评估（2026-09-06）：工程骨架、设计系统主题层、API Client（Orval 生成 + 统一 mutator）、Feature 层（words / review 的 api keys / queries / mutations）与后端 8 个端点已就绪；`src/pages/` 四个路由页面中导入页、生词库与生词详情已落地，其余仍为占位卡片。以下按依赖顺序登记，完成后删除对应条目。
+MVP 完成度评估（2026-09-06）：工程骨架、设计系统主题层、API Client（Orval 生成 + 统一 mutator）、Feature 层（words / review 的 api keys / queries / mutations）与后端 8 个端点已就绪；`src/pages/` 五个路由页面（导入、生词库、生词详情、复习、复习结果）已全部落地，页面基础设施（路由 meta → document.title、skip link、main landmark、h1 与状态分支）已就绪。以下按依赖顺序登记，完成后删除对应条目。
 
 ### MVP 业务落地（review-flow.md §2–§10）
 

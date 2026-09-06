@@ -2,9 +2,9 @@
 
 `apps/web` 是 LexiLoop 的 Vue 3 + TypeScript + Vite 前端应用。本文件是 web 子树内 Agent 的补充工作指引；仓库级纪律（改动前读 agent-log、冲突裁决、改动后记录）以根目录 [AGENTS.md](../../AGENTS.md) 为准，前端目录结构与职责权威见 [docs/specs/frontend/前端应用架构规范.md](../../docs/specs/frontend/前端应用架构规范.md)。本文件不维护 schema、公式或决策结论，只引用。
 
-## 当前状态：骨架就绪，四个核心页面已落地
+## 当前状态：MVP 业务落地完成，页面基础设施就绪
 
-工程骨架（Vue 3 + vue-router + Pinia + TanStack Query + Tailwind CSS v4 + Reka UI / Radix Colors + Storybook 10）、设计系统主题层（`src/styles/`，Light / Dark / System）、API Client 装配（workspace 包 [`packages/api-client`](../../packages/api-client/)：Orval 生成请求函数与 DTO 类型 + 手写 mutator 统一传输、`{code, message, data}` 解包与 `ApiError` 分类；web 侧装配点为 `src/lib/api.ts`）、Feature 层（`src/features/words/`、`src/features/review/` 的 keys / queries / mutations）均已就绪；四个路由页面（导入页 `/import`、生词库 `/words`、生词详情 `/words/:id`、复习页 `/review`、复习结果页 `/review/result/:session`）已完整落地。下一步清单（含服务端契约缺口登记）以 [README.md](README.md) 为准——完成里程碑后同步更新两处，避免状态失真。
+工程骨架（Vue 3 + vue-router + Pinia + TanStack Query + Tailwind CSS v4 + Reka UI / Radix Colors + Storybook 10）、设计系统主题层（`src/styles/`，Light / Dark / System）、API Client 装配（workspace 包 [`packages/api-client`](../../packages/api-client/)：Orval 生成请求函数与 DTO 类型 + 手写 mutator 统一传输、`{code, message, data}` 解包与 `ApiError` 分类；web 侧装配点为 `src/lib/api.ts`）、Feature 层（`src/features/words/`、`src/features/review/` 的 keys / queries / mutations）均已就绪；五个路由页面（导入页 `/import`、生词库 `/words`、生词详情 `/words/:id`、复习页 `/review`、复习结果页 `/review/result/:session`）已完整落地，页面基础设施（路由 meta → `document.title`、skip link、main landmark、各页面 h1 与状态分支）已就绪。下一步清单（含服务端契约缺口登记）以 [README.md](README.md) 为准——完成里程碑后同步更新两处，避免状态失真。
 
 改动本子树任何代码前：先读 [docs/agent-log/](../../docs/agent-log/) 当月文件的最近记录了解上下文，再核对下表对应文档与当前代码。
 
@@ -50,7 +50,7 @@ pnpm -F @lexi-loop/api-client test:run  # api-client mutator / 生成端点单�
 - 无状态纯函数放 `src/utils/`（架构规范 §4.5 / §4.8），跨 Feature 客户端状态放 `src/stores/`（Pinia，§4.6），跨 Feature 带状态的 composable 放 `src/composables/`（§4.5）；状态归属决策顺序见 §7.1。
 - 基础组件 `src/components/ui/` 每组件独立文件夹（`Button.vue` + 同目录 Story），经 `components/ui/index.ts` 统一导出；保持业务无关——不 import stores / api-client / 路由（架构规范 §4.4）；视觉配方以设计系统方案 §8 为准，不在组件里另起一套。
 - 主题：偏好 Light / Dark / System 持久化在 `localStorage`（`lexi-loop.theme`），`main.ts` 在应用挂载前初始化，解析后的主题类互斥挂 `<html>`（设计系统方案 §11）。
-- 可访问性基线随页面落地，不后补：页面 h1 与 landmark、Loading / Empty / Error 分支（架构规范 §11、交互与可访问性规范 §6.1）、焦点移动与快捷键（同规范 §5.3–§5.4）；复习页键盘映射 Space / 1 / 2 / ← / → 以 review-flow.md 为准。
+- 可访问性基线随页面落地，不后补：页面 h1 与 landmark、Loading / Empty / Error 分支（架构规范 §11、交互与可访问性规范 §6.1）、焦点移动与快捷键（同规范 §5.3–§5.4）；路由 meta → `document.title` 统一由 `router.afterEach` 管理（WordDetailPage 保留动态标题覆盖）；AppShell 含 skip link（`#main-content`）与 `<main id="main-content">` landmark；复习页键盘映射 Space / 1 / 2 / ← / → 以 review-flow.md 为准。
 - 可分享页面状态（搜索、分页、恢复进度）写 URL（架构规范 §6.2、交互与可访问性规范 §6.2）。
 
 ## MVP 边界与冻结决策（web 侧）
