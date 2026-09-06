@@ -1,10 +1,153 @@
 <script setup lang="ts">
-// 骨架占位：本轮复习结果业务实现（汇总 / 需要加强列表 / 再来一轮）按 docs/frontend/review-flow.md §9 落地。
+import { computed, watchEffect } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { CheckCircle, RotateCcw } from 'lucide-vue-next'
+import { Button } from '@/components/ui'
+import { useReviewSessionQuery } from '@/features/review/api/queries'
+
+// review-flow.md §9：本轮复习结果（汇总 / 需要加强列表 / 再来一轮 / 回到生词库）。
+
+const route = useRoute()
+const router = useRouter()
+
+const sessionId = computed(() => String(route.params.session))
+
+const {
+  data: session,
+  isPending,
+  isError,
+  error,
+  refetch,
+  isFetching,
+} = useReviewSessionQuery(sessionId)
+
+const accuracy = computed(() => {
+  if (!session.value || session.value.total === 0) return 0
+  return Math.round((session.value.remembered / session.value.total) * 100)
+})
+
+const forgottenWords = computed(() =>
+  (session.value?.items ?? []).filter((item) => item.result === 'forgotten'),
+)
+
+const errorMessage = computed(() =>
+  error.value instanceof Error ? error.value.message : '复习结果加载失败，请稍后重试',
+)
+
+function goToReview() {
+  void router.push({ name: 'review' })
+}
+
+// 《前端交互与可访问性规范》§6.1：页面标题随路由更新。
+watchEffect(() => {
+  document.title = '复习结果 · LexiLoop'
+})
 </script>
 
 <template>
   <section class="rounded-card bg-surface p-6 shadow-surface">
     <h1 class="text-lg font-semibold text-foreground">复习结果</h1>
-    <p class="mt-2 text-sm text-muted-foreground">业务实现待后续工作单元落地。</p>
+
+    <!-- Loading -->
+    <div v-if="isPending" class="mt-4">
+      <p role="status" class="text-sm text-muted-foreground">
+        正在加载复习结果…
+      </p>
+      <div aria-hidden="true" class="mt-4 space-y-4 py-1">
+        <div class="h-7 w-48 rounded-field bg-surface-tertiary motion-safe:animate-pulse" />
+        <div class="h-5 w-32 rounded-field bg-surface-tertiary motion-safe:animate-pulse" />
+        <div class="h-5 w-32 rounded-field bg-surface-tertiary motion-safe:animate-pulse" />
+        <div class="h-5 w-32 rounded-field bg-surface-tertiary motion-safe:animate-pulse" />
+      </div>
+    </div>
+
+    <!-- Error -->
+    <template v-else-if="isError">
+      <p role="alert" class="mt-4 text-sm text-danger-text">
+        {{ errorMessage }}
+      </p>
+      <Button
+        variant="outline"
+        class="mt-3"
+        :pending="isFetching"
+        @click="refetch()"
+      >
+        重试
+      </Button>
+    </template>
+
+    <!-- Session 不存在或未完成 -->
+    <template v-else-if="session && session.status !== 'completed'">
+      <p class="mt-4 text-sm text-muted-foreground">
+        该复习轮次尚未完成。
+      </p>
+      <div class="mt-4 flex gap-3">
+        <Button @click="goToReview">去复习</Button>
+        <RouterLink
+          to="/words"
+          class="inline-flex min-h-11 items-center justify-center rounded-control border border-border-strong bg-transparent px-4 py-2 text-sm font-medium text-foreground transition-colors duration-150 ease-out hover:bg-default"
+        >
+          回到生词库
+        </RouterLink>
+      </div>
+    </template>
+
+    <!-- 结果展示 -->
+    <template v-else-if="session">
+      <!-- 完成标记 -->
+      <div class="mt-4 flex items-center gap-2">
+        <CheckCircle class="size-5 shrink-0 text-success-text" aria-hidden="true" />
+        <span class="text-base font-medium text-foreground">本轮完成</span>
+      </div>
+
+      <!-- 汇总统计 -->
+      <dl class="mt-4 space-y-2 text-sm">
+        <div class="flex items-baseline justify-between gap-6">
+          <dt class="text-muted-foreground">总计</dt>
+          <dd class="font-medium tabular-nums text-foreground">{{ session.total }} 个单词</dd>
+        </div>
+        <div class="flex items-baseline justify-between gap-6">
+          <dt class="text-muted-foreground">记得</dt>
+          <dd class="font-medium tabular-nums text-foreground">{{ session.remembered }}</dd>
+        </div>
+        <div class="flex items-baseline justify-between gap-6">
+          <dt class="text-muted-foreground">不记得</dt>
+          <dd class="font-medium tabular-nums text-foreground">{{ session.forgotten }}</dd>
+        </div>
+        <div class="flex items-baseline justify-between gap-6">
+          <dt class="text-muted-foreground">正确率</dt>
+          <dd class="font-medium tabular-nums text-foreground">{{ accuracy }}%</dd>
+        </div>
+      </dl>
+
+      <!-- 需要加强的单词列表 -->
+      <template v-if="forgottenWords.length > 0">
+        <hr class="my-6 border-t border-border">
+        <h2 class="text-sm font-medium text-foreground">需要加强</h2>
+        <ul class="mt-2 space-y-1">
+          <li
+            v-for="item in forgottenWords"
+            :key="item.word"
+            class="text-sm text-muted-foreground"
+          >
+            {{ item.word }}
+          </li>
+        </ul>
+      </template>
+
+      <!-- 操作按钮 -->
+      <div class="mt-6 flex gap-3">
+        <Button class="gap-2" @click="goToReview">
+          <RotateCcw class="size-4 shrink-0" aria-hidden="true" />
+          再来一轮
+        </Button>
+        <RouterLink
+          to="/words"
+          class="inline-flex min-h-11 items-center justify-center rounded-control border border-border-strong bg-transparent px-4 py-2 text-sm font-medium text-foreground transition-colors duration-150 ease-out hover:bg-default"
+        >
+          回到生词库
+        </RouterLink>
+      </div>
+    </template>
   </section>
 </template>
