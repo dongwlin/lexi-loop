@@ -58,7 +58,7 @@ type DictionaryEntry struct {
 	RawMeanings    []Meaning
 	ReviewMeanings []Meaning
 	Exchange       map[string]string // 词形变化表（ECDICT exchange；键为变化类型代码，"0" 为原形），lemma 解析依据 normalization.md §2
-	Frequency      map[string]int    // 词频数据（frequency / bnc_frequency / coca_frequency，data-model.md §8）
+	Frequency      map[string]int    // 词频数据（bnc_frequency / coca_frequency / collins / oxford，data-model.md §8）
 	Tags           []string
 	Source         string
 	SourceVersion  string

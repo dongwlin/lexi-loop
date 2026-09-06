@@ -144,7 +144,7 @@ effective_review_meaning =
 ## 8. 发音、词频与标签
 
 - **发音**：音标优先使用本地词典数据。如果在线 Provider 存在音频，可以保存 `audio`（第二阶段起，见 [enrichment.md](enrichment.md)），但第一版音频不是核心功能。
-- **词频**：ECDICT 提供的词频信息（`frequency`、`bnc_frequency`、`coca_frequency`）可以保留。未来复习算法可以考虑「个人 `encounter_count` + 客观 `frequency`」，但客观词频只能作为弱信号——复习权重主要依赖用户自己遇到多少次、是否记得、多久没复习，而不是公共语料库词频（[review/algorithm.md](../review/algorithm.md)）。
+- **词频**：ECDICT 提供的词频信息（`frequency`、`bnc_frequency`、`coca_frequency`）可以保留；离线导入时柯林斯词频星级（`collins`）与牛津三千核心词标记（`oxford`）同属客观语料元数据，一并存入 `frequency`（0 与空串视为无数据、不写入键）。未来复习算法可以考虑「个人 `encounter_count` + 客观 `frequency`」，但客观词频只能作为弱信号——复习权重主要依赖用户自己遇到多少次、是否记得、多久没复习，而不是公共语料库词频（[review/algorithm.md](../review/algorithm.md)）。
 
 ## 9. 软删除（deleted_at）
 

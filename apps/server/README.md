@@ -4,7 +4,7 @@ LexiLoop（词环）英语生词复习系统后端。工程结构规范见 [docs
 
 ## 当前状态：MVP 业务链路可用
 
-后端已按分层规范实现 **Word / Review 全部业务用例与 `/api/v1` 端点**：`internal/domain` 领域模型与纯业务规则（四实体工厂、ApplyReview / Submit / Complete / Abandon 状态迁移、weight / mastery 动态计算，含单元测试）、`internal/infra/database` 数据库连接池（bun + pgx）、`migrations/` 真实迁移 DDL（四表，含「全库至多一个 active session」部分唯一索引）、`internal/repo` 数据访问适配器（advisory lock / FOR UPDATE / 条件 UPDATE、SQLSTATE 错误归一化）、`internal/apperr` 类型化应用错误与 `internal/handler/httpresp` 统一响应（唯一的 `apperr.Kind → HTTP 状态` 映射）均已实现并含测试；`internal/service`（`WeightedSampler` 加权随机不放回抽样、`DictionaryService` 本地 Lookup——归一 → 词形变化表归并 → 未命中创建最小词条、`WordService` 五用例、`ReviewService` 三用例按 structure.md §5 的事务与并发边界，`tx.go` 提供可重放事务的有上限重试；含 testcontainers 集成测试，覆盖 §5.4 必测的并发与回滚场景）、`internal/handler/v1`（版本化 Handler + DTO，httptest 组件测试驱动完整 HTTP 栈）与 `internal/app` 组合根（显式组装 DB / Service / Handler）均已落地；`serve` 现在需要 `LEXI_DATABASE_URL`。`import-ecdict` 命令与 `handler/middleware` 自定义实现仍为占位。
+后端已按分层规范实现 **Word / Review 全部业务用例与 `/api/v1` 端点**：`internal/domain` 领域模型与纯业务规则（四实体工厂、ApplyReview / Submit / Complete / Abandon 状态迁移、weight / mastery 动态计算，含单元测试）、`internal/infra/database` 数据库连接池（bun + pgx）、`migrations/` 真实迁移 DDL（四表，含「全库至多一个 active session」部分唯一索引）、`internal/repo` 数据访问适配器（advisory lock / FOR UPDATE / 条件 UPDATE、SQLSTATE 错误归一化）、`internal/apperr` 类型化应用错误与 `internal/handler/httpresp` 统一响应（唯一的 `apperr.Kind → HTTP 状态` 映射）均已实现并含测试；`internal/service`（`WeightedSampler` 加权随机不放回抽样、`DictionaryService` 本地 Lookup——归一 → 词形变化表归并 → 未命中创建最小词条、`WordService` 五用例、`ReviewService` 三用例按 structure.md §5 的事务与并发边界，`tx.go` 提供可重放事务的有上限重试；含 testcontainers 集成测试，覆盖 §5.4 必测的并发与回滚场景）、`internal/handler/v1`（版本化 Handler + DTO，httptest 组件测试驱动完整 HTTP 栈）、`internal/importer/ecdict`（ECDICT CSV 流式解析与字段映射、按批分事务的幂等导入，含单元与集成测试）与 `import-ecdict` 命令，以及 `internal/app` 组合根（显式组装 DB / Service / Handler）均已落地；`serve` 需要 `LEXI_DATABASE_URL`。`handler/middleware` 自定义实现仍为占位。
 
 ```text
 apps/server/
@@ -16,7 +16,7 @@ apps/server/
    ├─ domain/                    领域模型与纯业务规则（已实现，含单元测试）
    ├─ repo/                      数据访问适配器 + internal/schema（已实现，含集成测试）
    ├─ service/                   业务用例编排：word / dictionary / review / sampler / tx（已实现，含集成测试）
-   ├─ importer/ecdict/           ECDICT 离线导入（占位）
+   ├─ importer/ecdict/           ECDICT 离线导入：parser 字段映射 + importer 批事务编排（已实现，含单元与集成测试）
    ├─ handler/                   router.go（/api/v1 已挂载业务路由）+ httpresp / v1（已实现，含组件测试）/ middleware（占位）
    ├─ apperr/                    类型化应用错误（已实现，含单元测试）
    └─ infra/                     config（viper，已实现）/ database（连接池已实现）
@@ -52,6 +52,15 @@ LEXI_DATABASE_URL='postgres://lexi:lexi@localhost:5432/lexi_loop?sslmode=disable
 LEXI_DATABASE_URL='postgres://lexi:lexi@localhost:5432/lexi_loop?sslmode=disable' go run . migrate down 2     # 回退指定步数（超过可用数时截断）
 ```
 
+ECDICT 离线导入由 `import-ecdict` 命令执行（导入前先 `migrate up`，字段映射与源列取舍见 `internal/importer/ecdict`）：
+
+```bash
+LEXI_DATABASE_URL='postgres://lexi:lexi@localhost:5432/lexi_loop?sslmode=disable' go run . import-ecdict ecdict.csv           # 全量导入（默认每 1000 行一个事务）
+LEXI_DATABASE_URL='postgres://lexi:lexi@localhost:5432/lexi_loop?sslmode=disable' go run . import-ecdict ecdict.csv --batch-size 2000   # 自定义单事务行数
+```
+
+导入按固定批次分事务提交，失败只回滚当前批次并中止；写入按 headword 唯一键幂等，中断（SIGINT / SIGTERM）或失败后重跑同一文件即可续传。
+
 验证：
 
 ```bash
@@ -71,15 +80,14 @@ curl -X POST http://localhost:8080/api/v1/reviews -H 'Content-Type: application/
 ```bash
 go test ./...                       # 单元 + 集成测试（集成需本机 Docker）
 go test -short ./...                # 只跑单元测试（跳过 testcontainers 集成测试）
-go test -race ./internal/infra/... ./internal/repo/... ./internal/service/... ./internal/handler/... ./migrations
+go test -race ./internal/infra/... ./internal/repo/... ./internal/service/... ./internal/handler/... ./internal/importer/... ./migrations
 ```
 
-`internal/infra/database`、`migrations`、`internal/repo`、`internal/service` 与 `internal/handler` 的集成测试各自在包级 `TestMain` 中启动一次共享的真实 PostgreSQL 容器（镜像 `postgres:18-alpine`，全部用例复用；各包 `TestMain` 会先应用全部迁移）；Docker 不可用或传 `-short` 时集成用例跳过、纯单元测试仍运行（见 [Go 测试规范](../../docs/specs/backend/Go 测试规范.md)）。structure.md §5.4 的并发 / 回滚必测场景（单 active session、并发提交幂等、最后两题并发提交必完成、注入失败整体回滚、items 中途失败不留半成品）已在 Service 层用真实 PostgreSQL 验证；`internal/handler` 组件测试经 httptest 驱动完整 HTTP 栈验证端点契约。
+`internal/infra/database`、`migrations`、`internal/repo`、`internal/service`、`internal/handler` 与 `internal/importer/ecdict` 的集成测试各自在包级 `TestMain` 中启动一次共享的真实 PostgreSQL 容器（镜像 `postgres:18-alpine`，全部用例复用；各包 `TestMain` 会先应用全部迁移）；Docker 不可用或传 `-short` 时集成用例跳过、纯单元测试仍运行（见 [Go 测试规范](../../docs/specs/backend/Go 测试规范.md)）。structure.md §5.4 的并发 / 回滚必测场景（单 active session、并发提交幂等、最后两题并发提交必完成、注入失败整体回滚、items 中途失败不留半成品）已在 Service 层用真实 PostgreSQL 验证；`internal/handler` 组件测试经 httptest 驱动完整 HTTP 栈验证端点契约；`internal/importer/ecdict` 以小型固定 CSV 验证字段映射、幂等重跑与批次回滚续传。
 
 ## 下一步（按依赖顺序）
 
-1. `internal/importer/ecdict` + `import-ecdict` 命令：ECDICT 离线导入
-2. 中间件替换为 `handler/middleware` 自定义实现（request_id / logger / recovery / cors）
+1. 中间件替换为 `handler/middleware` 自定义实现（request_id / logger / recovery / cors）
 
 ## 模块
 
