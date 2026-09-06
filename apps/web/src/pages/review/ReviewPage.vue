@@ -63,6 +63,13 @@ function applyCustomCount() {
   selectedCount.value = parsed
 }
 
+// 输入状态必须是字符串：type="number" 上的 v-model 会把可解析输入写成 number，
+// 下游 .trim() 将抛 TypeError 冻结整张配置卡片的渲染（浏览器回归发现的问题）。
+function handleCountInput(event: Event) {
+  customCountInput.value = (event.target as HTMLInputElement).value
+  customCountError.value = null
+}
+
 function handleCountKeydown(event: KeyboardEvent) {
   if (event.key === 'Enter') {
     event.preventDefault()
@@ -394,13 +401,13 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
           </label>
           <input
             id="custom-count"
-            v-model="customCountInput"
+            :value="customCountInput"
             type="number"
             min="1"
             placeholder="例如 25"
             class="mt-2 w-full min-h-11 rounded-field border border-field-border bg-field px-3 py-2 text-sm text-foreground shadow-field placeholder:text-muted-foreground enabled:hover:bg-field-hover outline-hidden focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             @keydown="handleCountKeydown"
-            @input="customCountError = null"
+            @input="handleCountInput"
           />
           <p v-if="customCountError" role="alert" class="mt-1 text-xs text-danger-text">
             {{ customCountError }}
