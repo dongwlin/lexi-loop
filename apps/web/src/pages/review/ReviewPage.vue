@@ -9,6 +9,7 @@ import { useStartReviewSessionMutation, useSubmitReviewResultMutation } from '@/
 import { reviewSessionQueryOptions } from '@/features/review/api/queries'
 import { wordsListQueryOptions } from '@/features/words/api/queries'
 import { formatMeanings } from '@/utils/formatMeanings'
+import { resolveReviewKeyAction } from '@/utils/review-keyboard'
 import { computeResumeProgress } from '@/utils/review-resume'
 import {
   clearReviewSnapshot,
@@ -16,10 +17,18 @@ import {
   saveReviewSnapshot,
   type ReviewSnapshot,
 } from '@/utils/review-snapshot'
+import {
+  advanceAfterAnswer,
+  enterReview,
+  revealCard,
+  type ReviewMode,
+} from '@/utils/review-state-machine'
 
 // review-flow.md §6–§8、§10：复习页。
-// 状态机 idle → recalling → revealed → answered → recalling → ... → finished（跳转结果页）。
-// 键盘操作绑定在复习区域：Space 揭示释义；1 / ← 不记得；2 / → 记得（§10、§5.4）。
+// 状态机 idle → recalling → revealed → answered → recalling → ... → finished（跳转结果页），
+// 迁移判定与推进收敛在 utils/review-state-machine（本页持有 ref 状态与副作用）。
+// 键盘操作绑定在复习区域：Space 揭示释义；1 / ← 不记得；2 / → 记得（§10、§5.4），
+// 按键 → 操作的映射在 utils/review-keyboard，本页只负责 DOM 归约（焦点是否在控件上）与 preventDefault。
 // D010：进入时检测 active session，由用户选择继续 / 放弃；无 abandon 端点，MVP 只清本地快照。
 // 恢复检查复用 Feature 层查询（queryClient.fetchQuery），按 ApiError 区分 404 与瞬时失败。
 
@@ -163,8 +172,9 @@ function handleResume() {
   const resumeIndex = savedProgress.value?.resumeIndex ?? 0
   items.value = snapshot.items
   sessionId.value = snapshot.sessionId
-  currentIndex.value = Math.min(Math.max(resumeIndex, 0), snapshot.items.length - 1)
-  currentMode.value = 'recalling'
+  const entry = enterReview(snapshot.items.length, resumeIndex)
+  currentIndex.value = entry.currentIndex
+  currentMode.value = entry.mode
   recoveryState.value = 'idle'
   void nextTick(() => focusReviewArea())
 }
@@ -197,8 +207,9 @@ async function startNewSession(count: number) {
 
     items.value = response.items
     sessionId.value = response.sessionId
-    currentIndex.value = response.items.length > 0 ? 0 : -1
-    currentMode.value = response.items.length > 0 ? 'recalling' : 'idle'
+    const entry = enterReview(response.items.length)
+    currentIndex.value = entry.currentIndex
+    currentMode.value = entry.mode
 
     saveReviewSnapshot({
       sessionId: response.sessionId,
@@ -225,8 +236,6 @@ function describeStartError(err: unknown): string {
 
 // ---- 复习状态机 ----
 
-type ReviewMode = 'idle' | 'recalling' | 'revealed'
-
 const currentMode = ref<ReviewMode>('idle')
 const items = ref<ReviewSnapshot['items']>([])
 const currentIndex = ref(0)
@@ -243,8 +252,9 @@ const currentMeaning = computed(() => {
 })
 
 async function handleReveal() {
-  if (currentMode.value !== 'recalling' || !currentItem.value) return
-  currentMode.value = 'revealed'
+  const revealed = revealCard(currentMode.value, currentItem.value !== null)
+  if (!revealed) return
+  currentMode.value = revealed
   // 揭示后「查看释义」按钮随分支卸载会把焦点丢到 body，移回复习区域保住键盘操作（§5.3）。
   await nextTick()
   focusReviewArea()
@@ -264,11 +274,11 @@ async function handleAnswer(result: 'remembered' | 'forgotten') {
       result,
     })
 
-    const nextIndex = currentIndex.value + 1
+    const advance = advanceAfterAnswer(currentIndex.value, items.value.length)
 
-    if (nextIndex < items.value.length) {
-      currentIndex.value = nextIndex
-      currentMode.value = 'recalling'
+    if (advance.outcome === 'next') {
+      currentIndex.value = advance.nextIndex
+      currentMode.value = advance.mode
       await nextTick()
       focusReviewArea()
     } else {
@@ -289,29 +299,25 @@ async function handleAnswer(result: 'remembered' | 'forgotten') {
 // 绑定在复习区域元素上（代替 document 级监听）：快捷键只在复习区域持有焦点时生效，
 // 不抢占页头导航 / 主题菜单等处的按键（交互与可访问性规范 §5.4）。
 function handleKeydown(event: KeyboardEvent) {
-  if (currentMode.value === 'idle') return
-
   // 焦点落在按钮 / 链接等控件上时，Space / Enter 保留原生激活行为，不拦截。
   const target = event.target
   const onControl =
     target instanceof HTMLElement &&
-    target.closest('button, a, input, textarea, select, [contenteditable]')
+    target.closest('button, a, input, textarea, select, [contenteditable]') !== null
 
-  if (event.key === ' ' || event.code === 'Space') {
-    if (onControl) return
-    event.preventDefault()
+  const action = resolveReviewKeyAction(
+    { key: event.key, code: event.code },
+    currentMode.value,
+    onControl,
+  )
+  if (!action) return
+
+  event.preventDefault()
+  if (action === 'reveal') {
     void handleReveal()
-  } else if (
-    currentMode.value === 'revealed' &&
-    (event.key === '1' || event.key === 'ArrowLeft')
-  ) {
-    event.preventDefault()
+  } else if (action === 'answerForgotten') {
     void handleAnswer('forgotten')
-  } else if (
-    currentMode.value === 'revealed' &&
-    (event.key === '2' || event.key === 'ArrowRight')
-  ) {
-    event.preventDefault()
+  } else {
     void handleAnswer('remembered')
   }
 }
