@@ -29,7 +29,7 @@ func newServeCommand() *cobra.Command {
 			// 收到 SIGINT / SIGTERM 时取消 ctx，交由 app 完成优雅关闭。
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 			defer stop()
-			return app.Run(ctx, cfg)
+			return app.Run(ctx, cfg, appLogger)
 		},
 	}
 	cmd.Flags().StringVar(&httpAddr, "http-addr", "", "HTTP 监听地址；为空时取环境变量 LEXI_HTTP_ADDR，缺省为 :8080")

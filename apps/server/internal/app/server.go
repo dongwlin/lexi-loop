@@ -4,12 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	zerologlog "github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 	"github.com/uptrace/bun"
 
 	"github.com/dongwlin/lexi-loop/apps/server/internal/handler"
@@ -25,7 +24,9 @@ const shutdownTimeout = 10 * time.Second
 // Run 组装长生命周期组件（structure.md §3 组合根：*bun.DB、具体 Service、
 // 版本化 Handler），以 HTTP 服务方式运行直到 ctx 结束，随后优雅关闭。
 // Repo、Domain 不进入长生命周期依赖图，由 Service 方法内按需构造。
-func Run(ctx context.Context, cfg *config.Config) error {
+// log 是注入的 zerolog logger，由 cmd 根命令经 logger.Init 构造后传入，
+// 并继续传给 RegisterRoutes（structure.md §4.4）。
+func Run(ctx context.Context, cfg *config.Config, log zerolog.Logger) error {
 	if cfg.Database.URL == "" {
 		return fmt.Errorf("missing database config: set LEXI_DATABASE_URL")
 	}
@@ -41,19 +42,19 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	}
 	defer func() {
 		if err := db.Close(); err != nil {
-			log.Printf("close database: %v", err)
+			log.Error().Err(err).Msg("close database")
 		}
 	}()
 
 	srv := &http.Server{
 		Addr:              cfg.HTTP.Addr,
-		Handler:           newEngine(cfg, db),
+		Handler:           newEngine(cfg, db, log),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	errCh := make(chan error, 1)
 	go func() {
-		log.Printf("lexi-loop http server listening on %s", cfg.HTTP.Addr)
+		log.Info().Str("addr", cfg.HTTP.Addr).Msg("lexi-loop http server listening")
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- err
 		}
@@ -68,7 +69,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		if err := srv.Shutdown(shutdownCtx); err != nil {
 			return fmt.Errorf("graceful shutdown: %w", err)
 		}
-		log.Print("lexi-loop http server stopped")
+		log.Info().Msg("lexi-loop http server stopped")
 		return nil
 	}
 }
@@ -76,7 +77,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 // newEngine 创建 Gin Engine：组合根显式构造具体 Service 与版本化 Handler
 // （不创建接口），全局中间件与 /api/v1 业务路由统一经 handler.RegisterRoutes
 // 挂载，基础设施端点直接挂在根路径。
-func newEngine(cfg *config.Config, db *bun.DB) *gin.Engine {
+func newEngine(cfg *config.Config, db *bun.DB, log zerolog.Logger) *gin.Engine {
 	dictionarySvc := service.NewDictionary(db)
 	wordSvc := service.NewWord(db, dictionarySvc)
 	reviewSvc := service.NewReview(db, service.NewWeightedSampler(service.NewTimeSeededSource()))
@@ -85,10 +86,8 @@ func newEngine(cfg *config.Config, db *bun.DB) *gin.Engine {
 	reviewHandler := v1.NewReviewHandler(reviewSvc)
 
 	engine := gin.New()
-	// 全局日志已由 cmd 根命令经 logger.Init 接管（ConsoleWriter 格式），
-	// 此处取全局 logger 传给中间件。
 	handler.RegisterRoutes(engine, handler.Options{
-		Log:                zerologlog.Logger,
+		Log:                log,
 		CORSAllowedOrigins: cfg.HTTP.CORSAllowedOrigins,
 	}, wordHandler, reviewHandler)
 	// 健康检查属基础设施端点，不参与业务版本（docs/specs/backend/HTTP API 设计规范.md §2.4）。
