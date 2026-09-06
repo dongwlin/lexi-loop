@@ -16,6 +16,10 @@ const totalEncounters = computed(() =>
 
 const importMutation = useImportWordsMutation()
 
+// 逐词结果（api/words.md §2 items）：review-flow §3 的
+// 「ambiguous 新增 / constrain 已存在 +2」反馈。
+const importItems = computed(() => importMutation.data.value?.items ?? [])
+
 const isInputMode = ref(true)
 const errorText = ref<string | null>(null)
 // 程序化焦点目标（非原生可聚焦，临时 tabindex="-1"，见《前端交互与可访问性规范》§5.3）。
@@ -98,7 +102,7 @@ function handleContinue() {
       </div>
     </template>
 
-    <!-- 结果模式：review-flow.md §3 聚合反馈 -->
+    <!-- 结果模式：review-flow.md §3 聚合反馈 + 逐词结果 -->
     <template v-else>
       <div role="status" class="mt-4">
         <h2
@@ -128,6 +132,28 @@ function handleContinue() {
             </dd>
           </div>
         </dl>
+
+        <ul class="mt-4 space-y-1.5 text-sm">
+          <li
+            v-for="item in importItems"
+            :key="item.word"
+            class="flex items-baseline justify-between gap-4"
+          >
+            <span class="font-medium break-words text-foreground">
+              {{ item.word }}
+            </span>
+            <span
+              class="shrink-0 tabular-nums"
+              :class="
+                item.result === 'created'
+                  ? 'text-success-text'
+                  : 'text-muted-foreground'
+              "
+            >
+              {{ item.result === 'created' ? '新增' : `已存在 +${item.count}` }}
+            </span>
+          </li>
+        </ul>
       </div>
 
       <div class="mt-6 flex gap-3">
