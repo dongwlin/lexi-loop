@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import {
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogOverlay,

@@ -25,6 +25,19 @@ interface DialogProps {
 
 defineProps<DialogProps>()
 const emit = defineEmits<{ 'update:open': [open: boolean] }>()
+
+// Reka 打开时默认聚焦首个可聚焦元素（右上角关闭按钮）；内容里有 data-dialog-initial-focus
+// 标记时优先聚焦它（交互与可访问性规范 §5.3：打开 Dialog 移入合适的首个元素）。未标记则
+// 交给 Reka 默认行为。
+function handleOpenAutoFocus(event: Event) {
+  const initial = (event.currentTarget as HTMLElement | null)?.querySelector<HTMLElement>(
+    '[data-dialog-initial-focus]',
+  )
+  if (initial) {
+    event.preventDefault()
+    initial.focus()
+  }
+}
 </script>
 
 <template>
@@ -36,6 +49,7 @@ const emit = defineEmits<{ 'update:open': [open: boolean] }>()
     <DialogPortal>
       <DialogOverlay class="fixed inset-0 z-40 bg-black/50" />
       <DialogContent
+        @open-auto-focus="handleOpenAutoFocus"
         class="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col overflow-y-auto rounded-dialog bg-overlay p-6 text-foreground shadow-overlay forced-colors:outline-solid! forced-colors:outline-1 forced-colors:outline-[CanvasText]!"
       >
         <div class="flex items-start justify-between gap-4">

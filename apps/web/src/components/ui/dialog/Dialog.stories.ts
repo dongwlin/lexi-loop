@@ -11,7 +11,9 @@ const meta = {
 } satisfies Meta<typeof Dialog>
 
 export default meta
-type Story = StoryObj<typeof meta>
+// 组件的 open / title / description 为必填 props，StoryObj<typeof meta> 会强制 args；
+// 这些 Story 用 render 全量接管，改用无泛型 StoryObj 放宽类型关联。
+type Story = StoryObj
 
 // 受控开闭（触发器 → Esc 关闭）在 play 中验证。对话框挂在 body 的 Portal 上，断言需从
 // document 查询（不局限于 canvas 容器）。

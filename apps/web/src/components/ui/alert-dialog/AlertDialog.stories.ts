@@ -12,7 +12,9 @@ const meta = {
 } satisfies Meta<typeof AlertDialog>
 
 export default meta
-type Story = StoryObj<typeof meta>
+// 组件的 open / title / description 为必填 props，StoryObj<typeof meta> 会强制 args；
+// 这些 Story 用 render 全量接管，改用无泛型 StoryObj 放宽类型关联。
+type Story = StoryObj
 
 // 不可逆确认（交互与可访问性规范 §9.4）：危险按钮用具体动作名称，Cancel 在前让初始焦点落
 // 在安全操作上。确认与取消的语义角色（alertdialog + 两个 button）在 play 中验证。
