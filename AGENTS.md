@@ -13,7 +13,7 @@ PRD（product/prd.md：做什么）
 → specs（specs/backend/ — 后端工程规范；specs/frontend/ — 前端工程规范）
 ```
 
-新人/Agent 先读 [docs/architecture/overview.md](docs/architecture/overview.md)，再按需下沉；导航与权威关系表见 [docs/README.md](docs/README.md)。在 `apps/server` 内工作时，先读 [apps/server/AGENTS.md](apps/server/AGENTS.md) 的子树级指引（与本文档叠加生效）。
+新人/Agent 先读 [docs/architecture/overview.md](docs/architecture/overview.md)，再按需下沉；导航与权威关系表见 [docs/README.md](docs/README.md)。在 `apps/server` / `apps/web` 内工作时，先读对应子树级指引（与本文档叠加生效）：[apps/server/AGENTS.md](apps/server/AGENTS.md)、[apps/web/AGENTS.md](apps/web/AGENTS.md)。
 
 ## Agent 工作记录
 
@@ -47,7 +47,7 @@ PRD（product/prd.md：做什么）
 | 前端 API 与认证集成规范 | [docs/specs/frontend/前端 API 与认证集成规范.md](docs/specs/frontend/前端%20API%20与认证集成规范.md) | 引用 |
 | 前端交互与可访问性规范 | [docs/specs/frontend/前端交互与可访问性规范.md](docs/specs/frontend/前端交互与可访问性规范.md) | 引用 |
 | 前端测试规范 | [docs/specs/frontend/前端测试规范.md](docs/specs/frontend/前端测试规范.md) | 引用 |
-| 设计系统方案 | [docs/specs/frontend/Reka UI + Tailwind CSS v4 + Radix Colors 设计系统方案.md](docs/specs/frontend/Reka%20UI%20+%20Tailwind%20CSS%20v4%20+%20Radix%20Colors%20设计系统方案.md) | 引用 |
+| 设计系统方案 | [docs/specs/frontend/Vue 组件设计系统方案.md](docs/specs/frontend/Vue%20组件设计系统方案.md) | 引用 |
 | Vue 性能与缓存优化 | [docs/specs/frontend/Vue 性能与缓存优化.md](docs/specs/frontend/Vue%20性能与缓存优化.md) | 引用 |
 | 品牌 | [docs/brand/naming.md](docs/brand/naming.md) | 引用 |
 
@@ -73,7 +73,7 @@ HTTP API 规范冲突 → specs/backend/HTTP API 设计规范.md 为准
 前端认证集成冲突 → specs/frontend/前端 API 与认证集成规范.md 为准
 前端交互与可访问性冲突 → specs/frontend/前端交互与可访问性规范.md 为准
 前端测试规范冲突 → specs/frontend/前端测试规范.md 为准
-设计系统冲突     → specs/frontend/Reka UI + Tailwind CSS v4 + Radix Colors 设计系统方案.md 为准
+设计系统冲突     → specs/frontend/Vue 组件设计系统方案.md 为准
 Vue 性能优化冲突 → specs/frontend/Vue 性能与缓存优化.md 为准
 品牌相关         → brand/naming.md 为准
 ```

@@ -62,7 +62,7 @@ docs/
 │     ├─ 前端 API 与认证集成规范.md       Bearer Token / Refresh / 并发刷新 / 请求重放
 │     ├─ 前端交互与可访问性规范.md        WCAG 2.2 AA / 键盘 / 焦点 / 表单 / 动画
 │     ├─ 前端测试规范.md                  Vitest / Testing Library / MSW / Storybook / Playwright
-│     ├─ Reka UI + Tailwind CSS v4 + Radix Colors 设计系统方案.md  Token / 色彩 / 组件样式
+│     ├─ Vue 组件设计系统方案.md           Token / 色彩 / 组件配方 / 主题
 │     └─ Vue 性能与缓存优化.md            KeepAlive / 预取 / 虚拟列表 / 缓存策略
 ├─ brand/
 │  ├─ naming.md               项目名称 / Slogan
@@ -124,7 +124,7 @@ brand/naming.md  ← 品牌旁路，不依赖其它文档
 | 前端 API 与认证集成规范 | [specs/frontend/前端 API 与认证集成规范.md](specs/frontend/前端%20API%20与认证集成规范.md) |
 | 前端交互与可访问性规范 | [specs/frontend/前端交互与可访问性规范.md](specs/frontend/前端交互与可访问性规范.md) |
 | 前端测试规范 | [specs/frontend/前端测试规范.md](specs/frontend/前端测试规范.md) |
-| 设计系统方案 | [specs/frontend/Reka UI + Tailwind CSS v4 + Radix Colors 设计系统方案.md](specs/frontend/Reka%20UI%20+%20Tailwind%20CSS%20v4%20+%20Radix%20Colors%20设计系统方案.md) |
+| 设计系统方案 | [specs/frontend/Vue 组件设计系统方案.md](specs/frontend/Vue%20组件设计系统方案.md) |
 | Vue 性能与缓存优化 | [specs/frontend/Vue 性能与缓存优化.md](specs/frontend/Vue%20性能与缓存优化.md) |
 | 项目名称 / slogan | [brand/naming.md](brand/naming.md) |
 | 冻结决策 | [decisions/README.md](decisions/README.md) |
