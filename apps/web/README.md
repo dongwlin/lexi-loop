@@ -36,7 +36,7 @@ MVP 完成度评估（2026-09-06）：工程骨架、设计系统主题层、API
 
 ### MVP 业务落地（review-flow.md §2–§10）
 
-- [ ] 导入页 `/import`（review-flow §2–§3）：多行粘贴解析（trim / lowercase / 去空行，重复单词聚合成 count 不丢弃）、`importWords` 提交、导入结果反馈（聚合口径，见下方契约缺口）
+- [x] 导入页 `/import`（review-flow §2–§3）：多行粘贴解析（trim / lowercase / 去空行，重复单词聚合成 count 不丢弃）、`importWords` 提交、导入结果反馈（聚合口径，见下方契约缺口）
 - [ ] 生词库 `/words`（review-flow §4）：搜索与分页写入 URL（《前端应用架构规范》§6.2）、语义表格（单词 / 释义 / 遇到 / 复习 / 记得 / 忘记）、Loading / Empty / Error 状态
 - [ ] 生词详情 `/words/:id`（review-flow §5）：学习统计展示、编辑复习释义（Dialog，PATCH `customReviewMeaning`，null 清除并回退三层取值 D007）、删除生词（AlertDialog 确认，软删除语义 D004，重新导入可恢复）
 - [ ] 复习页 `/review`（review-flow §6–§8、§10）：数量选择（10 / 20 / 30 / 50 + 自定义，超出词库时提示截断 D009）、active session 恢复（「继续复习 / 放弃本轮」由用户选择，D010；恢复进度用 GET session 逐词结果按 word join 本地快照）、状态机 idle → recalling → revealed → answered、键盘操作（Space 揭示释义，1 / ← 不记得，2 / → 记得）与焦点管理、完成跳转结果页。备注：无 abandon 端点，「放弃本轮」MVP 只清除本地快照，服务端旧 session 在下一轮开始时自动 abandon
