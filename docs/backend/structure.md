@@ -88,8 +88,10 @@ apps/server/
 │  │  └─ error.go
 │  └─ infra/                     纯技术组件，由组合根组装
 │     ├─ config/
-│     └─ database/
-│        └─ database.go          连接池构造
+│     ├─ database/
+│     │  └─ database.go          连接池构造
+│     └─ logger/
+│        └─ logger.go            zerolog ConsoleWriter 日志初始化（含全局接管）
 └─ go.mod
 ```
 

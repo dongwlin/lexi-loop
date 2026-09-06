@@ -4,7 +4,7 @@ LexiLoop（词环）英语生词复习系统后端。工程结构规范见 [docs
 
 ## 当前状态：MVP 业务链路可用
 
-后端已按分层规范实现 **Word / Review 全部业务用例与 `/api/v1` 端点**：`internal/domain` 领域模型与纯业务规则（四实体工厂、ApplyReview / Submit / Complete / Abandon 状态迁移、weight / mastery 动态计算，含单元测试）、`internal/infra/database` 数据库连接池（bun + pgx）、`migrations/` 真实迁移 DDL（四表，含「全库至多一个 active session」部分唯一索引）、`internal/repo` 数据访问适配器（advisory lock / FOR UPDATE / 条件 UPDATE、SQLSTATE 错误归一化）、`internal/apperr` 类型化应用错误与 `internal/handler/httpresp` 统一响应（唯一的 `apperr.Kind → HTTP 状态` 映射）均已实现并含测试；`internal/service`（`WeightedSampler` 加权随机不放回抽样、`DictionaryService` 本地 Lookup——归一 → 词形变化表归并 → 未命中创建最小词条、`WordService` 五用例、`ReviewService` 三用例按 structure.md §5 的事务与并发边界，`tx.go` 提供可重放事务的有上限重试；含 testcontainers 集成测试，覆盖 §5.4 必测的并发与回滚场景）、`internal/handler/v1`（版本化 Handler + DTO，httptest 组件测试驱动完整 HTTP 栈）、`internal/importer/ecdict`（ECDICT CSV 流式解析与字段映射、按批分事务的幂等导入，含单元与集成测试）与 `import-ecdict` 命令，以及 `internal/app` 组合根（显式组装 DB / Service / Handler）均已落地；`serve` 需要 `LEXI_DATABASE_URL`。`handler/middleware` 自定义实现仍为占位。
+后端已按分层规范实现 **Word / Review 全部业务用例与 `/api/v1` 端点**：`internal/domain` 领域模型与纯业务规则（四实体工厂、ApplyReview / Submit / Complete / Abandon 状态迁移、weight / mastery 动态计算，含单元测试）、`internal/infra/database` 数据库连接池（bun + pgx）、`migrations/` 真实迁移 DDL（四表，含「全库至多一个 active session」部分唯一索引）、`internal/repo` 数据访问适配器（advisory lock / FOR UPDATE / 条件 UPDATE、SQLSTATE 错误归一化）、`internal/apperr` 类型化应用错误与 `internal/handler/httpresp` 统一响应（唯一的 `apperr.Kind → HTTP 状态` 映射）均已实现并含测试；`internal/service`（`WeightedSampler` 加权随机不放回抽样、`DictionaryService` 本地 Lookup——归一 → 词形变化表归并 → 未命中创建最小词条、`WordService` 五用例、`ReviewService` 三用例按 structure.md §5 的事务与并发边界，`tx.go` 提供可重放事务的有上限重试；含 testcontainers 集成测试，覆盖 §5.4 必测的并发与回滚场景）、`internal/handler/v1`（版本化 Handler + DTO，httptest 组件测试驱动完整 HTTP 栈）、`internal/importer/ecdict`（ECDICT CSV 流式解析与字段映射、按批分事务的幂等导入，含单元与集成测试）与 `import-ecdict` 命令，以及 `internal/app` 组合根（显式组装 DB / Service / Handler）与 `internal/infra/logger` 日志初始化（zerolog ConsoleWriter，CLI 启动时接管全局日志）均已落地；`serve` 需要 `LEXI_DATABASE_URL`。`handler/middleware` 自定义实现仍为占位。
 
 ```text
 apps/server/
@@ -19,7 +19,7 @@ apps/server/
    ├─ importer/ecdict/           ECDICT 离线导入：parser 字段映射 + importer 批事务编排（已实现，含单元与集成测试）
    ├─ handler/                   router.go（/api/v1 已挂载业务路由）+ httpresp / v1（已实现，含组件测试）/ middleware（占位）
    ├─ apperr/                    类型化应用错误（已实现，含单元测试）
-   └─ infra/                     config（viper，已实现）/ database（连接池已实现）
+   └─ infra/                     config（viper，已实现）/ database（连接池已实现）/ logger（zerolog ConsoleWriter 日志初始化，已实现）
 ```
 
 目录与职责对齐 [docs/backend/structure.md](../../docs/backend/structure.md) §2；与通用分层规范的关系见 [docs/specs/backend/Go 单体应用架构规范.md](../../docs/specs/backend/Go%20单体应用架构规范.md)。
@@ -88,6 +88,7 @@ go test -race ./internal/infra/... ./internal/repo/... ./internal/service/... ./
 ## 下一步（按依赖顺序）
 
 1. 中间件替换为 `handler/middleware` 自定义实现（request_id / logger / recovery / cors）
+2. `app.Run` 的 stdlib log 输出切换为注入的 zerolog logger
 
 ## 模块
 
