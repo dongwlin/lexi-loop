@@ -15,8 +15,12 @@
     "@lexi-loop/api-client": "workspace:*",
     "@radix-ui/colors": "^3.0.0",
     "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/vue-query": "^5.102.8",
+    "pinia": "^3.0.4",
+    "reka-ui": "^2.10.4",
     "tailwindcss": "^4.3.3",
-    "vue": "^3.5.41"
+    "vue": "^3.5.41",
+    "vue-router": "^4.6.4"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",

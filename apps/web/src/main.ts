@@ -1,6 +1,9 @@
 import { createApp } from 'vue'
 import './lib/api'
 import './styles/main.css'
-import App from './App.vue'
+import App from './app/App.vue'
+import { installApp } from './app/providers'
 
-createApp(App).mount('#app')
+const app = createApp(App)
+installApp(app)
+app.mount('#app')
