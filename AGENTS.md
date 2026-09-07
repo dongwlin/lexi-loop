@@ -37,6 +37,7 @@ PRD（product/prd.md：做什么）
 | Word API | [docs/api/words.md](docs/api/words.md) | 引用 |
 | Review API | [docs/api/reviews.md](docs/api/reviews.md) | 引用 |
 | Meta API（版本信息） | [docs/api/meta.md](docs/api/meta.md) | 引用 |
+| 发布流程（tag → 镜像构建 → compose） | [docs/deploy/release.md](docs/deploy/release.md) | 引用 |
 | 页面与状态机 | [docs/frontend/review-flow.md](docs/frontend/review-flow.md) | 引用 |
 | Go 工程结构 | [docs/backend/structure.md](docs/backend/structure.md) | 引用 |
 | Go 技术选型 | [docs/specs/backend/Go 技术栈.md](docs/specs/backend/Go%20技术栈.md) | 引用 |

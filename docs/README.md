@@ -51,6 +51,8 @@ docs/
 ├─ openapi/
 │  ├─ openapi.json            OpenAPI 3.1 spec（由 `lexi-loop openapi` 离线生成，勿手改；契约权威仍是 api/*）
 │  └─ openapi.yaml            同上（YAML 格式）
+├─ deploy/
+│  └─ release.md              发布流程（tag → release.sh → compose）与容器运行时切换
 ├─ specs/
 │  ├─ backend/
 │  │  ├─ Go 技术栈.md          后端框架 / 数据库 / CLI / 日志 / 测试等选型
@@ -116,6 +118,7 @@ brand/naming.md  ← 品牌旁路，不依赖其它文档
 | Word API | [api/words.md](api/words.md) |
 | Review API | [api/reviews.md](api/reviews.md) |
 | Meta API（版本信息） | [api/meta.md](api/meta.md) |
+| 发布流程 / 镜像构建 | [deploy/release.md](deploy/release.md) |
 | Go package | [backend/structure.md](backend/structure.md) |
 | Go 技术栈 | [specs/backend/Go 技术栈.md](specs/backend/Go%20技术栈.md) |
 | Go 单体架构规范 | [specs/backend/Go 单体应用架构规范.md](specs/backend/Go%20单体应用架构规范.md) |
@@ -137,6 +140,7 @@ brand/naming.md  ← 品牌旁路，不依赖其它文档
 我要改权重            → review/algorithm.md
 我要改复习接口        → api/reviews.md
 我要改版本接口        → api/meta.md
+我要发布新版本        → deploy/release.md
 我要看接口 spec 产物  → openapi/openapi.yaml（由 lexi-loop openapi 离线生成，勿手改）
 我要改词形解析        → dictionary/normalization.md
 我要改数据库表        → dictionary/data-model.md / review/data-model.md
