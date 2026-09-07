@@ -1,7 +1,8 @@
 /**
- * 开始复习失败的用户可读文案映射（review-flow §6 / §9）：服务端 message 面向排查
- * （英文原文），界面按错误分类给文案。复习页开始与结果页「再来一轮」共用同一映射。
- * 结构化局部类型判定 ApiError 形态，utils 层不依赖 api-client（同 formatMeanings）。
+ * 复习动作失败的用户可读文案映射（review-flow §6 / §9）：服务端 message 面向
+ * 排查（英文原文），界面按错误分类给文案。复习页开始 / 放弃与结果页「再来一轮」
+ * 共用同一映射。结构化局部类型判定 ApiError 形态，utils 层不依赖 api-client
+ * （同 formatMeanings）。
  */
 interface ApiErrorLike {
   kind?: unknown
@@ -14,19 +15,34 @@ function asApiErrorLike(err: unknown): ApiErrorLike | null {
   return err
 }
 
+function describeTransientApiError(apiError: ApiErrorLike): string | null {
+  if (apiError.kind === 'network' || apiError.kind === 'timeout')
+    return '网络异常，请检查连接后重试。'
+  if (
+    apiError.kind === 'http' &&
+    typeof apiError.httpStatus === 'number' &&
+    apiError.httpStatus >= 500
+  )
+    return '服务暂时不可用，请稍后重试。'
+  return null
+}
+
 export function describeReviewStartError(err: unknown): string {
   const apiError = asApiErrorLike(err)
   if (apiError) {
     if (apiError.code === 'BASE.BIZ.USER_DISABLED')
       return '当前没有可复习的生词，请先导入生词。'
-    if (apiError.kind === 'network' || apiError.kind === 'timeout')
-      return '网络异常，请检查连接后重试。'
-    if (
-      apiError.kind === 'http' &&
-      typeof apiError.httpStatus === 'number' &&
-      apiError.httpStatus >= 500
-    )
-      return '服务暂时不可用，请稍后重试。'
+    const transient = describeTransientApiError(apiError)
+    if (transient) return transient
   }
   return '开始复习失败，请稍后重试'
+}
+
+export function describeReviewAbandonError(err: unknown): string {
+  const apiError = asApiErrorLike(err)
+  if (apiError) {
+    const transient = describeTransientApiError(apiError)
+    if (transient) return transient
+  }
+  return '放弃本轮失败，请重试'
 }

@@ -1,6 +1,10 @@
 // review Feature 的 Mutation（前端应用架构规范 §8.3）。
 import { useMutation, useQueryClient } from '@tanstack/vue-query'
-import { startReviewSession, submitReviewResult } from '@lexi-loop/api-client'
+import {
+  abandonReviewSession,
+  startReviewSession,
+  submitReviewResult,
+} from '@lexi-loop/api-client'
 import type {
   StartSessionRequest,
   SubmitResultRequestResult,
@@ -29,6 +33,19 @@ export function useSubmitReviewResultMutation() {
     mutationFn: ({ sessionId, itemId, result }: SubmitReviewResultVariables) =>
       submitReviewResult(sessionId, itemId, { result }),
     onSuccess: (_data, { sessionId }) =>
+      queryClient.invalidateQueries({
+        queryKey: reviewKeys.session(sessionId),
+      }),
+  })
+}
+
+// 放弃本轮：active → abandoned（api/reviews.md §6），失效 session 汇总，
+// 使恢复检查与结果页读到最新状态。
+export function useAbandonReviewSessionMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (sessionId: string) => abandonReviewSession(sessionId),
+    onSuccess: (_data, sessionId) =>
       queryClient.invalidateQueries({
         queryKey: reviewKeys.session(sessionId),
       }),

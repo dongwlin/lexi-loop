@@ -1,5 +1,6 @@
 // 复习进行中的本地快照存取（review-flow.md §6 / §9 / §10；D010 active session 恢复）。
-// 服务端无 abandon 端点，「放弃本轮」只清除本地快照；下一轮开始时服务端自动 abandon 旧 session。
+// 「放弃本轮」调用 abandon 端点由服务端标记 abandoned 后清除本地快照（api/reviews.md §6）；
+// 用户不放弃直接开始新一轮时，服务端在开始事务内自动 abandon 旧 active session。
 // autoResume 是一次性标记：结果页「再来一轮」开始新一轮后置 true，复习页据此跳过
 // 「继续 / 放弃」询问直接进入（用户刚显式开始本轮）；进入时即消费置回 false，
 // 之后的刷新 / 重进恢复仍由用户选择（D010）。

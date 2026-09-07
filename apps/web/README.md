@@ -54,4 +54,4 @@ MVP 完成度评估（2026-09-06，2026-09-07 更新）：工程骨架、设计�
 
 质量设施已就位（2026-09-07）：ESLint Flat Config（类型感知 TS / Vue / vuejs-accessibility / TanStack Query / import-x 规则）+ Prettier（含 Tailwind class 排序，配置与脚本见《前端技术栈》§11）；组件测试环境 jsdom + Testing Library（`vitest.config.ts` 按《前端测试规范》§15 合并 vite 配置，`tests/` 为跨页面集成与共享设施）；MSW 在 HTTP 边界 Mock（`tests/mocks/`，`onUnhandledRequest: 'error'`，测试指向保留假主机）；Storybook 项目接入 `@storybook/addon-vitest`（Story 在真实 Chromium 中执行）与 `addon-a11y`（axe 检查为测试门禁，全局 `test: 'error'`）；Playwright E2E（`playwright.config.ts`，webServer 跑生产构建 + preview，`e2e/` 存放用例）。Story 以菜单打开收尾时的 `aria-hidden-focus` 豁免等例外均以注释登记在对应 Story。
 
-品牌 favicon 已从 `docs/brand/logo.png` 的两个实心轮廓直接描摹为 `public/favicon.svg`：保留原图的双色开环、内嵌 L、开口位置与主色（`#242a34` / `#1771e4`），并裁去不适合标签页尺寸的外围留白；`index.html` 已声明 SVG favicon。
+品牌 favicon 已从 `docs/brand/logo.png` 的两个实心轮廓直接描摹为 `public/favicon.svg`：保留原图的双色开环、内嵌 L、开口位置与浅色模式主色（`#242a34` / `#1771e4`），并裁去不适合标签页尺寸的外围留白；SVG 内通过 `prefers-color-scheme: dark` 跟随系统深色偏好，将深色半环提亮为 `#eeeeee`，品牌蓝保持不变。favicon 独立于页面内的主题切换；`index.html` 已声明 SVG favicon。

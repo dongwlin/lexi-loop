@@ -6,13 +6,17 @@ import { CheckCircle, XCircle } from 'lucide-vue-next'
 import { Button } from '@/components/ui'
 import { isApiError } from '@/lib/api'
 import {
+  useAbandonReviewSessionMutation,
   useStartReviewSessionMutation,
   useSubmitReviewResultMutation,
 } from '@/features/review/api/mutations'
 import { reviewSessionQueryOptions } from '@/features/review/api/queries'
 import { wordsListQueryOptions } from '@/features/words/api/queries'
 import { formatMeanings } from '@/utils/formatMeanings'
-import { describeReviewStartError } from '@/utils/review-errors'
+import {
+  describeReviewAbandonError,
+  describeReviewStartError,
+} from '@/utils/review-errors'
 import { resolveReviewKeyAction } from '@/utils/review-keyboard'
 import { computeResumeProgress } from '@/utils/review-resume'
 import {
@@ -33,7 +37,8 @@ import {
 // 迁移判定与推进收敛在 utils/review-state-machine（本页持有 ref 状态与副作用）。
 // 键盘操作绑定在复习区域：Space 揭示释义；1 / ← 不记得；2 / → 记得（§10、§5.4），
 // 按键 → 操作的映射在 utils/review-keyboard，本页只负责 DOM 归约（焦点是否在控件上）与 preventDefault。
-// D010：进入时检测 active session，由用户选择继续 / 放弃；无 abandon 端点，MVP 只清本地快照。
+// D010：进入时检测 active session，由用户选择继续 / 放弃；放弃调用 abandon
+// 端点由服务端标记 abandoned（api/reviews.md §6），失败时保留快照供重试。
 // 恢复检查复用 Feature 层查询（queryClient.fetchQuery），按 ApiError 区分 404 与瞬时失败。
 
 const router = useRouter()
@@ -198,7 +203,7 @@ function enterWithSnapshot(snapshot: ReviewSnapshot, resumeIndex = 0) {
   const entry = enterReview(snapshot.items.length, resumeIndex)
   currentIndex.value = entry.currentIndex
   currentMode.value = entry.mode
-  void nextTick(() => focusReviewArea())
+  focusReviewAreaAfterTransition()
 }
 
 function handleResume() {
@@ -215,9 +220,33 @@ function handleResume() {
   recoveryState.value = 'idle'
 }
 
-function handleAbandon() {
-  discardSnapshot()
-  recoveryState.value = 'idle'
+const abandonMutation = useAbandonReviewSessionMutation()
+const isAbandoning = computed(() => abandonMutation.isPending.value)
+const abandonError = ref<string | null>(null)
+
+async function handleAbandon() {
+  const snapshot = savedSnapshot.value
+  abandonError.value = null
+  if (!snapshot) {
+    discardSnapshot()
+    recoveryState.value = 'idle'
+    return
+  }
+  try {
+    await abandonMutation.mutateAsync(snapshot.sessionId)
+    discardSnapshot()
+    recoveryState.value = 'idle'
+  } catch (err) {
+    if (isApiError(err) && (err.httpStatus === 404 || err.httpStatus === 422)) {
+      // 404：session 在服务端已不存在；422：该轮已结束（completed 不可放弃，
+      // api/reviews.md §6）。两者都视为快照失效，清除后回数量配置视图。
+      discardSnapshot()
+      recoveryState.value = 'idle'
+      return
+    }
+    // 网络 / 5xx 等瞬时失败：保留快照与恢复入口，展示可重试的错误。
+    abandonError.value = describeReviewAbandonError(err)
+  }
 }
 
 // ---- 开始复习 ----
@@ -253,8 +282,7 @@ async function startNewSession(count: number) {
       items: response.items,
     })
 
-    await nextTick()
-    focusReviewArea()
+    focusReviewAreaAfterTransition()
   } catch (err) {
     startError.value = describeReviewStartError(err)
   }
@@ -278,13 +306,12 @@ const currentMeaning = computed(() => {
   return formatMeanings(currentItem.value.effectiveReviewMeaning)
 })
 
-async function handleReveal() {
+function handleReveal() {
   const revealed = revealCard(currentMode.value, currentItem.value !== null)
   if (!revealed) return
   currentMode.value = revealed
-  // 揭示后「查看释义」按钮随分支卸载会把焦点丢到 body，移回复习区域保住键盘操作（§5.3）。
-  await nextTick()
-  focusReviewArea()
+  // 揭示后「查看释义」按钮随分支卸载，焦点移回复习区域保住键盘操作（§5.3）。
+  focusReviewAreaAfterTransition()
 }
 
 const submitMutation = useSubmitReviewResultMutation()
@@ -311,8 +338,7 @@ async function handleAnswer(result: 'remembered' | 'forgotten') {
     if (advance.outcome === 'next') {
       currentIndex.value = advance.nextIndex
       currentMode.value = advance.mode
-      await nextTick()
-      focusReviewArea()
+      focusReviewAreaAfterTransition()
     } else {
       // 最后一题，跳转结果页
       clearReviewSnapshot()
@@ -365,6 +391,24 @@ function focusReviewArea() {
   reviewAreaRef.value?.focus()
 }
 
+// 状态迁移后把焦点移入复习区域，并在后续帧校正一次。触发迁移的按钮（开始 /
+// 继续复习 / 查看释义 / 记得 / 不记得）随分支卸载，浏览器对「移除已聚焦元素」
+// 的焦点归还（focus fixup）作为任务排在 Vue 渲染微任务之后，仅 nextTick 聚焦
+// 会被覆盖回 body（真实浏览器可复现：恢复后 Space / 1 / 2 无响应），
+// 因此渲染完成后跨帧检查焦点是否仍在复习区域内，不在则再聚焦。
+function focusReviewAreaAfterTransition() {
+  void nextTick(() => {
+    focusReviewArea()
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!reviewAreaRef.value?.contains(document.activeElement)) {
+          focusReviewArea()
+        }
+      })
+    })
+  })
+}
+
 const reviewAreaRef = ref<HTMLElement | null>(null)
 </script>
 
@@ -400,9 +444,21 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
         上次复习未完成（{{ savedProgress.answered }} /
         {{ savedProgress.total }}）。
       </p>
+      <!-- 放弃失败的错误提示（瞬时失败保留快照，可重试） -->
+      <p v-if="abandonError" role="alert" class="mt-3 text-sm text-danger-text">
+        {{ abandonError }}
+      </p>
       <div class="mt-4 flex gap-3">
-        <Button @click="handleResume">继续复习</Button>
-        <Button variant="outline" @click="handleAbandon">放弃本轮</Button>
+        <Button :disabled="isAbandoning" @click="handleResume">
+          继续复习
+        </Button>
+        <Button
+          variant="outline"
+          :pending="isAbandoning"
+          @click="void handleAbandon()"
+        >
+          放弃本轮
+        </Button>
       </div>
     </div>
 
