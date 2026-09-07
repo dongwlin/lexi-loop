@@ -74,6 +74,30 @@ export const getReviewSession = async (id: string, options?: Parameters<typeof c
 
 
 
+export const getAbandonReviewSessionUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/reviews/${sessionId}/abandon`
+}
+
+/**
+ * @summary 放弃一轮进行中的复习（active → abandoned，幂等）
+ */
+export const abandonReviewSession = async (sessionId: string, options?: Parameters<typeof customFetch>[1]): Promise<NoData> => {
+
+  return customFetch<NoData>(getAbandonReviewSessionUrl(sessionId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
 export const getSubmitReviewResultUrl = (sessionId: string,
     itemId: string,) => {
 

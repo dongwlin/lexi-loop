@@ -10,6 +10,7 @@ export { configureApiClient } from './mutator'
 export type { ApiClientConfig } from './mutator'
 
 export {
+  abandonReviewSession,
   deleteWord,
   getReviewSession,
   getWord,

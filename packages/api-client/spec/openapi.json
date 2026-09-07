@@ -546,6 +546,37 @@
         ]
       }
     },
+    "/api/v1/reviews/{sessionId}/abandon": {
+      "post": {
+        "operationId": "abandon-review-session",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoData"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "放弃一轮进行中的复习（active → abandoned，幂等）",
+        "tags": [
+          "Reviews"
+        ]
+      }
+    },
     "/api/v1/reviews/{sessionId}/items/{itemId}": {
       "post": {
         "operationId": "submit-review-result",

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  abandonReviewSession,
   deleteWord,
   getReviewSession,
   getWord,
@@ -122,6 +123,17 @@ describe('reviews 端点', () => {
     const call = lastCall()
     expect(call.url).toBe('/api/v1/reviews/01991f3e-7b4c-7a20-8e3f-2c5d7a9b2001/items/01991f3e-7b4c-7a21-8e3f-2c5d7a9b2002')
     expect(JSON.parse(String(call.init.body))).toEqual({ result: 'remembered' })
+  })
+
+  it('abandonReviewSession：POST /api/v1/reviews/:sessionId/abandon，无请求体', async () => {
+    stubFetch()
+
+    await abandonReviewSession('01991f3e-7b4c-7a20-8e3f-2c5d7a9b2001')
+
+    const call = lastCall()
+    expect(call.url).toBe('/api/v1/reviews/01991f3e-7b4c-7a20-8e3f-2c5d7a9b2001/abandon')
+    expect(call.init.method).toBe('POST')
+    expect(call.init.body).toBeUndefined()
   })
 
   it('getReviewSession：GET /api/v1/reviews/:id', async () => {
