@@ -52,7 +52,10 @@ import ThemeSwitcher from './ThemeSwitcher.vue'
             关于
           </RouterLink>
         </nav>
-        <div class="ml-auto">
+        <!-- header-actions：应用级右上角常驻组件（如词典导入指示）由组合根
+             （app/App.vue）填充；布局组件不读取业务 Query（§4.4）。 -->
+        <div class="ml-auto flex items-center gap-1">
+          <slot name="header-actions" />
           <ThemeSwitcher />
         </div>
       </div>

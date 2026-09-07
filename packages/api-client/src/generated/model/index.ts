@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
+export * from './dictImportStatus';
 export * from './getSessionResponse';
 export * from './importWordInput';
 export * from './importWordItemResult';

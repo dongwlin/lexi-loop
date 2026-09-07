@@ -20,7 +20,7 @@
 | Query 缓存 / 数据流性能            | [docs/specs/frontend/Vue 性能与缓存优化.md](../../docs/specs/frontend/Vue%20性能与缓存优化.md)                                                      |
 | 测试方法与环境                     | [docs/specs/frontend/前端测试规范.md](../../docs/specs/frontend/前端测试规范.md)                                                                    |
 | 页面信息架构与复习状态机           | [docs/frontend/review-flow.md](../../docs/frontend/review-flow.md)                                                                                  |
-| HTTP 契约                          | [docs/api/words.md](../../docs/api/words.md)、[docs/api/reviews.md](../../docs/api/reviews.md)（Orval 输入源头 `docs/openapi/` 由后端生成，不手改） |
+| HTTP 契约                          | [docs/api/words.md](../../docs/api/words.md)、[docs/api/reviews.md](../../docs/api/reviews.md)、[docs/api/meta.md](../../docs/api/meta.md)（Orval 输入源头 `docs/openapi/` 由后端生成，不手改） |
 | 字段语义                           | [docs/dictionary/data-model.md](../../docs/dictionary/data-model.md)、[docs/review/data-model.md](../../docs/review/data-model.md)                  |
 
 ## 常用命令
@@ -49,6 +49,7 @@ pnpm -F @lexi-loop/api-client test:run  # api-client mutator / 生成端点单�
 以前端应用架构规范为准，以下只记常见踩坑的速记指针：
 
 - 跨目录 import 统一 `@/`（→ `src/`，`vite.config.ts` alias；架构规范 §5.2）；barrel file 只用于确实稳定的公共出口（§5.2）。
+- AppShell 顶栏右上角常驻组件（`features/meta/components/DictImportIndicator`，词典导入进度指示）经 `header-actions` 插槽由 `app/App.vue` 填充：布局组件不读取业务 Query（§4.4），业务指示器自己持有 meta feature 的轮询 Query（`refetchInterval` 按状态收敛，契约见 api/meta.md §3）；弹层容器是 `components/ui/popover/Popover.vue`（Reka Popover 配方，含同目录 Story）。
 - 应用装配一次性收在 `src/app/`（显式路由表 `router.ts`、providers / pinia / query-client）；路由页面在 `src/pages/`，页面结构与状态机以 review-flow.md 为准（架构规范 §2.1、§3、§4.1）。
 - 网络访问只经 `@lexi-loop/api-client`：包内 `src/generated/` 与派生 spec 不手改，后端契约变更后用 `pnpm -F @lexi-loop/api-client generate` 重建；web 侧装配点只有 `src/lib/api.ts`（`VITE_API_BASE_URL` 经 `lib/env.ts` 校验后注入），页面不得自行 fetch 或复制 DTO 类型（API 集成规范 §3、§5）。
 - Query Key / Query / Mutation 放各 Feature 的 `src/features/<域>/api/`（架构规范 §8.1）；DTO 直接用生成类型，queryFn 透传 `signal`；服务端数据只经 TanStack Query 管理，不复制进 Pinia（API 集成规范 §2.5、架构规范 §7）。

@@ -3,6 +3,7 @@
 // 当轮响应，命中未声明的请求一律视为测试缺陷（测试不得触碰真实网络）。
 // 只从同构入口 'msw' 导入，浏览器端（Storybook MSW 集成）可安全复用。
 import type {
+  DictImportStatus,
   GetSessionResponse,
   ImportWordsResponse,
   VersionInfo,
@@ -90,6 +91,22 @@ export function makeVersionInfo(
     version: '1.2.3',
     buildTime: '2026-09-01T10:30:00Z',
     goVersion: 'go1.26.7',
+    ...overrides,
+  }
+}
+
+export function makeDictImportStatus(
+  overrides: Partial<DictImportStatus> = {},
+): DictImportStatus {
+  return {
+    state: 'importing',
+    sourceVersion: '82c9872',
+    rowsProcessed: 323400,
+    rowsTotal: 770611,
+    entriesWritten: 323400,
+    startedAt: '2026-09-07T12:00:00Z',
+    updatedAt: '2026-09-07T12:00:20Z',
+    error: null,
     ...overrides,
   }
 }
