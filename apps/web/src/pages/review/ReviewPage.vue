@@ -541,7 +541,7 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
           inputmode="numeric"
           min="1"
           aria-label="自定义数量"
-          placeholder="例如 25"
+          placeholder="25"
           :aria-invalid="customCountError ? 'true' : undefined"
           :aria-describedby="
             customCountError ? 'custom-count-error' : undefined
