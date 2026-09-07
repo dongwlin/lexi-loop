@@ -9,6 +9,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 IMAGE="${LEXI_IMAGE:-lexi-loop}"
 RUNTIME="${CONTAINER_RUNTIME:-}"
 PUSH=0
+STRICT=0
 VERSION=""
 
 usage() {
@@ -24,6 +25,8 @@ server 二进制（infra/buildinfo，经 /api/v1/version 与 lexi-loop version �
                          podman），也可用环境变量 CONTAINER_RUNTIME 指定
   -i, --image NAME       镜像名，可含 registry 前缀（缺省 lexi-loop，环境变量 LEXI_IMAGE）
       --push             构建成功后 push 上述全部镜像 tag
+      --strict           严格模式：deploy/dict/ecdict.csv 缺失时构建失败
+                         （缺省只警告，产出「无词典数据」镜像，运行期自动导入跳过）
   -h, --help             显示本帮助
 
 参数:
@@ -59,6 +62,10 @@ while [[ $# -gt 0 ]]; do
 		;;
 	--push)
 		PUSH=1
+		shift
+		;;
+	--strict)
+		STRICT=1
 		shift
 		;;
 	-h | --help)
@@ -101,6 +108,14 @@ command -v git >/dev/null 2>&1 || die "构建发布镜像需要 git"
 
 [[ -z "$(git status --porcelain)" ]] ||
 	die "工作区有未提交改动，发布构建要求干净的工作区（git status 查看）"
+
+if [[ -f deploy/dict/ecdict.csv ]]; then
+	info "词典数据就绪: deploy/dict/ecdict.csv（随镜像分发）"
+elif [[ "$STRICT" -eq 1 ]]; then
+	die "严格模式：deploy/dict/ecdict.csv 缺失（先执行 deploy/dict/fetch.sh）；去掉 --strict 则产出无词典数据镜像"
+else
+	info "警告: deploy/dict/ecdict.csv 缺失，将产出无词典数据镜像（运行期词典自动导入跳过）；执行 deploy/dict/fetch.sh 获取数据"
+fi
 
 if [[ -z "$VERSION" ]]; then
 	VERSION="$(git describe --tags --exact-match 2>/dev/null)" ||

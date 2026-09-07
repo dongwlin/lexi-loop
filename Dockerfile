@@ -57,6 +57,15 @@ COPY --from=server-builder /out/lexi-loop /app/lexi-loop
 COPY --from=web-builder /repo/apps/web/dist /srv
 COPY deploy/Caddyfile /etc/caddy/Caddyfile
 COPY --chmod=0755 deploy/docker-entrypoint.sh /app/docker-entrypoint.sh
+# 词典数据随镜像分发（issue #3）：deploy/dict/ 由 deploy/dict/fetch.sh
+# 预先填充（ecdict.csv + manifest.json），构建期零网络依赖；缺数据文件时
+# 仍可构建（COPY 至少带 fetch.sh），运行期自动导入自然跳过，行为同无词典。
+# 发布严格模式（缺数据即失败）由 deploy/release.sh --strict 把关。
+COPY deploy/dict/ /app/data/
+RUN if [ ! -f /app/data/ecdict.csv ]; then \
+		echo "WARNING: deploy/dict/ecdict.csv 缺失——本镜像不含内置词典数据（serve 自动导入将跳过，词典为空）。" \
+			"执行 deploy/dict/fetch.sh 获取数据后重新构建。"; \
+	fi
 
 ENV GIN_MODE=release
 
