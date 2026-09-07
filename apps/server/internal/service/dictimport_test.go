@@ -150,26 +150,22 @@ func TestDictImport_FailsOnMalformedCSV(t *testing.T) {
 }
 
 func TestDictImport_DisabledOrMissingDataStaysIdle(t *testing.T) {
-	db := requireTestDB(t)
-	resetTables(t)
 	ctx := context.Background()
 
 	t.Run("开关关闭不产生任何动作", func(t *testing.T) {
 		csvPath := writeDictFixture(t, dictImportFixtureCSV, "off-v1", 3)
-		svc := NewDictImport(db, ecdict.NewImporter(db, 0), csvPath, false, zerolog.Nop())
+		svc := NewDictImport(nil, nil, csvPath, false, zerolog.Nop())
 		svc.StartAutoImport(ctx)
-		// goroutine 可能尚未执行，短暂等待后确认状态从未离开 idle。
-		time.Sleep(200 * time.Millisecond)
+		// 开关关闭时无需等待后台调度。
 		snap := svc.Snapshot()
 		assert.Equal(t, DictImportStateIdle, snap.State)
 		assert.True(t, snap.StartedAt.IsZero())
 	})
 
 	t.Run("CSV 不存在视为非镜像运行静默跳过", func(t *testing.T) {
-		svc := NewDictImport(db, ecdict.NewImporter(db, 0), filepath.Join(t.TempDir(), "missing.csv"), true, zerolog.Nop())
+		svc := NewDictImport(nil, nil, filepath.Join(t.TempDir(), "missing.csv"), true, zerolog.Nop())
 		svc.StartAutoImport(ctx)
-		time.Sleep(200 * time.Millisecond)
-		snap := svc.Snapshot()
+		snap := waitForState(t, svc, DictImportStateIdle)
 		assert.Equal(t, DictImportStateIdle, snap.State)
 		assert.True(t, snap.StartedAt.IsZero())
 	})
@@ -188,7 +184,11 @@ func TestDictImport_PreCanceledContextStopsAsShutdown(t *testing.T) {
 	svc := NewDictImport(db, ecdict.NewImporter(db, 0), csvPath, true, zerolog.Nop())
 	svc.StartAutoImport(ctx)
 
-	snap := waitForState(t, svc, DictImportStateChecking)
+	require.Eventually(t, func() bool {
+		return svc.Snapshot().SourceVersion == "cancel-v1"
+	}, time.Second, time.Millisecond)
+	snap := svc.Snapshot()
+	assert.Equal(t, DictImportStateChecking, snap.State)
 	assert.Equal(t, "cancel-v1", snap.SourceVersion)
 	assert.False(t, snap.StartedAt.IsZero())
 
@@ -200,8 +200,6 @@ func TestDictImport_PreCanceledContextStopsAsShutdown(t *testing.T) {
 // TestDictImport_MalformedManifestSkips：CSV 存在但 manifest 不可用时
 // 按数据不可用跳过，不导入也不置失败。
 func TestDictImport_MalformedManifestSkips(t *testing.T) {
-	db := requireTestDB(t)
-	resetTables(t)
 	ctx := context.Background()
 
 	dir := t.TempDir()
@@ -209,10 +207,9 @@ func TestDictImport_MalformedManifestSkips(t *testing.T) {
 	require.NoError(t, os.WriteFile(csvPath, []byte(dictImportFixtureCSV), 0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "manifest.json"), []byte("{invalid"), 0o644))
 
-	svc := NewDictImport(db, ecdict.NewImporter(db, 0), csvPath, true, zerolog.Nop())
+	svc := NewDictImport(nil, nil, csvPath, true, zerolog.Nop())
 	svc.StartAutoImport(ctx)
-	time.Sleep(200 * time.Millisecond)
-	snap := svc.Snapshot()
+	snap := waitForState(t, svc, DictImportStateIdle)
 	assert.Equal(t, DictImportStateIdle, snap.State, "manifest 不可用时静默跳过")
 	assert.True(t, snap.StartedAt.IsZero())
 }

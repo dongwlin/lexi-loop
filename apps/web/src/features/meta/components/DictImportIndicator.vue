@@ -48,7 +48,7 @@ const readyToastVisible = ref(false)
 let readyToastTimer: number | undefined
 
 watch(state, (next, prev) => {
-  if (next === 'completed' && prev !== undefined && prev !== 'completed') {
+  if (next === 'completed' && (prev === 'checking' || prev === 'importing')) {
     readyToastVisible.value = true
     window.clearTimeout(readyToastTimer)
     readyToastTimer = window.setTimeout(hideReadyToast, READY_TOAST_DURATION_MS)

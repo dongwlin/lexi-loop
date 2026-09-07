@@ -127,41 +127,46 @@ describe('DictImportIndicator', () => {
     expect(
       screen.getByText('导入失败不影响生词流程；重启容器将自动续传完成导入。'),
     ).toBeInTheDocument()
-    expect(screen.getByText('ecdict: read csv row 42: boom')).toBeInTheDocument()
+    expect(
+      screen.getByText('ecdict: read csv row 42: boom'),
+    ).toBeInTheDocument()
     expect(screen.getByText('12,300')).toBeInTheDocument()
   })
 
-  it('completed 迁移时弹一次性「词典已就绪」toast，徽标消失', async () => {
-    mountIndicator(makeDictImportStatus())
-    await settle()
-    expect(
-      screen.getByRole('button', { name: /词典导入进度/ }),
-    ).toBeInTheDocument()
+  it.each(['checking', 'importing'])(
+    '%s → completed 时弹一次性「词典已就绪」toast，徽标消失',
+    async (state) => {
+      mountIndicator(makeDictImportStatus({ state }))
+      await settle()
+      expect(
+        screen.getByRole('button', { name: /查看详情/ }),
+      ).toBeInTheDocument()
 
-    // 模拟下一次轮询拿到 completed：覆盖 MSW Handler 并推进一个轮询周期。
-    server.use(
-      http.get('*/api/v1/dictionary-import', () =>
-        HttpResponse.json({
-          code: 'OK',
-          message: 'success',
-          data: makeDictImportStatus({
-            state: 'completed',
-            rowsProcessed: 770611,
-            entriesWritten: 770611,
-            updatedAt: '2026-09-07T12:00:35Z',
+      // 模拟下一次轮询拿到 completed：覆盖 MSW Handler 并推进一个轮询周期。
+      server.use(
+        http.get('*/api/v1/dictionary-import', () =>
+          HttpResponse.json({
+            code: 'OK',
+            message: 'success',
+            data: makeDictImportStatus({
+              state: 'completed',
+              rowsProcessed: 770611,
+              entriesWritten: 770611,
+              updatedAt: '2026-09-07T12:00:35Z',
+            }),
           }),
-        }),
-      ),
-    )
-    await settle(3200)
+        ),
+      )
+      await settle(3200)
 
-    expect(screen.queryByRole('button', { name: /词典导入/ })).toBeNull()
-    expect(screen.getByRole('status')).toBeInTheDocument()
-    expect(screen.getByText('词典已就绪')).toBeInTheDocument()
-    expect(
-      screen.getByText('词典导入完成，现在可以正常添加生词了。'),
-    ).toBeInTheDocument()
-  })
+      expect(screen.queryByRole('button', { name: /词典导入/ })).toBeNull()
+      expect(screen.getByRole('status')).toBeInTheDocument()
+      expect(screen.getByText('词典已就绪')).toBeInTheDocument()
+      expect(
+        screen.getByText('词典导入完成，现在可以正常添加生词了。'),
+      ).toBeInTheDocument()
+    },
+  )
 
   it('toast 在约 4.5s 后自动消失', async () => {
     mountIndicator(makeDictImportStatus())
@@ -192,6 +197,9 @@ describe('DictImportIndicator', () => {
     })
     await settle()
     expect(requestCount).toBe(1)
+
+    // 首次响应后立即检查，不能等到 toast 的自动关闭时间之后才断言。
+    expect(screen.queryByRole('status')).toBeNull()
 
     await settle(20000)
     expect(requestCount).toBe(1)

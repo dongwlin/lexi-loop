@@ -18,7 +18,7 @@ import (
 )
 
 // DictImportState 是词典自动导入的进程内状态机取值（docs/api/meta.md §3）：
-// idle → checking → importing → completed / failed；进程内存态，重启后回到
+// checking → importing → completed / failed；确认跳过时为 idle，重启后回到
 // checking 重新守卫判断。
 type DictImportState string
 
@@ -78,8 +78,13 @@ type DictImport struct {
 }
 
 // NewDictImport 构造词典自动导入服务；manifest 固定与 CSV 同目录读取。
-// 初始快照即 idle：开关关闭、数据缺失等跳过路径不经过状态机。
+// 自动检查开启时初始即 checking，避免 HTTP 已可用但后台尚未调度时
+// 返回 idle 导致客户端停止轮询；开关关闭时才直接为 idle。
 func NewDictImport(db *bun.DB, importer *ecdict.Importer, csvPath string, autoCheck bool, log zerolog.Logger) *DictImport {
+	state := DictImportStateIdle
+	if autoCheck {
+		state = DictImportStateChecking
+	}
 	return &DictImport{
 		db:           db,
 		importer:     importer,
@@ -87,7 +92,7 @@ func NewDictImport(db *bun.DB, importer *ecdict.Importer, csvPath string, autoCh
 		manifestPath: filepath.Join(filepath.Dir(csvPath), manifestFile),
 		autoCheck:    autoCheck,
 		log:          log,
-		snap:         DictImportSnapshot{State: DictImportStateIdle},
+		snap:         DictImportSnapshot{State: state},
 	}
 }
 
@@ -121,8 +126,9 @@ func (s *DictImport) run(ctx context.Context) {
 	}
 	if _, err := os.Stat(s.csvPath); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			// 非镜像运行（如 go run . serve）：静默跳过，保持 idle。
+			// 非镜像运行（如 go run . serve）：确认缺文件后收敛为 idle。
 			s.log.Info().Str("path", s.csvPath).Msg("built-in dict csv not found, skip auto import")
+			s.skip()
 			return
 		}
 		s.fail(fmt.Errorf("stat dict csv: %w", err))
@@ -131,6 +137,7 @@ func (s *DictImport) run(ctx context.Context) {
 	manifest, err := s.loadManifest()
 	if err != nil {
 		s.log.Warn().Err(err).Str("path", s.manifestPath).Msg("dict manifest unusable, skip auto import")
+		s.skip()
 		return
 	}
 
@@ -210,7 +217,14 @@ func (s *DictImport) loadManifest() (*dictManifest, error) {
 	return &m, nil
 }
 
-// beginChecking 记录「任务已开始」：设置版本与期望行数并盖 StartedAt。
+// skip 确认无可用数据后进入稳定态，客户端可以停止轮询。
+func (s *DictImport) skip() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.snap = DictImportSnapshot{State: DictImportStateIdle}
+}
+
+// beginChecking 在数据文件检查通过后设置版本与期望行数并盖 StartedAt。
 func (s *DictImport) beginChecking(m *dictManifest) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

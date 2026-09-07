@@ -1,7 +1,7 @@
 package handler
 
 // 词典导入进度端点的组件测试：快照是进程内存态，纯单元测试即可覆盖
-// 响应契约（idle 零值 → 各字段缺省映射为 null / 0）；状态机行为本身
+// 响应契约（初始 checking / idle → 各字段缺省映射为 null / 0）；状态机行为本身
 // 由 service 包的集成测试覆盖。Handler 的 DictImport 只读快照，
 // nil db / nil importer 不参与该路径。
 
@@ -31,28 +31,39 @@ type dictImportData struct {
 }
 
 func TestDictImportRoute(t *testing.T) {
-	engine := gin.New()
-	// 未调用 StartAutoImport 的服务保持 idle：csvPath 指向不存在的文件，
-	// db / importer 为 nil（快照路径不触达）。
-	svc := service.NewDictImport(nil, nil, "/nonexistent/ecdict.csv", true, zerolog.Nop())
-	RegisterRoutes(engine, Options{Log: zerolog.Nop()},
-		v1.NewWordHandler(nil), v1.NewReviewHandler(nil), v1.NewVersionHandler(),
-		v1.NewDictImportHandler(svc))
+	for _, tc := range []struct {
+		name      string
+		autoCheck bool
+		state     string
+	}{
+		{"后台尚未启动时继续轮询", true, "checking"},
+		{"关闭自动检查时停止轮询", false, "idle"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			engine := gin.New()
+			// 不调用 StartAutoImport，覆盖 HTTP 已可用但后台尚未调度的窗口；
+			// db / importer 为 nil（快照路径不触达）。
+			svc := service.NewDictImport(nil, nil, "/nonexistent/ecdict.csv", tc.autoCheck, zerolog.Nop())
+			RegisterRoutes(engine, Options{Log: zerolog.Nop()},
+				v1.NewWordHandler(nil), v1.NewReviewHandler(nil), v1.NewVersionHandler(),
+				v1.NewDictImportHandler(svc))
 
-	rec := doJSON(t, engine, "GET", "/api/v1/dictionary-import", nil)
-	require.Equal(t, http.StatusOK, rec.Code)
-	e := decodeEnvelope(t, rec.Body.Bytes())
-	assert.Equal(t, "OK", e.Code)
-	assert.Equal(t, "success", e.Message)
+			rec := doJSON(t, engine, "GET", "/api/v1/dictionary-import", nil)
+			require.Equal(t, http.StatusOK, rec.Code)
+			e := decodeEnvelope(t, rec.Body.Bytes())
+			assert.Equal(t, "OK", e.Code)
+			assert.Equal(t, "success", e.Message)
 
-	var data dictImportData
-	require.NoError(t, json.Unmarshal(e.Data, &data))
-	assert.Equal(t, "idle", data.State, "未启动导入时为 idle")
-	assert.Empty(t, data.SourceVersion)
-	assert.Zero(t, data.RowsProcessed)
-	assert.Zero(t, data.RowsTotal)
-	assert.Zero(t, data.EntriesWritten)
-	assert.Nil(t, data.StartedAt)
-	assert.Nil(t, data.UpdatedAt)
-	assert.Nil(t, data.Error)
+			var data dictImportData
+			require.NoError(t, json.Unmarshal(e.Data, &data))
+			assert.Equal(t, tc.state, data.State)
+			assert.Empty(t, data.SourceVersion)
+			assert.Zero(t, data.RowsProcessed)
+			assert.Zero(t, data.RowsTotal)
+			assert.Zero(t, data.EntriesWritten)
+			assert.Nil(t, data.StartedAt)
+			assert.Nil(t, data.UpdatedAt)
+			assert.Nil(t, data.Error)
+		})
+	}
 }

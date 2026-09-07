@@ -87,9 +87,8 @@ serve 启动后进程内自动导入镜像内置词典（ECDICT），本端点�
 ### 契约：状态机与轮询收敛
 
 - 进度是**进程内存态**，不落库：进程重启后从 `checking` 重新做完整性守卫判断，不存在跨进程的持久进度。
-- `state` 迁移：`idle`（无自动导入任务）→ `checking`（守卫检查中）→ `importing` → `completed` / `failed`。`checking` 与 `importing` 期间容器 `aria-busy` 语义由前端承载。
+- 自动检查开启时，服务构造即为 `checking`（含后台任务尚未调度、数据文件检查与守卫查询），避免首次请求误读 `idle` 后停止轮询；manifest 尚未读取时版本为空、总行数为 0、时间为 null。确认数据不可用后进入 `idle`；开关关闭时初始即为 `idle`。数据可用时继续 `checking` → `importing` → `completed` / `failed`，守卫完整也可直接从 `checking` 进入 `completed`。`checking` 与 `importing` 期间容器 `aria-busy` 语义由前端承载。
 - **完整性守卫**：`dictionary_entries` 中 `source='ecdict'` 且 `source_version=<manifest 版本>` 的词条数达到 manifest 期望行数即视为完整，直接返回 `completed` 而不导入——同一守卫覆盖空库（全新部署）、半截库（导入中断后续传补齐）与旧版本库（数据集升级后全量刷新）。
 - **失败语义**：导入失败不退出进程，`state=failed` 且 `error` 给出原因；服务降级可用（生词流程走最小词条），重启容器自动重试续传。
 - **前端轮询建议**：`checking` / `importing` 3 秒轮询；`failed` 低频（如 15 秒）以展示重启后的续传恢复；进入 `completed` / `idle` 稳定态后停止轮询。重启容器产生的新一轮导入在页面不刷新的前提下不主动唤醒——属既定取舍，刷新页面即可恢复轮询。
 - 进度只在批次事务提交后推进（崩溃安全）；优雅关闭时导入在批次边界停止，已提交批次保持有效。
-
