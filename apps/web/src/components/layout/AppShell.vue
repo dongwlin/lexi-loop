@@ -44,6 +44,13 @@ import ThemeSwitcher from './ThemeSwitcher.vue'
           >
             导入
           </RouterLink>
+          <RouterLink
+            to="/about"
+            class="inline-flex min-h-11 items-center rounded-item px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
+            active-class="bg-surface-active text-foreground"
+          >
+            关于
+          </RouterLink>
         </nav>
         <div class="ml-auto">
           <ThemeSwitcher />

@@ -5,6 +5,7 @@
 import type {
   GetSessionResponse,
   ImportWordsResponse,
+  VersionInfo,
   WordDetail,
   WordListItem,
 } from '@lexi-loop/api-client'
@@ -78,6 +79,17 @@ export function makeSessionResponse(
       { word: 'diligent', result: 'forgotten' },
       { word: 'constrain', result: 'remembered' },
     ],
+    ...overrides,
+  }
+}
+
+export function makeVersionInfo(
+  overrides: Partial<VersionInfo> = {},
+): VersionInfo {
+  return {
+    version: '1.2.3',
+    buildTime: '2026-09-01T10:30:00Z',
+    goVersion: 'go1.26.7',
     ...overrides,
   }
 }

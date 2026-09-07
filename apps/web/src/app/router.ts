@@ -43,6 +43,12 @@ export const router = createRouter({
       meta: { title: `复习结果 · ${BRAND}` },
     },
     {
+      path: '/about',
+      name: 'about',
+      component: () => import('@/pages/about/AboutPage.vue'),
+      meta: { title: `关于 · ${BRAND}` },
+    },
+    {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
       component: () => import('@/pages/error/NotFoundPage.vue'),
