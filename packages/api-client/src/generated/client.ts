@@ -16,6 +16,7 @@ import type {
   StartSessionResponse,
   SubmitResultRequest,
   UpdateReviewMeaningRequest,
+  VersionInfo,
   WordDetail
 } from './model';
 
@@ -126,6 +127,30 @@ return customFetch<NoData>(getSubmitReviewResultUrl(sessionId,itemId),
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(submitResultRequest)
+  }
+);}
+
+
+
+export const getGetVersionUrl = () => {
+
+
+
+
+  return `/api/v1/version`
+}
+
+/**
+ * @summary 版本信息
+ */
+export const getVersion = async ( options?: Parameters<typeof customFetch>[1]): Promise<VersionInfo> => {
+
+  return customFetch<VersionInfo>(getGetVersionUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
   }
 );}
 

@@ -70,6 +70,20 @@ components:
         - message
         - data
       type: object
+    EnvelopeVersionInfo:
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        data:
+          $ref: "#/components/schemas/VersionInfo"
+        message:
+          type: string
+      required:
+        - code
+        - message
+        - data
+      type: object
     EnvelopeWordDetail:
       additionalProperties: false
       properties:
@@ -352,6 +366,20 @@ components:
             - array
             - "null"
       type: object
+    VersionInfo:
+      additionalProperties: false
+      properties:
+        buildTime:
+          type: string
+        goVersion:
+          type: string
+        version:
+          type: string
+      required:
+        - version
+        - buildTime
+        - goVersion
+      type: object
     WordDetail:
       additionalProperties: false
       properties:
@@ -629,6 +657,19 @@ paths:
       summary: 提交一个单词的复习结果（幂等）
       tags:
         - Reviews
+  /api/v1/version:
+    get:
+      operationId: get-version
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVersionInfo"
+          description: OK
+      summary: 版本信息
+      tags:
+        - Meta
   /api/v1/words:
     get:
       operationId: list-words

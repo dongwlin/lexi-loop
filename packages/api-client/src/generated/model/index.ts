@@ -24,5 +24,6 @@ export * from './startSessionResponse';
 export * from './submitResultRequest';
 export * from './submitResultRequestResult';
 export * from './updateReviewMeaningRequest';
+export * from './versionInfo';
 export * from './wordDetail';
 export * from './wordListItem';

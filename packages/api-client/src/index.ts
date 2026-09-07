@@ -13,6 +13,7 @@ export {
   abandonReviewSession,
   deleteWord,
   getReviewSession,
+  getVersion,
   getWord,
   importWords,
   listWords,
