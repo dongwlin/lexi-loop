@@ -21,7 +21,7 @@ TDD 的三个收益：
 
 ## 2. 测试金字塔与分层测试策略
 
-按照 [[Go 单体应用架构规范]] 的分层架构（handler → service → repo → domain，middleware 为 handler 子包），测试策略应与分层对应：
+按照 [Go 单体应用架构规范](Go%20单体应用架构规范.md) 的分层架构（handler → service → repo → domain，middleware 为 handler 子包），测试策略应与分层对应：
 
 | 层 | 测试类型 | 依赖 | 速度 |
 | --- | --- | --- | --- |
@@ -206,7 +206,7 @@ for _, tt := range tests {
 
 ## 7. 断言风格：testify
 
-项目测试栈为 `testify + testcontainers`（见 [[Go 技术栈]]），统一使用 testify 断言：
+项目测试栈为 `testify + testcontainers`（见 [Go 技术栈](Go%20技术栈.md)），统一使用 testify 断言：
 
 ```go
 import (

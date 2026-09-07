@@ -32,7 +32,7 @@ configureApiClient({ baseUrl, getAccessToken })
 const page = await listWords({ page: 1, search: 'amb' }) // Promise<ListWordsResponse>，已是解包后的 data
 ```
 
-认证刷新与 401 重放（《前端 API 与认证集成规范》§10）在 mutator 内实现，对调用方透明。
+当前仅提供可选的 Bearer 注入，未实现认证刷新与 401 重放。账号体系引入后按 [前端 API 与认证集成规范](../../docs/specs/frontend/前端%20API%20与认证集成规范.md) 在 mutator 内接入；阶段见 [Roadmap](../../docs/product/roadmap.md)。
 
 ## 命令
 

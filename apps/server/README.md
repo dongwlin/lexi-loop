@@ -2,29 +2,11 @@
 
 LexiLoop（词环）英语生词复习系统后端。工程结构规范见 [docs/backend/structure.md](../../docs/backend/structure.md)，技术选型见 [docs/specs/backend/Go 技术栈.md](../../docs/specs/backend/Go%20技术栈.md)。
 
-## 当前状态：MVP 业务链路可用
+## 实现入口
 
-后端已按分层规范实现 **Word / Review 全部业务用例与 `/api/v1` 端点**：`internal/domain` 领域模型与纯业务规则（四实体工厂、ApplyReview / Submit / Complete / Abandon 状态迁移、weight / mastery 动态计算，含单元测试）、`internal/infra/database` 数据库连接池（bun + pgx）、`migrations/` 真实迁移 DDL（四表，含「全库至多一个 active session」部分唯一索引）、`internal/repo` 数据访问适配器（advisory lock / FOR UPDATE / 条件 UPDATE、SQLSTATE 错误归一化）、`internal/apperr` 类型化应用错误与 `internal/handler/httpresp` 统一响应外壳（`Envelope[T]` / 错误模型）与唯一的 `apperr.Kind → HTTP 状态` 映射均已实现并含测试；`internal/service`（`WeightedSampler` 加权随机不放回抽样、`DictionaryService` 本地 Lookup——归一 → 词形变化表归并 → 未命中创建最小词条、`WordService` 五用例、`ReviewService` 三用例按 structure.md §5 的事务与并发边界，`tx.go` 提供可重放事务的有上限重试；含 testcontainers 集成测试，覆盖 §5.4 必测的并发与回滚场景）、`internal/handler/v1`（huma v2 声明式操作：请求绑定、基础校验与请求体 schema 由 huma 按 DTO 标签完成，操作函数只做 DTO 转换与 Service 调用，httptest 组件测试驱动完整 HTTP 栈）、`internal/handler/httpresp` 的 huma 错误模型装配（`huma.NewError` 覆盖：校验失败 422 降为 400 + `BASE.PARAM.VALIDATION_FAILED` + `data.fieldErrors`，RateLimited 透传 `Retry-After`，Content-Type 保持 `application/json`）、`internal/importer/ecdict`（ECDICT CSV 流式解析与字段映射、按批分事务的幂等导入，含单元与集成测试）与 `import-ecdict` 命令，以及 `internal/app` 组合根（显式组装 DB / Service / Handler，接收根命令注入的 zerolog logger 并传给 `RegisterRoutes`；`BuildOpenAPISpec` 提供离线 spec 生成入口）与 `internal/infra/logger` 日志初始化（zerolog ConsoleWriter，CLI 启动时接管全局日志）均已落地；`serve` 需要 `LEXI_DATABASE_URL`。`handler/middleware` 自定义中间件已实现并经 `handler/router.go` 全局挂载（顺序 request_id → recovery → cors → logger）：request_id 透传 / 生成 `X-Request-Id` 响应头与链路日志字段、logger 输出 zerolog 请求日志（method / path / status / bytes / client_ip / latency，按状态分级）、recovery 将 panic 统一渲染为内部错误（不向客户端暴露 panic 值与堆栈）、cors 封装官方 gin-contrib/cors 按显式 Origin 白名单放行（规范 §11.2 的方法 / 请求头 / 暴露响应头）；四个中间件均含单元测试。
+阶段状态见 [Roadmap](../../docs/product/roadmap.md)。服务端提供 Word / Review / Meta API、本地词典导入、迁移和离线 OpenAPI 生成；工程目录与职责见 [backend/structure.md](../../docs/backend/structure.md)，接口行为分别见 [Word API](../../docs/api/words.md)、[Review API](../../docs/api/reviews.md) 与 [Meta API](../../docs/api/meta.md)。
 
-**OpenAPI 3.1 spec** 由 `lexi-loop openapi` 离线生成至 [docs/openapi/](../../docs/openapi/)（JSON + YAML，不挂载到线上系统；`components.schemas.Error` 与实际错误响应模型一致，业务前置条件 422 仅保留在开始复习操作上）。产物由生成器维护，请勿手改；契约的权威仍是 [docs/api/words.md](../../docs/api/words.md)、[docs/api/reviews.md](../../docs/api/reviews.md) 与 [docs/api/meta.md](../../docs/api/meta.md)。
-
-```text
-apps/server/
-├─ main.go                       可执行入口：仅调用 cmd.Execute()
-├─ cmd/                          CLI 路由层（serve / migrate / import-ecdict / openapi / version）
-├─ migrations/                   版本化迁移（migrations.go 执行入口 + 四表真实 DDL）
-└─ internal/
-   ├─ app/                       组合根：组件显式组装、Server 生命周期、优雅关闭（已接入 DB / Service / Handler；含离线 spec 生成入口）
-   ├─ domain/                    领域模型与纯业务规则（已实现，含单元测试）
-   ├─ repo/                      数据访问适配器 + internal/schema（已实现，含集成测试）
-   ├─ service/                   业务用例编排：word / dictionary / review / sampler / tx（已实现，含集成测试）
-   ├─ importer/ecdict/           ECDICT 离线导入：parser 字段映射 + importer 批事务编排（已实现，含单元与集成测试）
-   ├─ handler/                   router.go（huma API + /api/v1 操作挂载）+ openapi.go（离线 spec）/ httpresp / v1（huma 声明式操作，含组件测试）/ middleware（已实现，含单元测试）
-   ├─ apperr/                    类型化应用错误（已实现，含单元测试）
-   └─ infra/                     config（viper，已实现）/ buildinfo（构建期版本信息，已实现）/ database（连接池已实现）/ logger（zerolog ConsoleWriter 日志初始化，已实现）
-```
-
-目录与职责对齐 [docs/backend/structure.md](../../docs/backend/structure.md) §2；与通用分层规范的关系见 [docs/specs/backend/Go 单体应用架构规范.md](../../docs/specs/backend/Go%20单体应用架构规范.md)。
+OpenAPI 产物由下方命令生成，不手改，也不挂载在线文档路由。启动 `serve` 需要 `LEXI_DATABASE_URL`。
 
 ## 运行
 
@@ -102,10 +84,6 @@ go test -race ./internal/infra/... ./internal/repo/... ./internal/service/... ./
 ```
 
 `internal/infra/database`、`migrations`、`internal/repo`、`internal/service`、`internal/handler` 与 `internal/importer/ecdict` 的集成测试各自在包级 `TestMain` 中启动一次共享的真实 PostgreSQL 容器（镜像 `postgres:18-alpine`，全部用例复用；各包 `TestMain` 会先应用全部迁移）；Docker 不可用或传 `-short` 时集成用例跳过、纯单元测试仍运行（见 [Go 测试规范](../../docs/specs/backend/Go 测试规范.md)）。structure.md §5.4 的并发 / 回滚必测场景（单 active session、并发提交幂等、最后两题并发提交必完成、注入失败整体回滚、items 中途失败不留半成品）已在 Service 层用真实 PostgreSQL 验证；`internal/handler` 组件测试经 httptest 驱动完整 HTTP 栈验证端点契约，OpenAPI spec 单元测试（离线构造，不依赖 Docker）验证操作路由与 Error 模型 schema；`internal/importer/ecdict` 以小型固定 CSV 验证字段映射、幂等重跑与批次回滚续传。
-
-## 下一步（按依赖顺序）
-
-当前无待办。
 
 ## 模块
 

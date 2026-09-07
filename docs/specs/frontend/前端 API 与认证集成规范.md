@@ -1,17 +1,19 @@
 # 前端 API 与认证集成规范
 
+> 项目适用边界：现行 MVP 无登录与鉴权。HTTP 传输、响应解包、取消及错误分类规范用于当前 API Client；Token、登录会话、刷新协调器与认证端点相关内容在引入账号体系时适用，不构成当前接口契约或补齐待办。阶段见 [Roadmap](../../product/roadmap.md)，现行接口见 [api/](../../api/words.md)。
+
 ## 1. 适用范围
 
 本规范适用于基于 Vite、TypeScript 的 Vue 单页应用（SPA），规定前端调用 HTTP API、管理长短双 token、恢复会话、协调刷新和处理认证错误的统一方式。
 
 本规范只规定前端集成与前后端协作边界：
 
-- HTTP Client、API 生成器和数据层的技术选型以《[[前端技术栈]]》为准
-- HTTP 顶层响应、错误码、状态码、分页和字段命名以《[[HTTP API 设计规范]]》为唯一权威
-- 页面、Feature、`lib` 和状态归属以《[[前端应用架构规范]]》为准
-- 表单错误、Toast、Focus、会话失效提示和认证表单体验以《[[前端交互与可访问性规范]]》为准
-- 测试工具、测试层级和 HTTP Mock 以《[[前端测试规范]]》为准
-- ETag 生成与服务端重验证语义以《[[ETag 设计规范]]》为准
+- HTTP Client、API 生成器和数据层的技术选型以《[前端技术栈](前端技术栈.md)》为准
+- HTTP 顶层响应、错误码、状态码、分页和字段命名以《[HTTP API 设计规范](../backend/HTTP%20API%20设计规范.md)》为唯一权威
+- 页面、Feature、`lib` 和状态归属以《[前端应用架构规范](前端应用架构规范.md)》为准
+- 表单错误、Toast、Focus、会话失效提示和认证表单体验以《[前端交互与可访问性规范](前端交互与可访问性规范.md)》为准
+- 测试工具、测试层级和 HTTP Mock 以《[前端测试规范](前端测试规范.md)》为准
+- ETag 为按需设计；仓库尚无独立 ETag 规范，接入前须先在对应 API 契约中定义服务端重验证语义，本文 §12.5 仅规定前端职责
 
 项目使用 Vue，不得改变本规范规定的传输、token 轮换、并发刷新和错误处理语义。
 
@@ -97,7 +99,7 @@ src/
     └── env.ts
 ```
 
-契约 API Client 位于 monorepo 共享包 `packages/api-client`（见 `docs/architecture/overview.md` §5.2 与《[[前端技术栈]]》§7）；`lib/api` 只做应用侧组合。项目较小时可以合并文件，但职责不能混合。
+契约 API Client 位于 monorepo 共享包 `packages/api-client`（见 `docs/architecture/overview.md` §5.2 与《[前端技术栈](前端技术栈.md)》§7）；`lib/api` 只做应用侧组合。项目较小时可以合并文件，但职责不能混合。
 
 | 模块 | 职责 | 不负责 |
 | --- | --- | --- |
@@ -138,7 +140,7 @@ interface TokenPair {
 - 前端使用服务端返回的过期时间，不通过解析 PASETO/JWT 内容推断刷新计划
 - 轮换不得无限延长初次登录建立的绝对会话期限
 
-响应仍须遵循《[[HTTP API 设计规范]]》的统一顶层结构，本节只定义认证端点 `data` 的集成要求。
+响应仍须遵循《[HTTP API 设计规范](../backend/HTTP%20API%20设计规范.md)》的统一顶层结构，本节只定义认证端点 `data` 的集成要求。
 
 ### 4.2 内存中的 access token
 
@@ -260,7 +262,7 @@ interface ApiRequestOptions {
 
 ### 5.2 响应解包
 
-普通 JSON 响应统一按《[[HTTP API 设计规范]]》解包：
+普通 JSON 响应统一按《[HTTP API 设计规范](../backend/HTTP%20API%20设计规范.md)》解包：
 
 ```text
 HTTP Response
@@ -778,7 +780,7 @@ ETag 由 API 传输或缓存适配层处理，不散落在 Feature 中：
 
 ## 13. OpenAPI 与生成客户端
 
-生成器的默认选择见《[[前端技术栈]]》；本节只规定所有生成器都必须遵循的集成边界。
+生成器的默认选择见《[前端技术栈](前端技术栈.md)》；本节只规定所有生成器都必须遵循的集成边界。
 
 - Swagger/OpenAPI 生成代码统一放在 monorepo 共享包 `packages/api-client`，应用内不得出现第二份生成物
 - 生成文件不手工修改
@@ -851,7 +853,7 @@ DTO 与视图类型一致时直接使用；只有字段组合、可空性、表�
 
 ## 16. 测试要求
 
-测试执行、MSW、Browser Mode 和 Storybook 规则见《[[前端测试规范]]》。本节只规定 API 与认证必须覆盖的行为。
+测试执行、MSW、Browser Mode 和 Storybook 规则见《[前端测试规范](前端测试规范.md)》。本节只规定 API 与认证必须覆盖的行为。
 
 ### 16.1 API Client 单元与集成测试
 

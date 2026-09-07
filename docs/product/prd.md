@@ -1,5 +1,7 @@
 # LexiLoop 产品需求（PRD）
 
+> 状态：本文描述已交付 MVP 的现行产品基线；阶段完成状态与后续规划见 [roadmap.md](roadmap.md)。MVP 完成不代表下列边界自动失效。
+
 > 本文档回答「现在这个产品是什么」：为什么做、解决什么问题、用户如何操作、核心业务规则与 MVP 边界。它不包含算法公式与数据库字段——那些是技术实现细节，见 [architecture/overview.md](../architecture/overview.md) 及其下游文档；「以后准备怎么长」的版本阶段规划（MVP → V2 → V3）见 [roadmap.md](roadmap.md)；词典数据方案入口见 [dictionary/overview.md](../dictionary/overview.md)。
 
 ## 1. 项目目标

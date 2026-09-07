@@ -1,5 +1,7 @@
 # Lookup / Enrich 与多来源合并（Dictionary Enrichment）
 
+> 适用阶段：本地查询与最小词条兜底为现行行为；Online Provider、在线 Lookup、Enrich 与 Merge 为 V2 后续设计，AI 整理为 V3 后续设计，均不代表已接入。阶段状态见 [Roadmap](../product/roadmap.md)。
+
 > Lookup 与 Enrich 是同一套 Provider 机制的两个方向，放在同一篇：本文档定义在线补充的两条链路、`DictionaryProvider` 接口、多来源 Merge 原则与词典能力的阶段边界。
 > 表字段定义见 [data-model.md](data-model.md)，导入时的归一前置见 [normalization.md](normalization.md)。
 
@@ -17,7 +19,7 @@ ECDICT 作为**导入期数据源**：大型 CSV 通过离线脚本一次性导�
 - 导入大量单词时性能稳定
 - 复习页面无需等待第三方词典
 
-运行时唯一可能访问外部的时机，是本地词典库中不存在该词（ECDICT 也未收录，如专有名词、缩写），此时才走在线 Provider 补充。
+当前运行时不访问外部词典。V2 的外部访问仅限下节定义的在线 Lookup 兜底与 Enrich 增强两条链路。
 
 ## 2. 两条链路的划分
 

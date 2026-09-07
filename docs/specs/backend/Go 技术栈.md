@@ -27,7 +27,7 @@
 - **pgx/v5/stdlib**：通过 `database/sql` 适配器接入 bun。连接参数与错误类型统一使用 pgx v5；数据库错误通过 `*pgconn.PgError` 的 SQLSTATE 判断，不比较错误文本。
 - **PostgreSQL**：作为默认关系型数据库，提供 JSONB、部分索引等完整能力，并适合使用 UUID 主键。
 
-数据访问的分层方式、事务边界和 Repo 约定见《[[Go 单体应用架构规范]]》；表结构与字段约定见《[[PostgreSQL 数据库设计规范]]》。
+数据访问的分层方式、事务边界和 Repo 约定见《[Go 单体应用架构规范](Go%20单体应用架构规范.md)》；项目表关系见 [architecture/data-model.md](../../architecture/data-model.md)，字段约定见 [dictionary/data-model.md](../../dictionary/data-model.md) 与 [review/data-model.md](../../review/data-model.md)。
 
 ### 依赖组装
 
@@ -50,7 +50,7 @@
 
 ### 测试
 
-testify 用于断言，testcontainers 用于启动真实 PostgreSQL，执行 Service + Repo 集成测试；数据库访问不使用 mock。测试分层与替身边界见《[[Go 测试规范]]》。
+testify 用于断言，testcontainers 用于启动真实 PostgreSQL，执行 Service + Repo 集成测试；数据库访问不使用 mock。测试分层与替身边界见《[Go 测试规范](Go%20测试规范.md)》。
 
 ### API 文档
 
@@ -62,4 +62,4 @@ huma 基于代码定义生成 OpenAPI 3.1 文档，同时为请求参数提供�
 
 ## 按需能力
 
-ristretto 不是默认依赖。只有指标或压测证明缓存能解决实际性能问题时才启用；缓存未命中、写入被拒绝或条目被淘汰都不得影响业务正确性。具体策略见《[[Go 单体应用架构规范]]》。
+ristretto 不是默认依赖。只有指标或压测证明缓存能解决实际性能问题时才启用；缓存未命中、写入被拒绝或条目被淘汰都不得影响业务正确性。具体策略见《[Go 单体应用架构规范](Go%20单体应用架构规范.md)》。

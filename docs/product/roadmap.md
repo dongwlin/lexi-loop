@@ -1,9 +1,11 @@
 # LexiLoop Roadmap（阶段规划）
 
-> 本文档回答「以后准备怎么长」：MVP → V2 → V3 的能力演进、复习的两种形态、MVP 完成定义与工程落地顺序。
+> 本文档回答「以后准备怎么长」：MVP → V2 → V3 的能力演进、复习的两种形态、MVP 完成状态与后续开发入口。
 > 它只做版本与顺序层面的规划，各项能力的详细规则在对应专项文档；「当前产品具体是什么、MVP 详细边界」以 [prd.md](prd.md) 为准。
 
 ## 1. 版本总览
+
+截至 2026-09-07，MVP 阶段目标已完成，发布基线为仓库标签 `v0.0.1`。当前产品规则继续由 [prd.md](prd.md) 及其领域文档维护；发布操作见 [release.md](../deploy/release.md)。
 
 ```text
 MVP（第一个可用闭环）
@@ -13,7 +15,7 @@ V2（在线词典增强 + 算法升级）
 V3（AI 整理 + 完整 SRS + 多用户）
 ```
 
-### MVP（当前实现目标）
+### MVP（已完成，现行基线）
 
 - **生词导入**：多行批量粘贴；同一单词重复导入累计遇词次数；词形归并（见 [dictionary/normalization.md](../dictionary/normalization.md)）。
 - **本地词典**：ECDICT 全量离线导入本地，导入即自动补全原形 / 音标 / 词性 / 中文释义（见 [dictionary/overview.md](../dictionary/overview.md)）。
@@ -22,14 +24,14 @@ V3（AI 整理 + 完整 SRS + 多用户）
 
 MVP 明确不做：到期复习提醒、完整 SRS / FSRS、词典在线增强（Lookup 在线分支与 Enrich）、AI 整理、多用户。MVP 的完成标准见第 3 节。
 
-### V2
+### V2（后续规划）
 
 - **Lookup 在线兜底 + Enrich 增强**：为本地词典库没有的词创建词条、为已有词条补英文释义 / 音频 / 例句（阶段边界见 [dictionary/enrichment.md](../dictionary/enrichment.md)）。
 - **复习算法升级**：统计最近 N 次表现、对越新的结果指数加权，用于评估「到期复习」提示（机制见 [review/algorithm.md](../review/algorithm.md)）。
 - **错词复习**：只复习本轮忘记的单词入口。
-- **「到期复习」模式**（B 形态，见第 2 节）：MVP 之后的第一个产品级新增复习形态。
+- **「到期复习」评估**（B 形态，见第 2 节）：V2 评估提示机制，完整模式仍在 V3 结合 FSRS 评估落地（D012）。
 
-### V3
+### V3（后续规划）
 
 - **AI review_meanings**：`raw_meanings → AI → 复习释义` 的整理层，AI 不制造词典事实（见 [dictionary/data-model.md](../dictionary/data-model.md)）。
 - **FSRS / 到期复习**：再评估 FSRS 这类完整间隔重复算法并正式引入到期复习。
@@ -44,7 +46,7 @@ MVP 明确不做：到期复习提醒、完整 SRS / FSRS、词典在线增强�
 
 ## 3. MVP 完成定义
 
-当下面这个流程完全成立时，第一版即完成：
+以下为已达成的 MVP 产品闭环，保留作为后续迭代的回归依据：
 
 ```text
 我今天做了一篇英语阅读
@@ -72,36 +74,8 @@ ambiguous 因为出现次数高，更容易被抽到
 
 这个流程即 [prd.md](prd.md) 中「核心循环」的产品闭环。
 
-## 4. 工程落地顺序
+## 4. 后续开发与历史归档
 
-MVP 的开发不按「先全部设计完数据库 → 再写完所有 API → 再写前端」的顺序推进，而按垂直切片推进：
+MVP 已完成，后续工作在现有闭环上迭代。V2 / V3 是能力演进方向，尚不表示全部细节已定稿或已经实现；具体任务开始前，先更新对应领域的权威文档、契约与必要的数据迁移，再同步实现和引用。
 
-### 数据准备（工程步骤）
-
-离线程序把 ECDICT CSV 导入 `dictionary_entries`，运行时不读 CSV（见 [backend/structure.md](../backend/structure.md)）。
-
-### 第一阶段：单词导入
-
-完成 `user_words` 与词典打通、`/import` 页面、`POST /api/v1/words/import`、`/words` 页面。做到粘贴生词 → 数据库出现（含自动补全的释义）→ 重复粘贴 encounter +1。
-
-### 第二阶段：最简单复习
-
-完成 `/review`，随机抽 20 个，查看释义，记得 / 不记得。暂时可以完全随机，先把流程跑通。
-
-### 第三阶段：复习历史
-
-加入 `review_sessions`、`review_items`，开始正式记录学习数据。
-
-### 第四阶段：权重抽样
-
-加入 `UserWord.ReviewWeight(now)` 与 `WeightedSampler`，替换完全随机抽样；公式仍以 [review/algorithm.md](../review/algorithm.md) 为准，实现位置见 [backend/structure.md](../backend/structure.md)。
-
-### 第五阶段：统计
-
-加入 mastery、session result、word statistics。
-
-### 第六阶段：体验优化
-
-加入键盘快捷键、复习进度、只复习错误单词、动画、筛选、排序。
-
-> 各阶段涉及的页面与接口契约以 [frontend/review-flow.md](../frontend/review-flow.md)、[api/words.md](../api/words.md)、[api/reviews.md](../api/reviews.md) 等专项文档为准，本文件只定义顺序。
+早期的垂直切片开发顺序已移至 [历史归档](../archive/mvp-implementation-plan.md)，不再作为待办清单。各模块 README 仅维护运行与实现入口，阶段规划统一在本文维护。

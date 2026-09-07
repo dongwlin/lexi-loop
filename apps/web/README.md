@@ -37,21 +37,13 @@ MVP 服务端暂无认证端点；认证落地后在 `src/lib/api.ts` 注入 `ge
 
 测试设施在应用根目录外层：`vitest.config.ts`（Vitest Projects：`web` 为 jsdom 单元 / 组件 / 集成测试，`storybook` 为真实浏览器 Story 测试）、`tests/`（`setup.ts` 全局设施 + `mocks/` 的 MSW Handler 工厂与 server + `integration/` 页面集成测试——`helpers.ts` 提供真实 Router + 全新 QueryClient + MSW 的装配，覆盖生词库 / 详情 / 导入 / 复习结果跨页行为）、`e2e/`（Playwright 用例，webServer 面向生产构建 preview）。
 
-## 待办
+## 业务与维护入口
 
-MVP 完成度评估（2026-09-06，2026-09-07 更新）：工程骨架、设计系统主题层、API Client（Orval 生成 + 统一 mutator）、Feature 层（words / review / meta 的 api keys / queries / mutations）与后端 10 个端点已就绪；`src/pages/` 六个路由页面（导入、生词库、生词详情、复习、复习结果、关于）已全部落地，页面基础设施（路由 meta → document.title、skip link、main landmark、h1 与状态分支）已就绪。质量设施（Lint / 格式化 / 组件测试环境 / MSW / Storybook 测试与 a11y 门禁 / Playwright）、品牌 favicon、原「依赖服务端契约扩展」两条（列表 / 详情掌握度与优先级、导入逐词结果）与「再来一轮」行为定稿均已于 2026-09-07 完成；当前登记的 MVP 待办已全部完成。
+阶段状态与后续规划见 [Roadmap](../../docs/product/roadmap.md)。六个业务页面、复习恢复、键盘操作和结果页行为统一见 [review-flow.md](../../docs/frontend/review-flow.md)，版本信息契约见 [Meta API](../../docs/api/meta.md)。页面实现位于 `src/pages/`，数据查询与变更位于 `src/features/`，跨页复习快照与状态逻辑位于 `src/utils/`。
 
-### MVP 业务落地（review-flow.md §2–§10）
+页面集成测试位于 `tests/integration/`，使用真实 Router、独立 QueryClient 与 MSW；端到端用例位于 `e2e/`。新增行为按 [前端测试规范](../../docs/specs/frontend/前端测试规范.md) 补充对应层级验证。
 
-- [x] 导入页 `/import`（review-flow §2–§3）：多行粘贴解析（trim / lowercase / 去空行，重复单词聚合成 count 不丢弃）、`importWords` 提交、导入结果反馈（聚合统计 + 逐词「新增 / 已存在 +N」，数据来自契约的 items 逐词结果）
-- [x] 生词库 `/words`（review-flow §4）：搜索与分页写入 URL（《前端应用架构规范》§6.2，默认值不写入）、语义表格（单词 / 释义 / 遇到 / 复习 / 记得 / 忘记 / 掌握度 / 优先级，后两项为服务端动态计算并随 DTO 返回的派生指标）、Loading（Skeleton + `keepPreviousData` 翻页不闪）/ Empty（区分空词库与搜索无结果）/ Error（错误说明 + 重试）状态；纯逻辑（`buildPageItems` / `parsePositiveInt` / `formatMeanings`）在 `src/utils/` 配单测
-- [x] 生词详情 `/words/:id`（review-flow §5）：学习统计（含当前掌握度 / 当前复习优先级，D011 服务端动态计算）、生效释义逐条展示（D007 三层取值，自定义来源标注「自定义」）、编辑复习释义（Dialog，`meaningText` 文本 ⇄ 结构化释义，清空保存 = PATCH null 回退词典层，另设「清除自定义释义」）、删除生词（AlertDialog 确认，软删除语义 D004，删除成功回生词库）；已删 / 不存在 id 呈 404 态；生词库行内单词链接到详情；对话框提交中拦截关闭、失败聚焦错误摘要（§5.3 / §7.2）
-- [x] 复习页 `/review`（review-flow §6–§8、§10）：数量选择（10 / 20 / 30 / 50 + 自定义，自定义输入未确认直接开始时先应用输入；开始前以 GET /words 分页 total 提示可用量不足，D009 截断仍由服务端保证）、active session 恢复（「继续复习 / 放弃本轮」由用户选择，D010；恢复检查经 Feature 层查询 `fetchQuery` 强制取新，瞬时失败呈错误态可重试、仅 404 清快照；「继续复习」以 GET session 逐词结果按 word join 本地快照，跳到首个未答项续答）、状态机 idle → recalling → revealed → answered、键盘操作绑定复习区域（Space 揭示释义，1 / ← 不记得，2 / → 记得；焦点在按钮等控件上时 Space / Enter 保留原生激活）、完成跳转结果页。「放弃本轮」调用 abandon 端点（api/reviews.md §6）由服务端标记 abandoned 后清快照，网络 / 5xx 失败保留快照可重试，404 / 422 视为轮次已结束；状态迁移（开始 / 恢复 / 揭示 / 作答）后焦点跨帧校正回复习区域，修复浏览器焦点归还晚于 Vue 渲染导致的恢复后快捷键失效
-- [x] 复习结果页 `/review/result/:session`（review-flow §9）：汇总（总计 / 记得 / 不记得 / 正确率）、「需要加强」列表、再来一轮 / 回到生词库；「再来一轮」以上一轮实际词数（session 汇总 total）直接开始新一轮（D009 截断仍由服务端保证），经快照一次性 autoResume 标记让 `/review` 跳过恢复询问直接进入第一题，开始失败留在结果页展示错误与重试；不存在 id 呈 404 态（对齐详情页），未完成 / 已放弃分支区分文案
-- [x] 关于页 `/about`：展示后端 `GET /api/v1/version` 返回的应用版本 / 构建时间 / Go 版本（契约见 [docs/api/meta.md](../../docs/api/meta.md)；开发构建版本以 dev 占位、构建时间空展示「—」，数据单一来源为后端，前端不重复注入），主导航新增「关于」入口，Loading / Error 分支齐备
-- [x] 页面基础设施：路由 meta → `document.title` 随路由更新、SPA 页面级导航完成后焦点移到新页面主标题（h1 带 `tabindex="-1"`，兜底主内容；初次加载与搜索 / 分页等仅 query 变化不移动焦点，《前端交互与可访问性规范》§5.3）、AppShell skip link（目标 `main` 带 `tabindex="-1"` 保证跳转后焦点落入主内容）与 `main` landmark、各页面 h1 与 Loading / Empty / Error 分支（《前端交互与可访问性规范》§6.1）
-
-### 质量与品牌
+## 质量与品牌
 
 质量设施已就位（2026-09-07）：ESLint Flat Config（类型感知 TS / Vue / vuejs-accessibility / TanStack Query / import-x 规则）+ Prettier（含 Tailwind class 排序，配置与脚本见《前端技术栈》§11）；组件测试环境 jsdom + Testing Library（`vitest.config.ts` 按《前端测试规范》§15 合并 vite 配置，`tests/` 为跨页面集成与共享设施）；MSW 在 HTTP 边界 Mock（`tests/mocks/`，`onUnhandledRequest: 'error'`，测试指向保留假主机）；Storybook 项目接入 `@storybook/addon-vitest`（Story 在真实 Chromium 中执行）与 `addon-a11y`（axe 检查为测试门禁，全局 `test: 'error'`）；Playwright E2E（`playwright.config.ts`，webServer 跑生产构建 + preview，`e2e/` 存放用例）。Story 以菜单打开收尾时的 `aria-hidden-focus` 豁免等例外均以注释登记在对应 Story。
 

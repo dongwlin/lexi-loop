@@ -1,5 +1,19 @@
 # LexiLoop 文档中心
 
+## 阅读范围
+
+阶段状态见 [Roadmap](product/roadmap.md)：MVP 已完成，后续开发从现行基线继续。首次了解技术仍先读 [系统架构总览](architecture/overview.md)。
+
+| 材料 | 使用方式 |
+| --- | --- |
+| `product/prd.md`、架构、领域、API、页面与部署文档 | 现行产品和实现约束；文中明确标注 V2 / V3 的内容属于未来设计 |
+| `product/roadmap.md` | 阶段状态与后续规划的唯一入口 |
+| `specs/` | 工程规范；按需能力和认证等后续阶段规范不代表当前已实现 |
+| 应用与共享包 README | 本地运行、验证和实现入口，不另建阶段待办 |
+| [archive/](archive/README.md) | 已失效的阶段计划，只供追溯 |
+| [agent-log/](agent-log/README.md) | 当时的工作记录，历史“当前 / 待办”不能当作今天的状态 |
+
+
 LexiLoop（词环）：英语生词复习系统。本文档目录回答「要找某类内容去哪篇」，结构为**少量上层文档 + 按领域拆开的专项设计文档**，遵循「小而权威、明确引用、单一真相源」：同一份 schema / 公式 / 决策只在一个文件里权威定义，其它地方只能引用。
 
 ## 项目架构：Monorepo
@@ -23,12 +37,15 @@ lexi-loop/
 ```text
 docs/
 ├─ README.md                  ← 本文档（导航）
+├─ archive/
+│  ├─ README.md               历史材料索引与归档规则
+│  └─ mvp-implementation-plan.md  已失效的 MVP 初期落地顺序
 ├─ agent-log/
 │  ├─ README.md              Agent 工作记录规则
 │  └─ YYYY-MM.md             按月分文件、月内按时间逆序的工作记录
 ├─ product/
 │  ├─ prd.md                  产品需求（现在是什么、业务规则、MVP 边界）
-│  └─ roadmap.md              阶段规划（以后怎么长：MVP → V2 → V3）
+│  └─ roadmap.md              阶段状态与后续规划（MVP 已完成 → V2 → V3）
 ├─ architecture/
 │  ├─ overview.md             系统总体架构（入口，先读这篇）
 │  └─ data-model.md           四表关系级模型

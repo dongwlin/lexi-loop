@@ -113,7 +113,7 @@ weight ≈ 1 + 2.58 + 2.68 + 2 + 0.57 + 0 ≈ 8.83
 
 `mastery_score`（掌握程度）与 `review_weight`（复习优先级）是两个指标，前者衡量「这个词我掌握了吗」，后者衡量「这个词现在值不值得抽出来复习」。一个词 `mastery = 80%`，但两个月没有复习，`review_weight` 仍然可能升高——因为时间因素。产品语义见 [prd.md](../product/prd.md)。
 
-`mastery_score` 第一版直接从计数推导、不落库，建议平滑处理：
+`mastery_score` 第一版直接从计数推导、不落库，采用平滑处理：
 
 ```text
 mastery = (remember_count + 1) / (review_count + 2) × 100

@@ -5,7 +5,7 @@
 ## 1. 系统分层
 
 ```text
-Frontend（Vue 页面：/import /words /review /review/result/:session）
+Frontend（Vue 页面，完整路由见 frontend/review-flow.md）
    ↓ HTTP JSON
 HTTP API（internal/handler）
    ↓

@@ -632,7 +632,7 @@ func ToUserResponse(u *domain.User) UserResponse {
 
 ## 7. API 响应与错误码
 
-API 响应结构与错误码是全站统一契约，Handler 与 Middleware 一律遵循。统一响应结构（`code` / `message` / `data`）、错误码格式与分类、HTTP 状态码映射、分页与列表等响应细节见《[[HTTP API 设计规范]]》。
+API 响应结构与错误码是全站统一契约，Handler 与 Middleware 一律遵循。统一响应结构（`code` / `message` / `data`）、错误码格式与分类、HTTP 状态码映射、分页与列表等响应细节见《[HTTP API 设计规范](HTTP%20API%20设计规范.md)》。
 
 ### 7.1 响应实现约束
 
@@ -703,7 +703,7 @@ func (e *Error) Error() string { return e.Message }
 func (e *Error) Unwrap() error { return e.Err }
 ```
 
-Handler 通过 `errors.As(err, &appErr)` 取得结构化信息；`httpresp` 按《[[HTTP API 设计规范]]》§12 实现唯一的 `kind → HTTP status` 映射。业务 `code` 一经发布保持稳定，新增或废弃时同步接口文档。
+Handler 通过 `errors.As(err, &appErr)` 取得结构化信息；`httpresp` 按《[HTTP API 设计规范](HTTP%20API%20设计规范.md)》§11 实现唯一的 `kind → HTTP status` 映射。业务 `code` 一经发布保持稳定，新增或废弃时同步接口文档。
 
 ---
 

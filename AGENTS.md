@@ -1,5 +1,7 @@
 # AGENTS.md — lexi-loop
 
+> 当前阶段与后续规划以 [docs/product/roadmap.md](docs/product/roadmap.md) 为准。MVP 已完成，其现行产品规则与冻结决策继续生效；[docs/archive/](docs/archive/README.md) 和 Agent Log 中的旧计划、过渡实现与历史待办仅供追溯，不得作为当前任务清单。
+
 LexiLoop（词环）：英语生词复习系统。本仓库按 pnpm monorepo 布局同时保存代码与文档：`docs/` 为产品与技术文档，`apps/` 为应用代码（`server` 是 Go 后端，`web` 是 Vue 前端），`packages/` 为共享包；目录布局与导航以 [docs/README.md](docs/README.md) 为准。
 
 ## 文档地图
