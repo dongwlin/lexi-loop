@@ -32,7 +32,8 @@ apps/server/
 │  ├─ serve.go                   启动 HTTP 服务
 │  ├─ import_ecdict.go           调用 importer/ecdict 执行离线导入
 │  ├─ migrate.go                 执行数据库迁移
-│  └─ openapi.go                 离线生成 OpenAPI 3.1 spec 至 docs/openapi/
+│  ├─ openapi.go                 离线生成 OpenAPI 3.1 spec 至 docs/openapi/
+│  └─ version.go                 输出版本信息（-b 携带构建时间 / Go 版本，读 infra/buildinfo）
 ├─ migrations/                   PostgreSQL 版本化迁移
 │  ├─ migrations.go              迁移执行入口：embed 内嵌 SQL + golang-migrate
 │  ├─ 000001_dictionary.up.sql
@@ -78,9 +79,11 @@ apps/server/
 │  │  ├─ v1/
 │  │  │  ├─ word.go              词操作（huma 声明式注册）
 │  │  │  ├─ review.go            复习操作（huma 声明式注册）
+│  │  │  ├─ version.go           版本信息操作（无 Service 依赖，读 infra/buildinfo）
 │  │  │  └─ dto/
 │  │  │     ├─ word.go            词请求 / 响应 DTO
-│  │  │     └─ review.go          复习请求 / 响应 DTO
+│  │  │     ├─ review.go          复习请求 / 响应 DTO
+│  │  │     └─ version.go         版本信息响应 DTO
 │  │  └─ middleware/             HTTP 横切（Handler 子包，不版本化）
 │  │     ├─ cors.go
 │  │     ├─ logger.go
@@ -90,6 +93,8 @@ apps/server/
 │  │  └─ error.go
 │  └─ infra/                     纯技术组件，由组合根组装
 │     ├─ config/
+│     ├─ buildinfo/
+│     │  └─ buildinfo.go         构建期版本信息（ldflags 注入，CLI 与 HTTP API 共用）
 │     ├─ database/
 │     │  └─ database.go          连接池构造
 │     └─ logger/
@@ -111,12 +116,14 @@ lexi-loop migrate up            执行数据库迁移
 lexi-loop migrate down          回退明确指定的迁移步数
 lexi-loop import-ecdict <file>  将 ECDICT CSV 导入 dictionary_entries
 lexi-loop openapi               离线生成 /api/v1 的 OpenAPI 3.1 spec（docs/openapi/，不需要数据库）
+lexi-loop version               输出版本号（-b 携带构建时间 / Go 版本，不需要数据库）
 ```
 
 - `serve` 调用 `internal/app` 完成组件组装并管理服务生命周期。
 - `migrate` 调用 `migrations` 包的迁移执行入口（embed 内嵌 SQL + golang-migrate），只操作 `migrations/` 中的版本化 SQL，不在 Go 代码中另存一份 schema。
 - `import-ecdict` 调用 `internal/importer/ecdict`；Cobra 命令文件不解析 CSV、不直接构造 SQL。
 - `openapi` 调用组合根的离线 spec 构建入口（`internal/app` → `handler.BuildOpenAPISpec`）：不启动 HTTP、不连接数据库，操作注册仍完整执行 schema 生成与契约检查；产物为生成器维护的 docs/openapi/ 文件，契约权威仍是 api/* 文档。
+- `version` 读取 `internal/infra/buildinfo`（版本号与构建时间由 ldflags 注入，契约见 [api/meta.md](../api/meta.md)）；不连数据库。
 - `cmd` 可以依赖 `app`、`importer` 和基础设施构造函数；任何业务包不得反向依赖 `cmd`。
 - `app` 只是最外层组合根；Handler、Service、Repo、Domain、Importer 和 Infra 都不得反向导入 `app`。
 
@@ -246,7 +253,7 @@ ReviewService：StartSession()、SubmitResult()、GetSession()
 ECDICT Importer：Import()
 ```
 
-方法的 HTTP 契约见 [api/words.md](../api/words.md) 和 [api/reviews.md](../api/reviews.md)；Lookup / Enrich 的阶段边界见 [dictionary/enrichment.md](../dictionary/enrichment.md)。
+方法的 HTTP 契约见 [api/words.md](../api/words.md)、[api/reviews.md](../api/reviews.md) 与 [api/meta.md](../api/meta.md)；Lookup / Enrich 的阶段边界见 [dictionary/enrichment.md](../dictionary/enrichment.md)。
 
 ## 8. ECDICT 导入
 

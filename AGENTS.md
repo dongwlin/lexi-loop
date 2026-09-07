@@ -8,7 +8,7 @@ LexiLoop（词环）：英语生词复习系统。本仓库按 pnpm monorepo 布
 PRD（product/prd.md：做什么）
 → architecture（overview 系统结构 → data-model 四表关系）
 → domain design（dictionary/* · review/* · frontend/review-flow.md）
-→ API（api/words.md · api/reviews.md）
+→ API（api/words.md · api/reviews.md · api/meta.md）
 → implementation（backend/structure.md）
 → specs（specs/backend/ — 后端工程规范；specs/frontend/ — 前端工程规范）
 ```
@@ -36,6 +36,7 @@ PRD（product/prd.md：做什么）
 | 权重公式 / mastery / 抽样 | [docs/review/algorithm.md](docs/review/algorithm.md) | 引用 |
 | Word API | [docs/api/words.md](docs/api/words.md) | 引用 |
 | Review API | [docs/api/reviews.md](docs/api/reviews.md) | 引用 |
+| Meta API（版本信息） | [docs/api/meta.md](docs/api/meta.md) | 引用 |
 | 页面与状态机 | [docs/frontend/review-flow.md](docs/frontend/review-flow.md) | 引用 |
 | Go 工程结构 | [docs/backend/structure.md](docs/backend/structure.md) | 引用 |
 | Go 技术选型 | [docs/specs/backend/Go 技术栈.md](docs/specs/backend/Go%20技术栈.md) | 引用 |

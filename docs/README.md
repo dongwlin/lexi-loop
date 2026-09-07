@@ -36,7 +36,8 @@ docs/
 │  └─ review-flow.md          页面结构与复习交互（含状态机、键盘、恢复 UI）
 ├─ api/
 │  ├─ words.md                Word API 契约
-│  └─ reviews.md              Review API 契约
+│  ├─ reviews.md              Review API 契约
+│  └─ meta.md                 Meta API（版本信息）契约
 ├─ dictionary/
 │  ├─ overview.md             词典子系统入口
 │  ├─ data-model.md           dictionary_entries / user_words 字段
@@ -114,6 +115,7 @@ brand/naming.md  ← 品牌旁路，不依赖其它文档
 | 页面与状态机 | [frontend/review-flow.md](frontend/review-flow.md) |
 | Word API | [api/words.md](api/words.md) |
 | Review API | [api/reviews.md](api/reviews.md) |
+| Meta API（版本信息） | [api/meta.md](api/meta.md) |
 | Go package | [backend/structure.md](backend/structure.md) |
 | Go 技术栈 | [specs/backend/Go 技术栈.md](specs/backend/Go%20技术栈.md) |
 | Go 单体架构规范 | [specs/backend/Go 单体应用架构规范.md](specs/backend/Go%20单体应用架构规范.md) |
@@ -134,6 +136,7 @@ brand/naming.md  ← 品牌旁路，不依赖其它文档
 ```text
 我要改权重            → review/algorithm.md
 我要改复习接口        → api/reviews.md
+我要改版本接口        → api/meta.md
 我要看接口 spec 产物  → openapi/openapi.yaml（由 lexi-loop openapi 离线生成，勿手改）
 我要改词形解析        → dictionary/normalization.md
 我要改数据库表        → dictionary/data-model.md / review/data-model.md

@@ -31,7 +31,7 @@ MVP 服务端暂无认证端点；认证落地后在 `src/lib/api.ts` 注入 `ge
 
 ## 结构
 
-按《前端应用架构规范》§3 组织：`src/app/` 应用装配（根组件、显式路由表、providers / pinia / query client 一次性安装），`src/pages/` 路由页面（页面结构见 [docs/frontend/review-flow.md](../../docs/frontend/review-flow.md) §1），`src/components/ui/` 业务无关基础组件——每个组件独立文件夹（`button/Button.vue` + 同目录 Story），经 `components/ui/index.ts` 统一导出（Button 配方见《Vue 组件设计系统方案》§8.1），`src/components/layout/` 跨页面布局（AppShell、ThemeSwitcher），`src/stores/` 跨页面客户端状态，`src/lib/` 基础设施适配（env / api / storage），`src/styles/` 设计系统主题层（Tailwind CSS v4 + Radix Colors，见《Vue 组件设计系统方案》）。`src/features/` 按业务能力组织（当前 `words/`、`review/`），Query Key / Query / Mutation 置于各 Feature 的 `api/`（《前端应用架构规范》§8.1），DTO 直接使用 `@lexi-loop/api-client` 生成类型，queryFn 透传 `signal`；`src/utils/` 存放无状态纯函数（《前端应用架构规范》§4.5 / §4.8，当前 `parseImportText`、生词库的 `buildPageItems` / `parsePositiveInt` / `formatMeanings`、生词详情的 `meaningText` / `formatDateTime`、复习的 `review-snapshot` / `review-resume` / 复习状态机迁移 `review-state-machine` / 键盘映射 `review-keyboard` / 开始复习错误文案 `review-errors`、路由页面级导航判定 `isPageLevelNavigation`）。
+按《前端应用架构规范》§3 组织：`src/app/` 应用装配（根组件、显式路由表、providers / pinia / query client 一次性安装），`src/pages/` 路由页面（页面结构见 [docs/frontend/review-flow.md](../../docs/frontend/review-flow.md) §1），`src/components/ui/` 业务无关基础组件——每个组件独立文件夹（`button/Button.vue` + 同目录 Story），经 `components/ui/index.ts` 统一导出（Button 配方见《Vue 组件设计系统方案》§8.1），`src/components/layout/` 跨页面布局（AppShell、ThemeSwitcher），`src/stores/` 跨页面客户端状态，`src/lib/` 基础设施适配（env / api / storage），`src/styles/` 设计系统主题层（Tailwind CSS v4 + Radix Colors，见《Vue 组件设计系统方案》）。`src/features/` 按业务能力组织（当前 `words/`、`review/`、`meta/`），Query Key / Query / Mutation 置于各 Feature 的 `api/`（《前端应用架构规范》§8.1），DTO 直接使用 `@lexi-loop/api-client` 生成类型，queryFn 透传 `signal`；`src/utils/` 存放无状态纯函数（《前端应用架构规范》§4.5 / §4.8，当前 `parseImportText`、生词库的 `buildPageItems` / `parsePositiveInt` / `formatMeanings`、生词详情的 `meaningText` / `formatDateTime`、复习的 `review-snapshot` / `review-resume` / 复习状态机迁移 `review-state-machine` / 键盘映射 `review-keyboard` / 开始复习错误文案 `review-errors`、路由页面级导航判定 `isPageLevelNavigation`）。
 
 主题偏好为 Light / Dark / System（《Vue 组件设计系统方案》§11）：偏好持久化在 `localStorage`（`lexi-loop.theme`），解析后的主题类互斥挂在 `<html>`，`main.ts` 在应用挂载前初始化。
 
@@ -39,7 +39,7 @@ MVP 服务端暂无认证端点；认证落地后在 `src/lib/api.ts` 注入 `ge
 
 ## 待办
 
-MVP 完成度评估（2026-09-06，2026-09-07 更新）：工程骨架、设计系统主题层、API Client（Orval 生成 + 统一 mutator）、Feature 层（words / review 的 api keys / queries / mutations）与后端 9 个端点已就绪；`src/pages/` 五个路由页面（导入、生词库、生词详情、复习、复习结果）已全部落地，页面基础设施（路由 meta → document.title、skip link、main landmark、h1 与状态分支）已就绪。质量设施（Lint / 格式化 / 组件测试环境 / MSW / Storybook 测试与 a11y 门禁 / Playwright）、品牌 favicon、原「依赖服务端契约扩展」两条（列表 / 详情掌握度与优先级、导入逐词结果）与「再来一轮」行为定稿均已于 2026-09-07 完成；当前登记的 MVP 待办已全部完成。
+MVP 完成度评估（2026-09-06，2026-09-07 更新）：工程骨架、设计系统主题层、API Client（Orval 生成 + 统一 mutator）、Feature 层（words / review / meta 的 api keys / queries / mutations）与后端 10 个端点已就绪；`src/pages/` 六个路由页面（导入、生词库、生词详情、复习、复习结果、关于）已全部落地，页面基础设施（路由 meta → document.title、skip link、main landmark、h1 与状态分支）已就绪。质量设施（Lint / 格式化 / 组件测试环境 / MSW / Storybook 测试与 a11y 门禁 / Playwright）、品牌 favicon、原「依赖服务端契约扩展」两条（列表 / 详情掌握度与优先级、导入逐词结果）与「再来一轮」行为定稿均已于 2026-09-07 完成；当前登记的 MVP 待办已全部完成。
 
 ### MVP 业务落地（review-flow.md §2–§10）
 
@@ -48,6 +48,7 @@ MVP 完成度评估（2026-09-06，2026-09-07 更新）：工程骨架、设计�
 - [x] 生词详情 `/words/:id`（review-flow §5）：学习统计（含当前掌握度 / 当前复习优先级，D011 服务端动态计算）、生效释义逐条展示（D007 三层取值，自定义来源标注「自定义」）、编辑复习释义（Dialog，`meaningText` 文本 ⇄ 结构化释义，清空保存 = PATCH null 回退词典层，另设「清除自定义释义」）、删除生词（AlertDialog 确认，软删除语义 D004，删除成功回生词库）；已删 / 不存在 id 呈 404 态；生词库行内单词链接到详情；对话框提交中拦截关闭、失败聚焦错误摘要（§5.3 / §7.2）
 - [x] 复习页 `/review`（review-flow §6–§8、§10）：数量选择（10 / 20 / 30 / 50 + 自定义，自定义输入未确认直接开始时先应用输入；开始前以 GET /words 分页 total 提示可用量不足，D009 截断仍由服务端保证）、active session 恢复（「继续复习 / 放弃本轮」由用户选择，D010；恢复检查经 Feature 层查询 `fetchQuery` 强制取新，瞬时失败呈错误态可重试、仅 404 清快照；「继续复习」以 GET session 逐词结果按 word join 本地快照，跳到首个未答项续答）、状态机 idle → recalling → revealed → answered、键盘操作绑定复习区域（Space 揭示释义，1 / ← 不记得，2 / → 记得；焦点在按钮等控件上时 Space / Enter 保留原生激活）、完成跳转结果页。「放弃本轮」调用 abandon 端点（api/reviews.md §6）由服务端标记 abandoned 后清快照，网络 / 5xx 失败保留快照可重试，404 / 422 视为轮次已结束；状态迁移（开始 / 恢复 / 揭示 / 作答）后焦点跨帧校正回复习区域，修复浏览器焦点归还晚于 Vue 渲染导致的恢复后快捷键失效
 - [x] 复习结果页 `/review/result/:session`（review-flow §9）：汇总（总计 / 记得 / 不记得 / 正确率）、「需要加强」列表、再来一轮 / 回到生词库；「再来一轮」以上一轮实际词数（session 汇总 total）直接开始新一轮（D009 截断仍由服务端保证），经快照一次性 autoResume 标记让 `/review` 跳过恢复询问直接进入第一题，开始失败留在结果页展示错误与重试；不存在 id 呈 404 态（对齐详情页），未完成 / 已放弃分支区分文案
+- [x] 关于页 `/about`：展示后端 `GET /api/v1/version` 返回的应用版本 / 构建时间 / Go 版本（契约见 [docs/api/meta.md](../../docs/api/meta.md)；开发构建版本以 dev 占位、构建时间空展示「—」，数据单一来源为后端，前端不重复注入），主导航新增「关于」入口，Loading / Error 分支齐备
 - [x] 页面基础设施：路由 meta → `document.title` 随路由更新、SPA 页面级导航完成后焦点移到新页面主标题（h1 带 `tabindex="-1"`，兜底主内容；初次加载与搜索 / 分页等仅 query 变化不移动焦点，《前端交互与可访问性规范》§5.3）、AppShell skip link（目标 `main` 带 `tabindex="-1"` 保证跳转后焦点落入主内容）与 `main` landmark、各页面 h1 与 Loading / Empty / Error 分支（《前端交互与可访问性规范》§6.1）
 
 ### 质量与品牌

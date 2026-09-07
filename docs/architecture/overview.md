@@ -79,7 +79,7 @@ lexi-loop/
 
 ### 5.3 技术选型
 
-- 后端 Go（根 `main.go` + Cobra 子命令：`serve`、`migrate`、`import-ecdict`），数据库 PostgreSQL，前端 Vue。
+- 后端 Go（根 `main.go` + Cobra 子命令：`serve`、`migrate`、`import-ecdict`、`version`），数据库 PostgreSQL，前端 Vue。
 - 后端实体主键统一使用 UUID v7，由应用层生成；API 按字符串传输。
 - 后端工程结构见 [backend/structure.md](../backend/structure.md)。
 - MVP 单用户、无鉴权体系，`user_words` 暂不含 `user_id`。
@@ -94,6 +94,7 @@ lexi-loop/
 | 页面与交互 | [frontend/review-flow.md](../frontend/review-flow.md) |
 | Word API | [api/words.md](../api/words.md) |
 | Review API | [api/reviews.md](../api/reviews.md) |
+| Meta API（版本信息） | [api/meta.md](../api/meta.md) |
 | 复习数据模型（sessions / items） | [review/data-model.md](../review/data-model.md) |
 | 权重 / 掌握度 / 抽样算法 | [review/algorithm.md](../review/algorithm.md) |
 | 词典子系统入口 | [dictionary/overview.md](../dictionary/overview.md) |
