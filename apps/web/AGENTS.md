@@ -42,7 +42,7 @@ pnpm -F @lexi-loop/api-client generate  # 后端契约变更（docs/openapi/ 更
 pnpm -F @lexi-loop/api-client test:run  # api-client mutator / 生成端点单测
 ```
 
-纯逻辑单元测试已覆盖 `lib/env`、`lib/storage/local-storage`、`stores/theme`、`utils/`（parseImportText / buildPageItems / parsePositiveInt / formatMeanings / meaningText / formatDateTime / review-snapshot / review-resume / review-state-machine / review-keyboard / review-errors / isPageLevelNavigation）与各 Feature 的 query keys。质量设施已落地（《前端技术栈》§10/§11、测试规范 §15）：vitest.config.ts 按 projects 拆分——`web`（jsdom + tests/setup.ts 全局设施 + MSW 边界）与 `storybook`（Story 即浏览器测试 + addon-a11y 门禁，全局 `a11y.test: 'error'`，豁免须注释登记）；MSW handler 工厂在 `tests/mocks/`（按 api-client 生成类型构造的响应工厂），页面集成测试在 `tests/integration/`（`helpers.ts` 装配真实 Router + 全新 QueryClient + MSW，现覆盖生词库 / 详情 / 导入反馈 / 复习结果「再来一轮」跨页行为与 api-client HTTP 边界）；Playwright 用例在 `e2e/`。组件 / 页面集成测试按《前端测试规范》§4 优先级随新增行为补充——新增组件与页面行为须带对应层级的测试，不再有「设施未落地」的豁免理由。
+纯逻辑单元测试已覆盖 `lib/env`、`lib/storage/local-storage`、`stores/theme`、`utils/`（parseImportText / buildPageItems / parsePositiveInt / formatMeanings / meaningText / formatDateTime / review-snapshot / review-count-preference / review-resume / review-state-machine / review-keyboard / review-errors / isPageLevelNavigation）与各 Feature 的 query keys。质量设施已落地（《前端技术栈》§10/§11、测试规范 §15）：vitest.config.ts 按 projects 拆分——`web`（jsdom + tests/setup.ts 全局设施 + MSW 边界）与 `storybook`（Story 即浏览器测试 + addon-a11y 门禁，全局 `a11y.test: 'error'`，豁免须注释登记）；MSW handler 工厂在 `tests/mocks/`（按 api-client 生成类型构造的响应工厂），页面集成测试在 `tests/integration/`（`helpers.ts` 装配真实 Router + 全新 QueryClient + MSW，现覆盖生词库 / 详情 / 导入反馈 / 复习页（active session 恢复与数量选择）/ 复习结果「再来一轮」跨页行为与 api-client HTTP 边界）；Playwright 用例在 `e2e/`。组件 / 页面集成测试按《前端测试规范》§4 优先级随新增行为补充——新增组件与页面行为须带对应层级的测试，不再有「设施未落地」的豁免理由。
 
 ## 架构与实现要点
 
