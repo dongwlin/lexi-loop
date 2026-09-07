@@ -30,6 +30,7 @@ func buildOpenAPISpec() (*huma.OpenAPI, error) {
 	v1.NewWordHandler(nil).Register(api)
 	v1.NewReviewHandler(nil).Register(api)
 	v1.NewVersionHandler().Register(api)
+	v1.NewDictImportHandler(nil).Register(api)
 
 	spec := api.OpenAPI()
 	normalizeErrorResponses(spec)

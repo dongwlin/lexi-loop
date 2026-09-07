@@ -80,13 +80,13 @@ func TestNewRowReader(t *testing.T) {
 
 	t.Run("空文件报错", func(t *testing.T) {
 		t.Parallel()
-		_, err := NewRowReader(strings.NewReader(""))
+		_, err := NewRowReader(strings.NewReader(""), "")
 		require.Error(t, err)
 	})
 
 	t.Run("纯表头可创建且立即 EOF", func(t *testing.T) {
 		t.Parallel()
-		reader, err := NewRowReader(strings.NewReader("word,translation\n"))
+		reader, err := NewRowReader(strings.NewReader("word,translation\n"), "")
 		require.NoError(t, err)
 		_, err = reader.Next()
 		assert.ErrorIs(t, err, io.EOF)
@@ -95,7 +95,7 @@ func TestNewRowReader(t *testing.T) {
 
 	t.Run("缺少 word 列报错", func(t *testing.T) {
 		t.Parallel()
-		_, err := NewRowReader(strings.NewReader("phonetic,translation\n/aɪ/,,\n"))
+		_, err := NewRowReader(strings.NewReader("phonetic,translation\n/aɪ/,,\n"), "")
 		require.Error(t, err)
 	})
 }
@@ -110,12 +110,13 @@ func TestRowReader_Next(t *testing.T) {
 
 	t.Run("逐行产出并统计跳过行", func(t *testing.T) {
 		t.Parallel()
-		reader, err := NewRowReader(strings.NewReader(csvData))
+		reader, err := NewRowReader(strings.NewReader(csvData), "test-v1")
 		require.NoError(t, err)
 
 		first, err := reader.Next()
 		require.NoError(t, err)
 		assert.Equal(t, "derive", first.Headword)
+		assert.Equal(t, "test-v1", first.SourceVersion, "版本标记写入词条")
 
 		second, err := reader.Next()
 		require.NoError(t, err)
@@ -129,7 +130,7 @@ func TestRowReader_Next(t *testing.T) {
 
 	t.Run("行数不足按空串处理", func(t *testing.T) {
 		t.Parallel()
-		reader, err := NewRowReader(strings.NewReader("word,phonetic,translation\nshort\n"))
+		reader, err := NewRowReader(strings.NewReader("word,phonetic,translation\nshort\n"), "")
 		require.NoError(t, err)
 		entry, err := reader.Next()
 		require.NoError(t, err)
@@ -148,7 +149,7 @@ func TestMapRow(t *testing.T) {
 			"v. 获得；推导出\nv. 起源于", "n:0/0", "3", "1", "cet4 cet6 ky", "12000", "3500",
 			"0:derive/d:derived/p:derived/i:deriving/3:derives", "{}", "",
 		}
-		entry, err := mapRow(fields, standardColumns, testNow)
+		entry, err := mapRow(fields, standardColumns, "", testNow)
 		require.NoError(t, err)
 
 		assert.Equal(t, "derive", entry.Headword)
@@ -165,15 +166,15 @@ func TestMapRow(t *testing.T) {
 			freqKeyBNC: 12000, freqKeyCOCA: 3500, freqKeyCollins: 3, freqKeyOxford: 1,
 		}, entry.Frequency)
 		assert.Equal(t, []string{"cet4", "cet6", "ky"}, entry.Tags)
-		assert.Equal(t, sourceName, entry.Source)
-		assert.Equal(t, "", entry.SourceVersion, "CSV 无版本信息，保持空串")
+		assert.Equal(t, SourceName, entry.Source)
+		assert.Equal(t, "", entry.SourceVersion, "未指定版本时保持空串")
 		assert.Equal(t, testNow.UTC(), entry.CreatedAt)
 		assert.Equal(t, testNow.UTC(), entry.UpdatedAt)
 	})
 
 	t.Run("仅 word 的最小行", func(t *testing.T) {
 		t.Parallel()
-		entry, err := mapRow([]string{"SomeWord"}, standardColumns, testNow)
+		entry, err := mapRow([]string{"SomeWord"}, standardColumns, "test-v1", testNow)
 		require.NoError(t, err)
 		assert.Equal(t, "SomeWord", entry.Headword)
 		assert.Equal(t, "SomeWord", entry.Lemma, "无 exchange 原形键时回退为 headword")
@@ -181,7 +182,8 @@ func TestMapRow(t *testing.T) {
 		assert.Nil(t, entry.Exchange)
 		assert.Nil(t, entry.Frequency)
 		assert.Nil(t, entry.Tags)
-		assert.Equal(t, sourceName, entry.Source)
+		assert.Equal(t, SourceName, entry.Source)
+		assert.Equal(t, "test-v1", entry.SourceVersion, "版本标记写入词条")
 	})
 
 	t.Run("word 为空的行返回跳过", func(t *testing.T) {
@@ -190,7 +192,7 @@ func TestMapRow(t *testing.T) {
 			{""},
 			{"   ", "/aɪ/", "", "", "", "", "", "", "", "", "", "", ""},
 		} {
-			entry, err := mapRow(fields, standardColumns, testNow)
+			entry, err := mapRow(fields, standardColumns, "", testNow)
 			require.NoError(t, err)
 			assert.Nil(t, entry)
 		}
@@ -202,7 +204,7 @@ func TestMapRow(t *testing.T) {
 			"derived", "", "", "v. 获得", "", "", "", "", "0", "0",
 			"0:derive/p:derived", "", "",
 		}
-		entry, err := mapRow(fields, standardColumns, testNow)
+		entry, err := mapRow(fields, standardColumns, "", testNow)
 		require.NoError(t, err)
 		assert.Equal(t, "derive", entry.Lemma)
 		assert.Empty(t, entry.Frequency, "词频全为 0 时不写入任何键")

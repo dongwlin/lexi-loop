@@ -18,7 +18,7 @@ V3（AI 整理 + 完整 SRS + 多用户）
 ### MVP（已完成，现行基线）
 
 - **生词导入**：多行批量粘贴；同一单词重复导入累计遇词次数；词形归并（见 [dictionary/normalization.md](../dictionary/normalization.md)）。
-- **本地词典**：ECDICT 全量离线导入本地，导入即自动补全原形 / 音标 / 词性 / 中文释义（见 [dictionary/overview.md](../dictionary/overview.md)）。
+- **本地词典**：ECDICT 全量随镜像内置，serve 启动后异步导入本地（右上角展示导入进度），导入即自动补全原形 / 音标 / 词性 / 中文释义（见 [dictionary/overview.md](../dictionary/overview.md)）。
 - **加权随机复习**：用户选定本轮数量 → 一轮固定抽取（加权、不放回）→ 先回忆后看释义 → 记得 / 不记得（页面交互见 [frontend/review-flow.md](../frontend/review-flow.md)，算法见 [review/algorithm.md](../review/algorithm.md)）。
 - **复习历史**：`review_sessions` / `review_items` 逐次记录；每词统计、掌握程度与复习优先级展示（数据模型见 [review/data-model.md](../review/data-model.md)）。
 

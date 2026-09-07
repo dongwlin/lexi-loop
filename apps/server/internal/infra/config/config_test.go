@@ -71,3 +71,22 @@ func TestLoad_ParseCSVList(t *testing.T) {
 	assert.Equal(t, []string{"a", "b"}, parseCSVList(" a ,b"))
 	assert.Empty(t, parseCSVList(" , , "))
 }
+
+func TestLoad_DictDefaults(t *testing.T) {
+	cfg, err := Load()
+	require.NoError(t, err)
+
+	assert.Equal(t, DefaultDictCSVPath, cfg.Dict.CSVPath)
+	assert.True(t, cfg.Dict.AutoCheck, "缺省开启自动导入")
+}
+
+func TestLoad_DictEnvOverrides(t *testing.T) {
+	t.Setenv("LEXI_DICT_CSV", "/srv/data/ecdict.csv")
+	t.Setenv("LEXI_DICT_AUTOCHECK", "0")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+
+	assert.Equal(t, "/srv/data/ecdict.csv", cfg.Dict.CSVPath)
+	assert.False(t, cfg.Dict.AutoCheck, "显式置 0 关闭自动导入")
+}

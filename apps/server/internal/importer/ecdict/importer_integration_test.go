@@ -34,7 +34,7 @@ func TestImport_MapsFieldsAndCounts(t *testing.T) {
 	truncateDictionary(t)
 	ctx := context.Background()
 
-	result, err := NewImporter(db, 2).Import(ctx, strings.NewReader(fixtureCSV), nil)
+	result, err := NewImporter(db, 2).Import(ctx, strings.NewReader(fixtureCSV), "test-v1", nil)
 	require.NoError(t, err)
 	assert.Equal(t, 4, result.RowsProcessed, "数据行总数含被跳过的空词行")
 	assert.Equal(t, 1, result.RowsSkipped)
@@ -59,8 +59,8 @@ func TestImport_MapsFieldsAndCounts(t *testing.T) {
 		freqKeyBNC: 12000, freqKeyCOCA: 3500, freqKeyCollins: 3, freqKeyOxford: 1,
 	}, derive.Frequency)
 	assert.Equal(t, []string{"cet4", "cet6", "ky", "toefl"}, derive.Tags)
-	assert.Equal(t, sourceName, derive.Source)
-	assert.Equal(t, "", derive.SourceVersion)
+	assert.Equal(t, SourceName, derive.Source)
+	assert.Equal(t, "test-v1", derive.SourceVersion, "数据版本写入 source_version")
 	assert.False(t, derive.CreatedAt.IsZero())
 	assert.Equal(t, time.UTC, derive.CreatedAt.Location(), "时间戳以 UTC 记录")
 
@@ -97,12 +97,12 @@ func TestImport_IsIdempotentOnRerun(t *testing.T) {
 	require.NoError(t, repo.NewDictionaryRepo(db).Insert(ctx, existing))
 
 	importer := NewImporter(db, 10)
-	result, err := importer.Import(ctx, strings.NewReader(csvData), nil)
+	result, err := importer.Import(ctx, strings.NewReader(csvData), "", nil)
 	require.NoError(t, err)
 	assert.Equal(t, 2, result.EntriesWritten, "与既有词条冲突的行按 upsert 计入")
 
 	// 重跑同一文件：不产生重复行，词条数不变。
-	rerun, err := importer.Import(ctx, strings.NewReader(csvData), nil)
+	rerun, err := importer.Import(ctx, strings.NewReader(csvData), "", nil)
 	require.NoError(t, err)
 	assert.Equal(t, 2, rerun.EntriesWritten)
 	assert.Equal(t, 2, countDictionaryEntries(t))
@@ -110,7 +110,8 @@ func TestImport_IsIdempotentOnRerun(t *testing.T) {
 	derive, err := repo.NewDictionaryRepo(db).FindByHeadword(ctx, "derive")
 	require.NoError(t, err)
 	assert.Equal(t, "/dɪˈraɪv/", derive.PhoneticUK, "重跑刷新词典字段")
-	assert.Equal(t, sourceName, derive.Source, "来源标记切换为本次导入")
+	assert.Equal(t, SourceName, derive.Source, "来源标记切换为本次导入")
+	assert.Equal(t, "", derive.SourceVersion, "手动导入未指定版本时空串")
 	assert.Equal(t, []domain.Meaning{{Pos: "verb", Translations: []string{"获得"}}},
 		derive.ReviewMeanings, "review_meanings 不被导入清空")
 
@@ -135,7 +136,7 @@ func TestImport_RollsBackFailedBatchAndResumes(t *testing.T) {
 	// 临时触发器，不触碰 migrations，与 service 集成测试同一方式）。
 	setupFailwordTrigger(t, db)
 
-	result, err := NewImporter(db, 2).Import(ctx, strings.NewReader(csvData), nil)
+	result, err := NewImporter(db, 2).Import(ctx, strings.NewReader(csvData), "", nil)
 	require.Error(t, err, "批次失败应中止导入")
 	assert.Equal(t, 1, result.BatchesCommitted, "仅失败前的批次保持已提交")
 	assert.Equal(t, 2, result.EntriesWritten)
@@ -153,7 +154,7 @@ func TestImport_RollsBackFailedBatchAndResumes(t *testing.T) {
 
 	// 移除失败注入后重跑同一文件：UpsertBatch 幂等续传，四行全部就位。
 	dropFailwordTrigger(t, db)
-	rerun, err := NewImporter(db, 2).Import(ctx, strings.NewReader(csvData), nil)
+	rerun, err := NewImporter(db, 2).Import(ctx, strings.NewReader(csvData), "", nil)
 	require.NoError(t, err)
 	assert.Equal(t, 4, rerun.EntriesWritten)
 	assert.Equal(t, 4, countDictionaryEntries(t))
@@ -170,7 +171,7 @@ func TestImport_SameBatchDuplicateHeadword(t *testing.T) {
 		"derive,/wrong/,v. 错误音标,0:derive\n" +
 		"derive,/dɪˈraɪv/,v. 获得,0:derive\n"
 
-	result, err := NewImporter(db, 10).Import(ctx, strings.NewReader(csvData), nil)
+	result, err := NewImporter(db, 10).Import(ctx, strings.NewReader(csvData), "", nil)
 	require.NoError(t, err)
 	assert.Equal(t, 1, result.EntriesWritten, "同批重复词只写入一行")
 	assert.Equal(t, 1, countDictionaryEntries(t))

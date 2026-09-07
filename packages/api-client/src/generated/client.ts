@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type {
+  DictImportStatus,
   GetSessionResponse,
   ImportWordsRequest,
   ImportWordsResponse,
@@ -21,6 +22,30 @@ import type {
 } from './model';
 
 import { customFetch } from '../mutator';
+export const getGetDictionaryImportUrl = () => {
+
+
+
+
+  return `/api/v1/dictionary-import`
+}
+
+/**
+ * @summary 词典导入进度
+ */
+export const getDictionaryImport = async ( options?: Parameters<typeof customFetch>[1]): Promise<DictImportStatus> => {
+
+  return customFetch<DictImportStatus>(getGetDictionaryImportUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
 export const getStartReviewSessionUrl = () => {
 
 

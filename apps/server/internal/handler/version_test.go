@@ -27,7 +27,8 @@ type versionData struct {
 func TestVersionRoute(t *testing.T) {
 	engine := gin.New()
 	RegisterRoutes(engine, Options{Log: zerolog.Nop()},
-		v1.NewWordHandler(nil), v1.NewReviewHandler(nil), v1.NewVersionHandler())
+		v1.NewWordHandler(nil), v1.NewReviewHandler(nil), v1.NewVersionHandler(),
+		v1.NewDictImportHandler(nil))
 
 	rec := doJSON(t, engine, "GET", "/api/v1/version", nil)
 	require.Equal(t, http.StatusOK, rec.Code)

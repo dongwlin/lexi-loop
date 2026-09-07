@@ -59,9 +59,11 @@ type Result struct {
 // Import 流式导入 r 中的 ECDICT CSV。每个满批（或收尾的剩余行）作为
 // 一个独立事务提交：批次内任一行失败则整批回滚并中止导入，已提交的
 // 批次保持有效——重跑同一文件即可续传（UpsertBatch 幂等）。
+// sourceVersion 是数据版本标记，写入每条词条的 source_version（词典
+// 自动导入按它与 manifest 期望行数做完整性守卫），空串表示未版本化。
 // onProgress 可为 nil；ctx 取消后在当前批次边界停止，不中断已提交数据。
-func (imp *Importer) Import(ctx context.Context, r io.Reader, onProgress func(Progress)) (Result, error) {
-	reader, err := NewRowReader(r)
+func (imp *Importer) Import(ctx context.Context, r io.Reader, sourceVersion string, onProgress func(Progress)) (Result, error) {
+	reader, err := NewRowReader(r, sourceVersion)
 	if err != nil {
 		return Result{}, fmt.Errorf("ecdict: prepare csv reader: %w", err)
 	}

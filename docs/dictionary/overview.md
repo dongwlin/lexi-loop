@@ -5,8 +5,9 @@
 ## 1. 数据链路
 
 ```text
-导入期（离线）
-ECDICT CSV → 一次性导入 → dictionary_entries（本地词典库本体）
+导入期（镜像内置，serve 启动后异步执行）
+deploy/dict/ 内置词典（pinned ECDICT）→ serve 后 goroutine 自动导入 → dictionary_entries（本地词典库本体）
+（手动逃生口：lexi-loop import-ecdict 命令保留；导入进度经 Meta API 暴露，见 ../api/meta.md）
 
 运行时（MVP）
 输入 → 本地词典库查询 → 返回
@@ -53,7 +54,7 @@ Online Provider（V2 起）只面向两条在线链路：Lookup 兜底与 Enrich
 
 ### 原则一：本地优先
 
-`dictionary_entries` 就是本地词典库本体（ECDICT 导入期一次性灌入），MVP 运行时全部走本地、不依赖网络。复习页面无需等待第三方词典。详细论证见 [enrichment.md](enrichment.md)。
+`dictionary_entries` 就是本地词典库本体（ECDICT 随镜像分发，serve 启动后在进程内异步导入——不阻塞 HTTP 启动，前端右上角展示导入进度），MVP 运行时全部走本地、不依赖网络。复习页面无需等待第三方词典。详细论证见 [enrichment.md](enrichment.md)。
 
 ### 原则二：AI 不制造词典事实
 

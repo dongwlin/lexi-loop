@@ -17,9 +17,10 @@ import (
 	"github.com/dongwlin/lexi-loop/apps/server/internal/domain"
 )
 
-// sourceName 写入 dictionary_entries.source，标记词条数据来自 ECDICT
-// 离线导入；在线 Provider 的来源标记（V2）取不同的值。
-const sourceName = "ecdict"
+// SourceName 写入 dictionary_entries.source，标记词条数据来自 ECDICT
+// 离线导入；词典自动导入的版本完整性守卫也按它过滤
+// （docs/api/meta.md §3）。在线 Provider 的来源标记（V2）取不同的值。
+const SourceName = "ecdict"
 
 // frequency 列到 JSONB 键的映射：bnc / frq 分别是 BNC 与 COCA 语料库
 // 词频排名（docs/dictionary/data-model.md §8），collins 是柯林斯词频星级，
@@ -54,14 +55,17 @@ var canonicalColumns = map[string]string{
 // RowReader 流式读取 ECDICT CSV：按表头把源字段逐行映射为
 // domain.DictionaryEntry，数十万行的大型文件不整体载入内存。
 type RowReader struct {
-	csvReader   *csv.Reader
-	columns     map[string]int
-	rowsRead    int // 已读取的数据行数（含被跳过的行，不含表头）
-	rowsSkipped int // word 为空等不可导入而跳过的行数
+	csvReader     *csv.Reader
+	columns       map[string]int
+	sourceVersion string // 写入每条词条 source_version 的数据版本标记
+	rowsRead      int    // 已读取的数据行数（含被跳过的行，不含表头）
+	rowsSkipped   int    // word 为空等不可导入而跳过的行数
 }
 
-// NewRowReader 创建读取器并解析表头；缺少 word 列时报错。
-func NewRowReader(r io.Reader) (*RowReader, error) {
+// NewRowReader 创建读取器并解析表头；缺少 word 列时报错。sourceVersion
+// 是本次数据集的版本标记（如镜像内置词典的 manifest 版本），写入每条
+// 词条的 source_version；空串表示未版本化（手动导入）。
+func NewRowReader(r io.Reader, sourceVersion string) (*RowReader, error) {
 	csvReader := csv.NewReader(r)
 	// 列数不强制一致：按表头映射取用，缺失列 / 越界一律视为空串，
 	// 容忍 ECDICT 衍生 CSV 的尾部列差异。
@@ -79,7 +83,7 @@ func NewRowReader(r io.Reader) (*RowReader, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &RowReader{csvReader: csvReader, columns: columns}, nil
+	return &RowReader{csvReader: csvReader, columns: columns, sourceVersion: sourceVersion}, nil
 }
 
 // parseHeader 解析表头为「规范列名 → 列下标」映射；同义列名以先出现者
@@ -115,7 +119,7 @@ func (rr *RowReader) Next() (*domain.DictionaryEntry, error) {
 			return nil, fmt.Errorf("ecdict: read csv row %d: %w", rr.rowsRead+1, err)
 		}
 		rr.rowsRead++
-		entry, err := mapRow(fields, rr.columns, time.Now())
+		entry, err := mapRow(fields, rr.columns, rr.sourceVersion, time.Now())
 		if err != nil {
 			return nil, fmt.Errorf("ecdict: map csv row %d: %w", rr.rowsRead, err)
 		}
@@ -135,8 +139,9 @@ func (rr *RowReader) RowsSkipped() int { return rr.rowsSkipped }
 
 // mapRow 把一行源字段映射为 domain.DictionaryEntry；word 为空时返回
 // (nil, nil) 表示跳过。lemma 取词形变化表的原形键（exchange "0"），
-// 缺失时由 domain.NewDictionaryEntry 回退为 headword。
-func mapRow(fields []string, columns map[string]int, now time.Time) (*domain.DictionaryEntry, error) {
+// 缺失时由 domain.NewDictionaryEntry 回退为 headword。sourceVersion
+// 原样写入词条的 source_version，标记词条数据版本。
+func mapRow(fields []string, columns map[string]int, sourceVersion string, now time.Time) (*domain.DictionaryEntry, error) {
 	headword := field(fields, columns, "word")
 	if headword == "" {
 		return nil, nil
@@ -157,7 +162,8 @@ func mapRow(fields []string, columns map[string]int, now time.Time) (*domain.Dic
 		freqKeyOxford:  field(fields, columns, "oxford"),
 	})
 	entry.Tags = parseTags(field(fields, columns, "tag"))
-	entry.Source = sourceName
+	entry.Source = SourceName
+	entry.SourceVersion = sourceVersion
 	return entry, nil
 }
 

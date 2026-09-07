@@ -27,10 +27,16 @@ lexi-loop/
 │  └─ server/           后端应用（Go）
 ├─ packages/
 │  └─ api-client/       API 客户端（Orval 从 docs/openapi/ 自动生成）
+├─ deploy/
+│  ├─ dict/fetch.sh     词典数据依赖初始化（pinned ECDICT，见 deploy/release.md）
+│  └─ …                 Caddyfile / docker-entrypoint.sh / release.sh
+├─ Dockerfile           多阶段构建（web + server + 运行镜像，词典随镜像 COPY）
 ├─ pnpm-workspace.yaml  pnpm 工作区配置
 ├─ package.json         根 package.json（脚本入口）
 └─ docs/                项目文档
 ```
+
+项目 clone 后的标准初始化：`pnpm install`（依赖）、`deploy/dict/fetch.sh`（词典数据，幂等可重跑；产物 gitignore 忽略）、`go mod download`（后端按需）。
 
 ## 目录结构
 
@@ -54,7 +60,7 @@ docs/
 ├─ api/
 │  ├─ words.md                Word API 契约
 │  ├─ reviews.md              Review API 契约
-│  └─ meta.md                 Meta API（版本信息）契约
+│  └─ meta.md                 Meta API（版本信息 / 词典导入进度）契约
 ├─ dictionary/
 │  ├─ overview.md             词典子系统入口
 │  ├─ data-model.md           dictionary_entries / user_words 字段
@@ -69,7 +75,7 @@ docs/
 │  ├─ openapi.json            OpenAPI 3.1 spec（由 `lexi-loop openapi` 离线生成，勿手改；契约权威仍是 api/*）
 │  └─ openapi.yaml            同上（YAML 格式）
 ├─ deploy/
-│  └─ release.md              发布流程（tag → release.sh → compose）与容器运行时切换
+│  └─ release.md              发布流程（tag → release.sh → compose）、词典数据依赖与容器运行时切换
 ├─ specs/
 │  ├─ backend/
 │  │  ├─ Go 技术栈.md          后端框架 / 数据库 / CLI / 日志 / 测试等选型
@@ -134,8 +140,8 @@ brand/naming.md  ← 品牌旁路，不依赖其它文档
 | 页面与状态机 | [frontend/review-flow.md](frontend/review-flow.md) |
 | Word API | [api/words.md](api/words.md) |
 | Review API | [api/reviews.md](api/reviews.md) |
-| Meta API（版本信息） | [api/meta.md](api/meta.md) |
-| 发布流程 / 镜像构建 | [deploy/release.md](deploy/release.md) |
+| Meta API（版本信息 / 词典导入进度） | [api/meta.md](api/meta.md) |
+| 发布流程 / 镜像构建 / 词典数据依赖 | [deploy/release.md](deploy/release.md) |
 | Go package | [backend/structure.md](backend/structure.md) |
 | Go 技术栈 | [specs/backend/Go 技术栈.md](specs/backend/Go%20技术栈.md) |
 | Go 单体架构规范 | [specs/backend/Go 单体应用架构规范.md](specs/backend/Go%20单体应用架构规范.md) |
@@ -157,7 +163,9 @@ brand/naming.md  ← 品牌旁路，不依赖其它文档
 我要改权重            → review/algorithm.md
 我要改复习接口        → api/reviews.md
 我要改版本接口        → api/meta.md
+我要查词典导入进度接口 → api/meta.md §3
 我要发布新版本        → deploy/release.md
+我要获取内置词典数据   → deploy/dict/fetch.sh（见 deploy/release.md §3）
 我要看接口 spec 产物  → openapi/openapi.yaml（由 lexi-loop openapi 离线生成，勿手改）
 我要改词形解析        → dictionary/normalization.md
 我要改数据库表        → dictionary/data-model.md / review/data-model.md

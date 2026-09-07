@@ -12,6 +12,7 @@ export type { ApiClientConfig } from './mutator'
 export {
   abandonReviewSession,
   deleteWord,
+  getDictionaryImport,
   getReviewSession,
   getVersion,
   getWord,

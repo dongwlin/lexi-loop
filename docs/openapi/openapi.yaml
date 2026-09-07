@@ -1,5 +1,57 @@
 components:
   schemas:
+    DictImportStatus:
+      additionalProperties: false
+      properties:
+        entriesWritten:
+          format: int64
+          type: integer
+        error:
+          type:
+            - string
+            - "null"
+        rowsProcessed:
+          format: int64
+          type: integer
+        rowsTotal:
+          format: int64
+          type: integer
+        sourceVersion:
+          type: string
+        startedAt:
+          type:
+            - string
+            - "null"
+        state:
+          type: string
+        updatedAt:
+          type:
+            - string
+            - "null"
+      required:
+        - state
+        - sourceVersion
+        - rowsProcessed
+        - rowsTotal
+        - entriesWritten
+        - startedAt
+        - updatedAt
+        - error
+      type: object
+    EnvelopeDictImportStatus:
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        data:
+          $ref: "#/components/schemas/DictImportStatus"
+        message:
+          type: string
+      required:
+        - code
+        - message
+        - data
+      type: object
     EnvelopeGetSessionResponse:
       additionalProperties: false
       properties:
@@ -498,6 +550,19 @@ info:
   version: 1.0.0
 openapi: 3.1.0
 paths:
+  /api/v1/dictionary-import:
+    get:
+      operationId: get-dictionary-import
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDictImportStatus"
+          description: OK
+      summary: 词典导入进度
+      tags:
+        - Meta
   /api/v1/reviews:
     post:
       operationId: start-review-session

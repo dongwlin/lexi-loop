@@ -43,7 +43,7 @@ func TestBuildOpenAPISpec(t *testing.T) {
 	// docs/api/meta.md §1）----
 
 	ops := operationRefs(t, spec)
-	require.Len(t, ops, 10, "10 个业务操作")
+	require.Len(t, ops, 11, "11 个业务操作")
 
 	wantOps := map[string]string{
 		"post /api/v1/words/import":                       "import-words",
@@ -56,6 +56,7 @@ func TestBuildOpenAPISpec(t *testing.T) {
 		"post /api/v1/reviews/{sessionId}/abandon":        "abandon-review-session",
 		"get /api/v1/reviews/{id}":                        "get-review-session",
 		"get /api/v1/version":                             "get-version",
+		"get /api/v1/dictionary-import":                   "get-dictionary-import",
 	}
 	for key, opID := range wantOps {
 		op, ok := ops[key]
@@ -86,7 +87,7 @@ func TestBuildOpenAPISpec(t *testing.T) {
 		assert.Contains(t, ops[key].Responses, "404", "%s 契约含资源不存在", key)
 	}
 	for key, op := range ops {
-		if key == "get /api/v1/version" {
+		if key == "get /api/v1/version" || key == "get /api/v1/dictionary-import" {
 			continue // 无入参端点不存在参数校验，契约只文档化 200
 		}
 		assert.Contains(t, op.Responses, "400", "%s 契约含参数校验失败", key)
@@ -127,6 +128,11 @@ func TestBuildOpenAPISpec(t *testing.T) {
 	submitBody := submitOp.Responses["200"].Content["application/json"].Schema
 	assert.Contains(t, submitBody.Ref, "EnvelopeNoData", "无数据端点 data 为空对象形态")
 	assert.Equal(t, 200, submitOp.DefaultStatus, "提交结果契约返回 200 而非 204")
+
+	dictImportOp := ops["get /api/v1/dictionary-import"]
+	dictImportBody := dictImportOp.Responses["200"].Content["application/json"].Schema
+	assert.Contains(t, dictImportBody.Ref, "EnvelopeDictImportStatus", "导入进度响应引用 Envelope 组件")
+	assert.Len(t, dictImportOp.Responses, 1, "get-dictionary-import 恒成功，契约只文档化 200")
 
 	versionOp := ops["get /api/v1/version"]
 	versionBody := versionOp.Responses["200"].Content["application/json"].Schema
