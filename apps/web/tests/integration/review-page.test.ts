@@ -409,7 +409,7 @@ describe('复习页数量选择（review-flow §6）', () => {
     await user.click(screen.getByRole('button', { name: '自定义' }))
     await user.type(screen.getByLabelText('自定义数量'), '25')
     await user.click(screen.getByRole('button', { name: '20' }))
-    expect(JSON.parse(localStorage.getItem('lexi-loop.review-count'))).toEqual({
+    expect(JSON.parse(localStorage.getItem('lexi-loop.review-count')!)).toEqual({
       version: 1,
       mode: 'preset',
       count: 20,
@@ -418,7 +418,7 @@ describe('复习页数量选择（review-flow §6）', () => {
     // 再点自定义：输入框带回上一次输入的 25 并即时生效，存储同步回自定义 25。
     await user.click(screen.getByRole('button', { name: '自定义' }))
     expect(screen.getByLabelText('自定义数量')).toHaveValue(25)
-    expect(JSON.parse(localStorage.getItem('lexi-loop.review-count'))).toEqual({
+    expect(JSON.parse(localStorage.getItem('lexi-loop.review-count')!)).toEqual({
       version: 1,
       mode: 'custom',
       count: 25,
@@ -476,7 +476,7 @@ describe('复习页数量选择（review-flow §6）', () => {
     await user.type(input, '{Backspace}{Backspace}')
     // 空输入不覆盖持久化：停留在最后有效值 2，刷新语义下恢复 2。
     expect(input).toHaveValue(null)
-    expect(JSON.parse(localStorage.getItem('lexi-loop.review-count'))).toEqual({
+    expect(JSON.parse(localStorage.getItem('lexi-loop.review-count')!)).toEqual({
       version: 1,
       mode: 'custom',
       count: 2,
