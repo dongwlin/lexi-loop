@@ -7,7 +7,7 @@
 
 ## 1. ECDICT 全量本地化：dictionary_entries 就是本地词典库
 
-ECDICT 作为**导入期数据源**：大型 CSV 通过离线脚本一次性导入 PostgreSQL，运行时不读取 CSV。
+ECDICT 作为**导入期数据源**：大型 CSV 随镜像分发（`deploy/dict/fetch.sh` 获取 pinned 数据，构建期 COPY 进镜像），serve 启动后在 server 进程内**异步**导入 PostgreSQL——不阻塞 HTTP 服务，导入期间服务正常响应；进度经 Meta API `GET /api/v1/dictionary-import` 暴露，前端右上角指示组件轮询展示并在完成后收敛。启动时先做版本完整性守卫（`source_version` 达到 manifest 期望行数即跳过），因此同时覆盖全新部署、中断续传与数据集升级三种情况；导入失败置 `failed` 不影响进程，重启自动续传。手动 `lexi-loop import-ecdict` 命令保留为逃生口。获取与部署详见 [deploy/release.md](../deploy/release.md)，进度契约见 [Meta API §3](../api/meta.md)。运行时不读取 CSV。
 
 在这一架构下，`dictionary_entries` 不是「按需查询 ECDICT 的缓存」，而是**系统本地词典库本身**。凡 ECDICT 收录的词，导入后都直接查询 `dictionary_entries` 命中，例如 `Lookup("ambiguous")`；不存在运行时「查不到再从 ECDICT 查并写回」的链路。
 
@@ -87,7 +87,7 @@ type DictionaryProvider interface {
 
 `Enrichment` 指 `raw_meanings.en`、`audio`、`example` 等 ECDICT 缺失、需要在线源补全的字段。
 
-具体实现是 `FreeDictionaryAPIProvider`（实现上述两个方法）；未来增加 Cambridge、Oxford、Collins 等作为补充源时，只需新增 Provider，生词业务无需修改。**ECDICT 不是 Provider**——它是一次性离线导入脚本，导入后即完成使命。
+具体实现是 `FreeDictionaryAPIProvider`（实现上述两个方法）；未来增加 Cambridge、Oxford、Collins 等作为补充源时，只需新增 Provider，生词业务无需修改。**ECDICT 不是 Provider**——它是导入期数据源（随镜像内置、serve 启动异步导入，手动命令保留），导入后即完成使命。
 
 ## 4. 多来源合并原则
 

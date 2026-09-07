@@ -47,7 +47,7 @@ review_sessions
 
 ## 4. 词典运行时形态：本地优先
 
-`dictionary_entries` 就是本地词典库本体：ECDICT 通过离线程序一次性导入（导入期数据源），运行时不读 CSV、也没有「查不到再从 ECDICT Lookup」的链路。MVP 的运行时查询全部走本地、全程离线。
+`dictionary_entries` 就是本地词典库本体：ECDICT 数据随镜像内置（构建期 COPY），serve 启动后在 server 进程内异步守卫式导入（导入期数据源，进度经 Meta API 暴露；手动 `import-ecdict` 命令保留），运行时不读 CSV、也没有「查不到再从 ECDICT Lookup」的链路。MVP 的运行时查询全部走本地、全程离线。
 
 V2 起才有在线补充，分两条独立链路：**Lookup**（本地没有这个词条时在线创建）与 **Enrich**（词条已存在但缺增强字段时补全）。入口见 [dictionary/overview.md](../dictionary/overview.md)。
 

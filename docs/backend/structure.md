@@ -11,11 +11,11 @@
 
 ```text
 main → cmd → app / importer / migrations（迁移）
-app → handler / service / infra（组装）
+app → handler / service / importer / infra（组装）
 handler/router → handler/v1 / handler/middleware / httpresp（错误模型装配）
 handler/v1 → service / httpresp / apperr
 handler/middleware → service（按需）/ httpresp
-service → repo / domain / apperr / 外部端口（按需）
+service → repo / domain / apperr / importer（词典导入编排）/ 外部端口（按需）
 repo → domain / repo/internal/schema
 importer → repo / domain
 ```
@@ -65,6 +65,7 @@ apps/server/
 │  │  ├─ word.go                 WordService
 │  │  ├─ dictionary.go           DictionaryService（MVP：本地 Lookup）
 │  │  ├─ review.go               ReviewService
+│  │  ├─ dictimport.go           DictImportService（serve 期词典自动导入编排 + 进程内进度）
 │  │  ├─ tx.go                   可重放事务的有上限重试与内部错误包装
 │  │  └─ sampler.go              具体的 WeightedSampler
 │  ├─ importer/
@@ -80,10 +81,12 @@ apps/server/
 │  │  │  ├─ word.go              词操作（huma 声明式注册）
 │  │  │  ├─ review.go            复习操作（huma 声明式注册）
 │  │  │  ├─ version.go           版本信息操作（无 Service 依赖，读 infra/buildinfo）
+│  │  │  ├─ dictimport.go        词典导入进度操作（读 DictImportService 内存快照）
 │  │  │  └─ dto/
 │  │  │     ├─ word.go            词请求 / 响应 DTO
 │  │  │     ├─ review.go          复习请求 / 响应 DTO
-│  │  │     └─ version.go         版本信息响应 DTO
+│  │  │     ├─ version.go         版本信息响应 DTO
+│  │  │     └─ dictimport.go      词典导入进度响应 DTO
 │  │  └─ middleware/             HTTP 横切（Handler 子包，不版本化）
 │  │     ├─ cors.go
 │  │     ├─ logger.go
@@ -114,7 +117,7 @@ apps/server/
 lexi-loop serve                 启动 HTTP API
 lexi-loop migrate up            执行数据库迁移
 lexi-loop migrate down          回退明确指定的迁移步数
-lexi-loop import-ecdict <file>  将 ECDICT CSV 导入 dictionary_entries
+lexi-loop import-ecdict <file>  将 ECDICT CSV 导入 dictionary_entries（--source-version 标记数据版本）
 lexi-loop openapi               离线生成 /api/v1 的 OpenAPI 3.1 spec（docs/openapi/，不需要数据库）
 lexi-loop version               输出版本号（-b 携带构建时间 / Go 版本，不需要数据库）
 ```
@@ -250,6 +253,7 @@ MVP 只有一个真实实现，不提前声明 `Sampler` 接口。若以后确�
 WordService：ImportWords()、ListWords()、GetWord()、UpdateReviewMeaning()、DeleteWord()
 DictionaryService：Lookup()（MVP）；在线 Lookup 分支、Enrich()（V2）
 ReviewService：StartSession()、SubmitResult()、GetSession()
+DictImportService：StartAutoImport()、Snapshot()（serve 期自动导入编排，进度契约见 api/meta.md）
 ECDICT Importer：Import()
 ```
 
@@ -258,6 +262,8 @@ ECDICT Importer：Import()
 ## 8. ECDICT 导入
 
 `internal/importer/ecdict` 负责 CSV 解析、源字段到 Domain 的映射、批处理和可重入导入；`cmd/import_ecdict.go` 只是它的 Cobra 入口。解析器属于离线输入适配器，不放进 Domain 或 Service。
+
+镜像内置词典的自动导入由 `service.DictImportService` 编排（组合根在 serve 启动后拉起，goroutine 生命周期随 ctx）：读取镜像内置 CSV → 版本完整性守卫（repo.CountBySource 对比 manifest 期望行数）→ 不完整时经 ECDICT Importer 异步导入；进度为进程内存态，经版本化 DTO 由 `GET /api/v1/dictionary-import` 暴露（契约见 [api/meta.md](../api/meta.md)）。importer 保持同步可调（CLI 依赖此语义），异步与状态归 Service 编排；依赖方向为 service → importer（§1）。数据获取、构建期 pin 与部署见 [deploy/release.md](../deploy/release.md)。
 
 ECDICT 是导入期数据源，运行时不读取 CSV。导入后 `dictionary_entries` 就是本地词典库本身，运行时查询只走数据库。详细设计见 [dictionary/enrichment.md](../dictionary/enrichment.md)。
 
