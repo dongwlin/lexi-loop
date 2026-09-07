@@ -133,7 +133,7 @@ func newTestServer(t *testing.T) *gin.Engine {
 	engine := gin.New()
 	RegisterRoutes(engine, Options{
 		Log: zerolog.Nop(),
-	}, v1.NewWordHandler(wordSvc), v1.NewReviewHandler(reviewSvc))
+	}, v1.NewWordHandler(wordSvc), v1.NewReviewHandler(reviewSvc), v1.NewVersionHandler())
 	return engine
 }
 

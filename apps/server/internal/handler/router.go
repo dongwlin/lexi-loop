@@ -54,15 +54,15 @@ func newAPI(r *gin.Engine) huma.API {
 
 // RegisterRoutes 是 HTTP 路由挂载的唯一入口：构造并挂载全局中间件，
 // 注册 /api/v1 业务操作。版本化 Handler 与横切依赖由组合根
-// （internal/app）构造后传入，路径契约见 docs/api/words.md 与
-// docs/api/reviews.md。
+// （internal/app）构造后传入，路径契约见 docs/api/words.md、
+// docs/api/reviews.md 与 docs/api/meta.md。
 //
 // 全局中间件为 handler/middleware 的自定义实现，顺序：
 // request_id（最先挂载，panic / 中断的响应也携带 id）→
 // recovery（兜住后续所有环节的 panic）→
 // cors（预检与非法 Origin 的请求不进请求日志）→
 // logger。
-func RegisterRoutes(r *gin.Engine, opts Options, wordH *v1.WordHandler, reviewH *v1.ReviewHandler) {
+func RegisterRoutes(r *gin.Engine, opts Options, wordH *v1.WordHandler, reviewH *v1.ReviewHandler, versionH *v1.VersionHandler) {
 	r.Use(middleware.RequestID())
 	r.Use(middleware.Recovery(opts.Log))
 	r.Use(middleware.CORS(opts.CORSAllowedOrigins))
@@ -71,4 +71,5 @@ func RegisterRoutes(r *gin.Engine, opts Options, wordH *v1.WordHandler, reviewH 
 	api := newAPI(r)
 	wordH.Register(api)
 	reviewH.Register(api)
+	versionH.Register(api)
 }

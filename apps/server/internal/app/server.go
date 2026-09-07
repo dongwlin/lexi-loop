@@ -84,12 +84,13 @@ func newEngine(cfg *config.Config, db *bun.DB, log zerolog.Logger) *gin.Engine {
 
 	wordHandler := v1.NewWordHandler(wordSvc)
 	reviewHandler := v1.NewReviewHandler(reviewSvc)
+	versionHandler := v1.NewVersionHandler()
 
 	engine := gin.New()
 	handler.RegisterRoutes(engine, handler.Options{
 		Log:                log,
 		CORSAllowedOrigins: cfg.HTTP.CORSAllowedOrigins,
-	}, wordHandler, reviewHandler)
+	}, wordHandler, reviewHandler, versionHandler)
 	// 健康检查属基础设施端点，不参与业务版本（docs/specs/backend/HTTP API 设计规范.md §2.4）。
 	engine.GET("/healthz", handleHealthz)
 	return engine

@@ -1,6 +1,10 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        # 透传宿主环境 VERSION（如 git describe 产物）；缺省 dev 占位。
+        VERSION: ${VERSION:-dev}
     image: lexi-loop:latest
     ports:
       - "${LEXI_HTTP_PORT:-8080}:80"

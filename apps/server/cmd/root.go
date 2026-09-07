@@ -39,6 +39,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newMigrateCommand())
 	root.AddCommand(newImportECDictCommand())
 	root.AddCommand(newOpenAPICommand())
+	root.AddCommand(newVersionCommand())
 	return root
 }
 

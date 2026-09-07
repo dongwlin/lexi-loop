@@ -29,6 +29,7 @@ func buildOpenAPISpec() (*huma.OpenAPI, error) {
 	api := newAPI(gin.New())
 	v1.NewWordHandler(nil).Register(api)
 	v1.NewReviewHandler(nil).Register(api)
+	v1.NewVersionHandler().Register(api)
 
 	spec := api.OpenAPI()
 	normalizeErrorResponses(spec)
@@ -38,13 +39,16 @@ func buildOpenAPISpec() (*huma.OpenAPI, error) {
 // normalizeErrorResponses 使 spec 与实际错误响应一致：移除 huma 自动追加
 // 的 422 校验响应（运行时校验失败为 400），仅保留 keepBusiness422 中
 // 声明的业务前置条件 422 并写明语义；400 等错误响应已在 Operation.Errors
-// 声明并统一引用 Error 模型。
+// 声明并统一引用 Error 模型。另移除未声明 Errors 的操作（get-version，
+// 无入参恒成功）被 huma 自动追加的 default 错误响应——对显式声明过
+// 错误码的操作该删除是 no-op。
 func normalizeErrorResponses(spec *huma.OpenAPI) {
 	for _, item := range spec.Paths {
 		for _, op := range []*huma.Operation{item.Get, item.Post, item.Put, item.Patch, item.Delete, item.Head, item.Options, item.Trace} {
 			if op == nil {
 				continue
 			}
+			delete(op.Responses, "default")
 			if desc, keep := keepBusiness422[op.OperationID]; keep {
 				if resp := op.Responses["422"]; resp != nil {
 					resp.Description = desc

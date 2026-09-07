@@ -35,9 +35,17 @@ WORKDIR /src/apps/server
 
 COPY apps/server ./
 
+# VERSION 由构建方注入（如 --build-arg VERSION="$(git describe --tags --always --dirty)"）；
+# 未注入时为开发构建占位 dev，构建时间取镜像构建时刻（infra/buildinfo）。
+ARG VERSION=dev
+
 RUN --mount=type=cache,target=/go/pkg/mod \
 	--mount=type=cache,target=/root/.cache/go-build \
-	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/lexi-loop .
+	CGO_ENABLED=0 go build -trimpath \
+	-ldflags="-s -w \
+	-X github.com/dongwlin/lexi-loop/apps/server/internal/infra/buildinfo.Version=${VERSION} \
+	-X github.com/dongwlin/lexi-loop/apps/server/internal/infra/buildinfo.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+	-o /out/lexi-loop .
 
 # ---------- 运行镜像：Caddy 托管 web 并反代 server ----------
 FROM caddy:2-alpine
