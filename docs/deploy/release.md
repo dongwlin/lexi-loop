@@ -55,6 +55,11 @@ deploy/release.sh -i ghcr.io/dongwlin/lexi-loop --push   # 推送到 registry
 
 **podman**：镜像构建用 `deploy/release.sh -r podman`（Dockerfile 的 `RUN --mount` 缓存挂载在 buildah 下同样可用；脚本对 podman 固定 `--format docker`——OCI 镜像格式不支持 HEALTHCHECK，缺省会把它静默丢弃）。Dockerfile 与 compose 的基础镜像一律使用全限定名（`docker.io/library/...`）：podman 默认强制短名称解析交互确认，非限定短名在无 TTY 环境会直接失败，新增基础镜像时须保持全限定。运行编排可用 `podman-compose` 或 `podman kube play`，行为以各自实现为准。
 
+两个运维事实：
+
+- **docker 与 podman 的镜像存储相互独立**：`release.sh` 只填充当次调用的运行时，同一份发布产物在两边都要用时（如 docker 跑 compose、podman 日常验证），分别用各自运行时各跑一次脚本。
+- **buildah 会把多阶段构建的中间 stage 留成悬空（`<none>`）镜像**，它们正是 podman 增量构建 `Using cache` 命中的载体；删掉它们下次构建回到冷路径。确需清理时用 `podman image prune`——注意它会连同存储里其它悬空镜像一起删除。
+
 ## 4. 核对发布版本
 
 ```bash
