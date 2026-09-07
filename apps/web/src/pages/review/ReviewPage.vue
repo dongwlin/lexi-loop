@@ -527,32 +527,28 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
           {{ count }}
         </Button>
 
-        <!-- 「自定义」点击后原地替换为「自定义」可见标注 + 数字输入框（交互与可访问性
-             规范 §8.1：表单控件须有持久可见 Label，placeholder 不能代替）；仅替换该
-             选项的槽位，避免其它选项与布局明显位移；有效输入即时生效，无确认按钮 -->
-        <label
+        <!-- 「自定义」点击后原地替换为数字输入框：宽度与选项接近、文字居中，
+             避免其它选项与布局明显位移；有效输入即时生效，无确认按钮。
+             选项行是选择器而非表单场景，不适用规范 §8.1 的持久可见 Label
+             （上下文问句 + placeholder + aria-label 已表意），加可见标注反而
+             破坏「仅该选项原地替换」；§8.4 的错误关联仍然适用 -->
+        <input
           v-if="isCustomMode"
-          for="custom-count"
-          class="flex items-center gap-2 text-xs text-muted-foreground"
-        >
-          自定义
-          <input
-            id="custom-count"
-            ref="customCountInputRef"
-            :value="customCountInput"
-            type="number"
-            inputmode="numeric"
-            min="1"
-            name="review-count"
-            placeholder="例如 25"
-            :aria-invalid="customCountError ? 'true' : undefined"
-            :aria-describedby="
-              customCountError ? 'custom-count-error' : undefined
-            "
-            class="min-h-11 w-14 rounded-field border border-field-border bg-field px-2 py-2 text-center text-sm text-foreground shadow-field outline-hidden placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid enabled:hover:bg-field-hover"
-            @input="handleCountInput"
-          />
-        </label>
+          id="custom-count"
+          ref="customCountInputRef"
+          :value="customCountInput"
+          type="number"
+          inputmode="numeric"
+          min="1"
+          aria-label="自定义数量"
+          placeholder="例如 25"
+          :aria-invalid="customCountError ? 'true' : undefined"
+          :aria-describedby="
+            customCountError ? 'custom-count-error' : undefined
+          "
+          class="min-h-11 w-20 rounded-field border border-field-border bg-field px-2 py-2 text-center text-sm text-foreground shadow-field outline-hidden placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid enabled:hover:bg-field-hover"
+          @input="handleCountInput"
+        />
         <Button v-else variant="ghost" @click="enterCustomMode">
           自定义
         </Button>

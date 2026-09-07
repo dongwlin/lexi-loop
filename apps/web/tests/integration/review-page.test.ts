@@ -267,7 +267,7 @@ describe('复习页数量选择（review-flow §6）', () => {
       expect(screen.getByRole('button', { name: count })).toBeInTheDocument()
     }
     expect(screen.getByRole('button', { name: '自定义' })).toBeInTheDocument()
-    expect(screen.queryByLabelText('自定义')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('自定义数量')).not.toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: '确认' }),
     ).not.toBeInTheDocument()
@@ -278,14 +278,14 @@ describe('复习页数量选择（review-flow §6）', () => {
     )
   })
 
-  it('点击自定义后原地切换为「自定义」标注 + 输入框并聚焦，预设选项保持原位', async () => {
+  it('点击自定义后原地切换为输入框并聚焦，预设选项保持原位', async () => {
     mockAvailableCount()
     const user = userEvent.setup()
     await renderAppAtRoute('/review')
 
     await user.click(screen.getByRole('button', { name: '自定义' }))
 
-    const input = screen.getByLabelText('自定义')
+    const input = screen.getByLabelText('自定义数量')
     expect(input).toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: '自定义' }),
@@ -303,7 +303,7 @@ describe('复习页数量选择（review-flow §6）', () => {
     await renderAppAtRoute('/review')
 
     await user.click(screen.getByRole('button', { name: '自定义' }))
-    await user.type(screen.getByLabelText('自定义'), '2')
+    await user.type(screen.getByLabelText('自定义数量'), '2')
     await user.click(screen.getByRole('button', { name: '开始复习' }))
 
     expect(postedBodies).toEqual([{ count: 2 }])
@@ -322,11 +322,11 @@ describe('复习页数量选择（review-flow §6）', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('请输入正整数')
     // §8.4：错误经稳定 ID 与输入框关联（aria-invalid + aria-describedby）。
-    expect(screen.getByLabelText('自定义')).toHaveAttribute(
+    expect(screen.getByLabelText('自定义数量')).toHaveAttribute(
       'aria-invalid',
       'true',
     )
-    expect(screen.getByLabelText('自定义')).toHaveAttribute(
+    expect(screen.getByLabelText('自定义数量')).toHaveAttribute(
       'aria-describedby',
       'custom-count-error',
     )
@@ -342,11 +342,13 @@ describe('复习页数量选择（review-flow §6）', () => {
     await user.click(screen.getByRole('button', { name: '开始复习' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('请输入正整数')
 
-    await user.type(screen.getByLabelText('自定义'), '3')
+    await user.type(screen.getByLabelText('自定义数量'), '3')
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('自定义')).not.toHaveAttribute('aria-invalid')
-    expect(screen.getByLabelText('自定义')).not.toHaveAttribute(
+    expect(screen.getByLabelText('自定义数量')).not.toHaveAttribute(
+      'aria-invalid',
+    )
+    expect(screen.getByLabelText('自定义数量')).not.toHaveAttribute(
       'aria-describedby',
     )
   })
@@ -376,12 +378,12 @@ describe('复习页数量选择（review-flow §6）', () => {
     const first = await renderAppAtRoute('/review')
 
     await user.click(screen.getByRole('button', { name: '自定义' }))
-    await user.type(screen.getByLabelText('自定义'), '25')
+    await user.type(screen.getByLabelText('自定义数量'), '25')
     first.unmount()
 
     await renderAppAtRoute('/review')
     // 直接恢复为选中的自定义输入框并带回上次输入的数量。
-    expect(screen.getByLabelText('自定义')).toHaveValue(25)
+    expect(screen.getByLabelText('自定义数量')).toHaveValue(25)
     for (const count of ['10', '20', '30', '50']) {
       expect(screen.getByRole('button', { name: count })).toHaveAttribute(
         'aria-pressed',
@@ -402,7 +404,7 @@ describe('复习页数量选择（review-flow §6）', () => {
     await renderAppAtRoute('/review')
 
     await user.click(screen.getByRole('button', { name: '自定义' }))
-    await user.type(screen.getByLabelText('自定义'), '25')
+    await user.type(screen.getByLabelText('自定义数量'), '25')
     await user.click(screen.getByRole('button', { name: '20' }))
     expect(JSON.parse(localStorage.getItem('lexi-loop.review-count'))).toEqual({
       version: 1,
@@ -412,7 +414,7 @@ describe('复习页数量选择（review-flow §6）', () => {
 
     // 再点自定义：输入框带回上一次输入的 25 并即时生效，存储同步回自定义 25。
     await user.click(screen.getByRole('button', { name: '自定义' }))
-    expect(screen.getByLabelText('自定义')).toHaveValue(25)
+    expect(screen.getByLabelText('自定义数量')).toHaveValue(25)
     expect(JSON.parse(localStorage.getItem('lexi-loop.review-count'))).toEqual({
       version: 1,
       mode: 'custom',
@@ -429,7 +431,7 @@ describe('复习页数量选择（review-flow §6）', () => {
     const first = await renderAppAtRoute('/review')
 
     await user.click(screen.getByRole('button', { name: '自定义' }))
-    const input = screen.getByLabelText('自定义')
+    const input = screen.getByLabelText('自定义数量')
     await user.type(input, '25')
     await user.type(input, '{Backspace}{Backspace}')
     // 空输入不覆盖持久化：停留在最后有效值 2，刷新语义下恢复 2。
@@ -442,6 +444,6 @@ describe('复习页数量选择（review-flow §6）', () => {
     first.unmount()
 
     await renderAppAtRoute('/review')
-    expect(screen.getByLabelText('自定义')).toHaveValue(2)
+    expect(screen.getByLabelText('自定义数量')).toHaveValue(2)
   })
 })
