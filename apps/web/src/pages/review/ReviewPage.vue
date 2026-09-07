@@ -527,11 +527,12 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
           {{ count }}
         </Button>
 
-        <!-- 「自定义」点击后原地替换为数字输入框：宽度与选项接近、文字居中，
-             避免其它选项与布局明显位移；有效输入即时生效，无确认按钮。
+        <!-- 「自定义」点击后原地替换为数字输入框：有效输入即时生效，无确认按钮。
              选项行是选择器而非表单场景，不适用规范 §8.1 的持久可见 Label
              （上下文问句 + placeholder + aria-label 已表意），加可见标注反而
-             破坏「仅该选项原地替换」；§8.4 的错误关联仍然适用 -->
+             破坏「仅该选项原地替换」；§8.4 的错误关联仍然适用。
+             按钮与输入框同用 w-20 槽位（文字居中）：两者占位完全一致，
+             flex-wrap 下的换行条件在替换前后相同，临界视口宽度也不会因替换而跳动 -->
         <input
           v-if="isCustomMode"
           id="custom-count"
@@ -549,7 +550,7 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
           class="min-h-11 w-20 rounded-field border border-field-border bg-field px-2 py-2 text-center text-sm text-foreground shadow-field outline-hidden placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid enabled:hover:bg-field-hover"
           @input="handleCountInput"
         />
-        <Button v-else variant="ghost" @click="enterCustomMode">
+        <Button v-else variant="ghost" class="w-20" @click="enterCustomMode">
           自定义
         </Button>
       </div>

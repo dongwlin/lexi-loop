@@ -283,10 +283,13 @@ describe('复习页数量选择（review-flow §6）', () => {
     const user = userEvent.setup()
     await renderAppAtRoute('/review')
 
+    // 按钮与输入框同用 w-20 槽位：替换前后占位一致，flex-wrap 临界宽度下不换行。
+    expect(screen.getByRole('button', { name: '自定义' })).toHaveClass('w-20')
     await user.click(screen.getByRole('button', { name: '自定义' }))
 
     const input = screen.getByLabelText('自定义数量')
     expect(input).toBeInTheDocument()
+    expect(input).toHaveClass('w-20')
     expect(
       screen.queryByRole('button', { name: '自定义' }),
     ).not.toBeInTheDocument()
