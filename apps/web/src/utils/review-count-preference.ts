@@ -25,6 +25,18 @@ function isPresetCount(value: number): value is (typeof PRESET_COUNTS)[number] {
   return (PRESET_COUNTS as readonly number[]).includes(value)
 }
 
+// 复习数量的统一有效规则：十进制安全正整数。解析与校验只此一处，
+// 页面输入、开始前校验与持久化加载共用。
+function isPositiveCount(value: number): boolean {
+  return Number.isSafeInteger(value) && value >= 1
+}
+
+/** 把用户输入解析为复习数量；空 / 非正整数等无效输入返回 null，由调用方决定回退或报错。 */
+export function parsePositiveCount(raw: string): number | null {
+  const parsed = Number(raw)
+  return isPositiveCount(parsed) ? parsed : null
+}
+
 export function saveReviewCountPreference(
   preference: ReviewCountPreference,
 ): void {
@@ -43,11 +55,7 @@ export function loadReviewCountPreference(): ReviewCountPreference {
     if (parsed.mode === 'preset' && isPresetCount(parsed.count)) {
       return { mode: 'preset', count: parsed.count }
     }
-    if (
-      parsed.mode === 'custom' &&
-      Number.isSafeInteger(parsed.count) &&
-      parsed.count >= 1
-    ) {
+    if (parsed.mode === 'custom' && isPositiveCount(parsed.count)) {
       return { mode: 'custom', count: parsed.count }
     }
     return DEFAULT_PREFERENCE

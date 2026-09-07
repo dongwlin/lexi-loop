@@ -15,6 +15,7 @@ import { wordsListQueryOptions } from '@/features/words/api/queries'
 import { formatMeanings } from '@/utils/formatMeanings'
 import {
   loadReviewCountPreference,
+  parsePositiveCount,
   PRESET_COUNTS,
   saveReviewCountPreference,
 } from '@/utils/review-count-preference'
@@ -80,13 +81,18 @@ function selectPreset(count: number) {
 function enterCustomMode() {
   isCustomMode.value = true
   customCountError.value = null
-  // 输入框带回上次输入的数量时即时生效；为空则保持当前选中值，开始时再校验。
-  const parsed = Number(customCountInput.value.trim())
-  if (Number.isSafeInteger(parsed) && parsed >= 1) {
+  // 输入框带回上次输入的数量时即时生效并同步持久化（与逐键输入同一规则），
+  // 保持屏幕选中态与本地存储一致；为空则保持当前选中值，开始时再校验。
+  const parsed = parsePositiveCount(customCountInput.value.trim())
+  if (parsed !== null) {
     selectedCount.value = parsed
+    saveReviewCountPreference({ mode: 'custom', count: parsed })
   }
   // 「自定义」按钮被输入框替换，焦点移入输入框保持就地输入（交互与可访问性规范 §5.3）。
-  void nextTick(() => customCountInputRef.value?.focus())
+  refocusAfterTransition(
+    () => customCountInputRef.value?.focus(),
+    () => document.activeElement === customCountInputRef.value,
+  )
 }
 
 // 输入状态必须是字符串：type="number" 上的 v-model 会把可解析输入写成 number，
@@ -94,8 +100,8 @@ function enterCustomMode() {
 function handleCountInput(event: Event) {
   customCountInput.value = (event.target as HTMLInputElement).value
   customCountError.value = null
-  const parsed = Number(customCountInput.value.trim())
-  if (Number.isSafeInteger(parsed) && parsed >= 1) {
+  const parsed = parsePositiveCount(customCountInput.value.trim())
+  if (parsed !== null) {
     // 有效数量即时作为选中值并持久化（无需确认）；无效输入不覆盖上一次的有效选择。
     selectedCount.value = parsed
     saveReviewCountPreference({ mode: 'custom', count: parsed })
@@ -126,9 +132,19 @@ async function loadAvailableCount() {
   }
 }
 
+// 自定义模式下输入无效（空 / 非法）时 selectedCount 是残留值，截断提示会失真，
+// 视为当前没有可用选择一并隐藏。
+const hasUsableSelection = computed(
+  () =>
+    !isCustomMode.value ||
+    parsePositiveCount(customCountInput.value.trim()) !== null,
+)
+
 const hasTruncationWarning = computed(
   () =>
-    availableCount.value !== null && selectedCount.value > availableCount.value,
+    availableCount.value !== null &&
+    hasUsableSelection.value &&
+    selectedCount.value > availableCount.value,
 )
 
 const truncatedCount = computed(() =>
@@ -274,8 +290,8 @@ const startError = ref<string | null>(null)
 async function handleStart() {
   // 自定义模式下直接使用当前输入值（无需确认）；输入无效时就地报错并阻止开始。
   if (isCustomMode.value) {
-    const parsed = Number(customCountInput.value.trim())
-    if (!Number.isSafeInteger(parsed) || parsed < 1) {
+    const parsed = parsePositiveCount(customCountInput.value.trim())
+    if (parsed === null) {
       customCountError.value = '请输入正整数'
       return
     }
@@ -411,22 +427,32 @@ function focusReviewArea() {
   reviewAreaRef.value?.focus()
 }
 
-// 状态迁移后把焦点移入复习区域，并在后续帧校正一次。触发迁移的按钮（开始 /
-// 继续复习 / 查看释义 / 记得 / 不记得）随分支卸载，浏览器对「移除已聚焦元素」
-// 的焦点归还（focus fixup）作为任务排在 Vue 渲染微任务之后，仅 nextTick 聚焦
-// 会被覆盖回 body（真实浏览器可复现：恢复后 Space / 1 / 2 无响应），
-// 因此渲染完成后跨帧检查焦点是否仍在复习区域内，不在则再聚焦。
-function focusReviewAreaAfterTransition() {
+// 触发分支切换的元素（开始 / 继续复习 / 查看释义 / 记得 / 不记得 / 自定义）随渲染卸载，
+// 浏览器对「移除已聚焦元素」的焦点归还（focus fixup）作为任务排在 Vue 渲染微任务之后，
+// 仅 nextTick 聚焦会被覆盖回 body（真实浏览器可复现：恢复后 Space / 1 / 2 无响应），
+// 因此渲染完成后跨帧检查焦点是否落在目标上，不在则再聚焦。
+function refocusAfterTransition(
+  focus: () => void,
+  isFocusOnTarget: () => boolean,
+) {
   void nextTick(() => {
-    focusReviewArea()
+    focus()
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        if (!reviewAreaRef.value?.contains(document.activeElement)) {
-          focusReviewArea()
+        if (!isFocusOnTarget()) {
+          focus()
         }
       })
     })
   })
+}
+
+// 状态迁移后把焦点移入复习区域。
+function focusReviewAreaAfterTransition() {
+  refocusAfterTransition(
+    focusReviewArea,
+    () => reviewAreaRef.value?.contains(document.activeElement) ?? false,
+  )
 }
 
 const reviewAreaRef = ref<HTMLElement | null>(null)
@@ -501,28 +527,42 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
           {{ count }}
         </Button>
 
-        <!-- 「自定义」点击后原地替换为数字输入框：宽度与选项接近、文字居中，
-             避免其它选项与布局明显位移；有效输入即时生效，无确认按钮 -->
-        <input
+        <!-- 「自定义」点击后原地替换为「自定义」可见标注 + 数字输入框（交互与可访问性
+             规范 §8.1：表单控件须有持久可见 Label，placeholder 不能代替）；仅替换该
+             选项的槽位，避免其它选项与布局明显位移；有效输入即时生效，无确认按钮 -->
+        <label
           v-if="isCustomMode"
-          id="custom-count"
-          ref="customCountInputRef"
-          :value="customCountInput"
-          type="number"
-          min="1"
-          aria-label="自定义数量"
-          placeholder="例如 25"
-          class="min-h-11 w-20 rounded-field border border-field-border bg-field px-2 py-2 text-center text-sm text-foreground shadow-field outline-hidden placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid enabled:hover:bg-field-hover"
-          @input="handleCountInput"
-        />
+          for="custom-count"
+          class="flex items-center gap-2 text-xs text-muted-foreground"
+        >
+          自定义
+          <input
+            id="custom-count"
+            ref="customCountInputRef"
+            :value="customCountInput"
+            type="number"
+            inputmode="numeric"
+            min="1"
+            name="review-count"
+            placeholder="例如 25"
+            :aria-invalid="customCountError ? 'true' : undefined"
+            :aria-describedby="
+              customCountError ? 'custom-count-error' : undefined
+            "
+            class="min-h-11 w-14 rounded-field border border-field-border bg-field px-2 py-2 text-center text-sm text-foreground shadow-field outline-hidden placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid enabled:hover:bg-field-hover"
+            @input="handleCountInput"
+          />
+        </label>
         <Button v-else variant="ghost" @click="enterCustomMode">
           自定义
         </Button>
       </div>
 
-      <!-- 自定义输入无效（空 / 非正整数）时就地提示，开始复习被阻止 -->
+      <!-- 自定义输入无效（空 / 非正整数）时就地提示并经 aria-describedby 与输入框
+           关联（交互与可访问性规范 §8.4），开始复习被阻止；再次输入有效值即清除 -->
       <p
         v-if="customCountError"
+        id="custom-count-error"
         role="alert"
         class="mt-2 text-xs text-danger-text"
       >

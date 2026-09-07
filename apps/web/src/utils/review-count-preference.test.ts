@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   DEFAULT_REVIEW_COUNT,
   loadReviewCountPreference,
+  parsePositiveCount,
   saveReviewCountPreference,
 } from './review-count-preference'
 
@@ -55,8 +56,11 @@ describe('loadReviewCountPreference', () => {
     ['缺少数量字段', { version: 1, mode: 'preset' }],
     ['预设值不在预设列表内', { version: 1, mode: 'preset', count: 25 }],
     ['自定义数量小于 1', { version: 1, mode: 'custom', count: 0 }],
+    ['自定义数量为负数', { version: 1, mode: 'custom', count: -5 }],
     ['自定义数量非整数', { version: 1, mode: 'custom', count: 2.5 }],
     ['未知模式', { version: 1, mode: 'auto', count: 20 }],
+    ['version 为字符串', { version: '1', mode: 'preset', count: 20 }],
+    ['count 为字符串', { version: 1, mode: 'custom', count: '25' }],
   ])('%s 时回退默认值', (_name, stored) => {
     seedStorage(stored)
 
@@ -64,6 +68,16 @@ describe('loadReviewCountPreference', () => {
       mode: 'preset',
       count: DEFAULT_REVIEW_COUNT,
     })
+  })
+
+  it('JSON 合法但顶层不是对象（null / 数字）时回退默认值', () => {
+    for (const raw of ['null', '123']) {
+      seedStorage(raw)
+      expect(loadReviewCountPreference()).toEqual({
+        mode: 'preset',
+        count: DEFAULT_REVIEW_COUNT,
+      })
+    }
   })
 
   it('非法 JSON 回退默认值', () => {
@@ -111,5 +125,28 @@ describe('saveReviewCountPreference', () => {
     expect(() =>
       saveReviewCountPreference({ mode: 'custom', count: 25 }),
     ).not.toThrow()
+  })
+})
+
+describe('parsePositiveCount', () => {
+  it.each([
+    ['普通正整数', '25', 25],
+    ['首尾空白', ' 7 ', 7],
+    ['个位数', '3', 3],
+    ['科学计数法表示的整数值', '1e3', 1000],
+  ])('%s 解析为对应正整数', (_name, raw, parsed) => {
+    expect(parsePositiveCount(raw)).toBe(parsed)
+  })
+
+  it.each([
+    ['空字符串', ''],
+    ['纯空白', '   '],
+    ['零', '0'],
+    ['负数', '-3'],
+    ['小数', '2.5'],
+    ['非数字', 'abc'],
+    ['Infinity 字面量', 'Infinity'],
+  ])('%s 返回 null', (_name, raw) => {
+    expect(parsePositiveCount(raw)).toBeNull()
   })
 })
