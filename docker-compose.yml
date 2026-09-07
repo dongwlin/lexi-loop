@@ -16,7 +16,8 @@ services:
     restart: unless-stopped
 
   db:
-    image: postgres:18-alpine
+    # 基础镜像一律全限定名：podman 默认强制短名称解析确认，无 TTY 会直接失败。
+    image: docker.io/library/postgres:18-alpine
     environment:
       POSTGRES_USER: lexiloop
       POSTGRES_PASSWORD: lexiloop

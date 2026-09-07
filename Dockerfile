@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---------- web 构建 ----------
-FROM node:24-alpine AS web-builder
+FROM docker.io/library/node:24-alpine AS web-builder
 
 WORKDIR /repo
 
@@ -22,7 +22,7 @@ COPY packages/api-client packages/api-client
 RUN pnpm -F @lexi-loop/web build
 
 # ---------- server 构建 ----------
-FROM golang:1.26-alpine AS server-builder
+FROM docker.io/library/golang:1.26-alpine AS server-builder
 
 WORKDIR /src
 
@@ -49,7 +49,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 	-o /out/lexi-loop .
 
 # ---------- 运行镜像：Caddy 托管 web 并反代 server ----------
-FROM caddy:2-alpine
+FROM docker.io/library/caddy:2-alpine
 
 RUN apk add --no-cache tzdata
 

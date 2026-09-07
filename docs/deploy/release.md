@@ -53,7 +53,7 @@ deploy/release.sh -i ghcr.io/dongwlin/lexi-loop --push   # 推送到 registry
 
 镜像内的运行结构：Caddy 托管 web 静态产物并反代 `/api`、`/healthz` 到同容器的 Go server（`deploy/Caddyfile`）；入口脚本 `deploy/docker-entrypoint.sh` 先显式执行 `lexi-loop migrate up` 再并行启动两者，并转发 SIGTERM 保持优雅关闭。
 
-**podman**：镜像构建用 `deploy/release.sh -r podman`（Dockerfile 的 `RUN --mount` 缓存挂载在 buildah 下同样可用）。运行编排可用 `podman-compose` 或 `podman kube play`，行为以各自实现为准。
+**podman**：镜像构建用 `deploy/release.sh -r podman`（Dockerfile 的 `RUN --mount` 缓存挂载在 buildah 下同样可用）。Dockerfile 与 compose 的基础镜像一律使用全限定名（`docker.io/library/...`）：podman 默认强制短名称解析交互确认，非限定短名在无 TTY 环境会直接失败，新增基础镜像时须保持全限定。运行编排可用 `podman-compose` 或 `podman kube play`，行为以各自实现为准。
 
 ## 4. 核对发布版本
 
