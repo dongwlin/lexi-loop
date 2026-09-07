@@ -13,6 +13,12 @@ const (
 	DefaultHTTPAddr = ":8080"
 	// EnvPrefix 是环境变量前缀，如 LEXI_HTTP_ADDR。
 	EnvPrefix = "LEXI"
+
+	// DefaultDictCSVPath 是词典自动导入读取的 CSV 缺省路径：镜像把内置
+	// 词典数据放在 /app/data/（Dockerfile COPY deploy/dict/）。源码直接
+	// 运行（go run . serve）通常没有该文件，导入编排视为非镜像运行而
+	// 跳过，行为与未引入自动导入一致。
+	DefaultDictCSVPath = "/app/data/ecdict.csv"
 )
 
 // DefaultCORSAllowedOrigins 是 CORS Origin 白名单缺省值：本地前端开发源
@@ -27,6 +33,7 @@ var DefaultCORSAllowedOrigins = []string{
 type Config struct {
 	HTTP     HTTPConfig
 	Database DatabaseConfig
+	Dict     DictConfig
 }
 
 // HTTPConfig 是 HTTP 服务相关配置。
@@ -58,6 +65,18 @@ type DatabaseConfig struct {
 	MaxConnIdleTime time.Duration
 }
 
+// DictConfig 是镜像内置词典自动导入的配置（docs/deploy/release.md）。
+type DictConfig struct {
+	// CSVPath 是自动导入读取的 ECDICT CSV 路径（LEXI_DICT_CSV）。manifest
+	// 固定读取同目录下的 manifest.json（fetch.sh 的产物）。文件不存在视为
+	// 非镜像运行，导入编排直接跳过。
+	CSVPath string
+
+	// AutoCheck 是否在 serve 启动后执行词典自动导入（LEXI_DICT_AUTOCHECK，
+	// 缺省 true；显式置 0 / false 关闭）。关闭时不产生任何导入动作。
+	AutoCheck bool
+}
+
 // parseCSVList 把逗号分隔的环境变量值拆为列表：逐项去首尾空白并丢弃空项。
 func parseCSVList(s string) []string {
 	parts := strings.Split(s, ",")
@@ -84,6 +103,10 @@ func Load() (*Config, error) {
 
 	// 数据库配置键：database.url 对应环境变量 LEXI_DATABASE_URL；
 	// 连接池参数缺省为 0，语义为采用 pgx 默认值（见 DatabaseConfig 注释）。
+	v.SetDefault("dict.csv", DefaultDictCSVPath)
+	// dict.autocheck 对应 LEXI_DICT_AUTOCHECK，缺省 true，置 0 / false 关闭。
+	v.SetDefault("dict.autocheck", true)
+
 	return &Config{
 		HTTP: HTTPConfig{
 			Addr:               v.GetString("http.addr"),
@@ -95,6 +118,10 @@ func Load() (*Config, error) {
 			MinConns:        v.GetInt("database.min_conns"),
 			MaxConnLifetime: v.GetDuration("database.max_conn_lifetime"),
 			MaxConnIdleTime: v.GetDuration("database.max_conn_idle_time"),
+		},
+		Dict: DictConfig{
+			CSVPath:   v.GetString("dict.csv"),
+			AutoCheck: v.GetBool("dict.autocheck"),
 		},
 	}, nil
 }

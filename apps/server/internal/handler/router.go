@@ -62,7 +62,7 @@ func newAPI(r *gin.Engine) huma.API {
 // recovery（兜住后续所有环节的 panic）→
 // cors（预检与非法 Origin 的请求不进请求日志）→
 // logger。
-func RegisterRoutes(r *gin.Engine, opts Options, wordH *v1.WordHandler, reviewH *v1.ReviewHandler, versionH *v1.VersionHandler) {
+func RegisterRoutes(r *gin.Engine, opts Options, wordH *v1.WordHandler, reviewH *v1.ReviewHandler, versionH *v1.VersionHandler, dictImportH *v1.DictImportHandler) {
 	r.Use(middleware.RequestID())
 	r.Use(middleware.Recovery(opts.Log))
 	r.Use(middleware.CORS(opts.CORSAllowedOrigins))
@@ -72,4 +72,5 @@ func RegisterRoutes(r *gin.Engine, opts Options, wordH *v1.WordHandler, reviewH 
 	wordH.Register(api)
 	reviewH.Register(api)
 	versionH.Register(api)
+	dictImportH.Register(api)
 }

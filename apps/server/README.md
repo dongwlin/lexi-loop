@@ -28,6 +28,10 @@ LEXI_HTTP_ADDR=:9090 LEXI_DATABASE_URL='postgres://lexi:lexi@localhost:5432/lexi
 | `LEXI_DATABASE_MAX_CONNS` / `LEXI_DATABASE_MIN_CONNS` | 连接池上下限 |
 | `LEXI_DATABASE_MAX_CONN_LIFETIME` / `LEXI_DATABASE_MAX_CONN_IDLE_TIME` | 连接复用与空闲回收时长（Go duration，如 `5m` / `90s`） |
 | `LEXI_HTTP_CORS_ALLOWED_ORIGINS` | CORS 允许的前端 Origin 白名单，逗号分隔（不支持通配符）；缺省为本地开发源 `http://localhost:5173`、`http://127.0.0.1:5173`，生产部署须显式配置 |
+| `LEXI_DICT_CSV` | serve 启动后词典自动导入读取的 CSV 路径；缺省 `/app/data/ecdict.csv`（镜像内置）。文件不存在视为非镜像运行，自动导入直接跳过 |
+| `LEXI_DICT_AUTOCHECK` | 是否执行词典自动导入，缺省 `true`；显式置 `0` 关闭 |
+
+serve 启动后会在进程内异步自动导入镜像内置词典（不阻塞 HTTP 启动；进度经 `GET /api/v1/dictionary-import` 暴露，契约见 [Meta API §3](../../docs/api/meta.md)）：`LEXI_DICT_CSV` 指向的文件存在（缺省 `/app/data/ecdict.csv`，即镜像内路径）且 `LEXI_DICT_AUTOCHECK` 未关闭时，先按 manifest 版本做完整性守卫（`source_version` 词条数达到期望行数即跳过），不完整才导入。源码直接 `go run . serve` 时缺省路径不存在，自动导入静默跳过；手动导入走 `import-ecdict`。数据获取（pinned ECDICT + sha256）见 [deploy/release.md §3](../../docs/deploy/release.md)。
 
 数据库迁移由 `migrate` 命令显式执行（应用启动不隐式迁移，见 [docs/backend/structure.md](../../docs/backend/structure.md) §2）：
 
@@ -41,10 +45,11 @@ ECDICT 离线导入由 `import-ecdict` 命令执行（导入前先 `migrate up`�
 
 ```bash
 LEXI_DATABASE_URL='postgres://lexi:lexi@localhost:5432/lexi_loop?sslmode=disable' go run . import-ecdict ecdict.csv           # 全量导入（默认每 1000 行一个事务）
-LEXI_DATABASE_URL='postgres://lexi:lexi@localhost:5432/lexi_loop?sslmode=disable' go run . import-ecdict ecdict.csv --batch-size 2000   # 自定义单事务行数
+LEXI_DATABASE_URL='postgres://lexi:lexi@localhost:5432/lexi_loop?sslmode=disable' go run . import-ecdict ecdict.csv --batch-size 2000        # 自定义单事务行数
+LEXI_DATABASE_URL='postgres://lexi:lexi@localhost:5432/lexi_loop?sslmode=disable' go run . import-ecdict ecdict.csv --source-version 82c9872  # 标记数据版本（写入 source_version）
 ```
 
-导入按固定批次分事务提交，失败只回滚当前批次并中止；写入按 headword 唯一键幂等，中断（SIGINT / SIGTERM）或失败后重跑同一文件即可续传。
+导入按固定批次分事务提交，失败只回滚当前批次并中止；写入按 headword 唯一键幂等，中断（SIGINT / SIGTERM）或失败后重跑同一文件即可续传。`--source-version` 写入词条的 `source_version`（serve 自动导入按它与 manifest 期望行数做完整性守卫）；手动导入与镜像内置词典同一数据集时传入同一版本可让守卫直接视为完整，免去下次启动重复导入。
 
 OpenAPI 3.1 spec 由 `openapi` 命令离线生成（不需要数据库；产物落盘仓库根 `docs/openapi/`，由生成器维护、请勿手改）：
 

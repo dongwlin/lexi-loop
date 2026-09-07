@@ -18,6 +18,7 @@ import (
 // internal/importer/ecdict，本命令只做参数绑定与生命周期处理。
 func newImportECDictCommand() *cobra.Command {
 	var batchSize int
+	var sourceVersion string
 	cmd := &cobra.Command{
 		Use:   "import-ecdict <file>",
 		Short: "将 ECDICT CSV 导入本地词典库（dictionary_entries）",
@@ -26,7 +27,12 @@ func newImportECDictCommand() *cobra.Command {
 导入前必须先执行 lexi-loop migrate up 建表。导入按固定批次分事务提交，
 失败只回滚当前批次并中止；写入按 headword 唯一键幂等，中断或失败后
 重跑同一文件即可续传。连接串经 LEXI_DATABASE_URL 提供（与 serve /
-migrate 相同）。`,
+migrate 相同）。
+
+--source-version 为数据集版本标记，写入词条的 source_version；serve
+启动后的词典自动导入按「source_version 达到 manifest 期望行数」判定
+完整性，手动导入与镜像内置词典同一数据集时传入同一版本可免去重复
+导入。`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			url, err := databaseURL()
@@ -56,7 +62,7 @@ migrate 相同）。`,
 			}()
 
 			importer := ecdict.NewImporter(db, batchSize)
-			result, err := importer.Import(ctx, file, func(p ecdict.Progress) {
+			result, err := importer.Import(ctx, file, sourceVersion, func(p ecdict.Progress) {
 				fmt.Fprintf(os.Stderr, "\r已提交 %d 批，处理 %d 行，跳过 %d 行，写入 %d 词条",
 					p.BatchesCommitted, p.RowsProcessed, p.RowsSkipped, p.EntriesWritten)
 			})
@@ -71,5 +77,7 @@ migrate 相同）。`,
 	}
 	cmd.Flags().IntVar(&batchSize, "batch-size", ecdict.DefaultBatchSize,
 		"单个事务提交的行数；批次失败只回滚当前批")
+	cmd.Flags().StringVar(&sourceVersion, "source-version", "",
+		"数据版本标记（写入 source_version）；与镜像内置词典同一数据集时传 manifest 版本")
 	return cmd
 }

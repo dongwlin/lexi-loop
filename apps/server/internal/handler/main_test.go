@@ -27,6 +27,7 @@ import (
 	"github.com/uptrace/bun"
 
 	v1 "github.com/dongwlin/lexi-loop/apps/server/internal/handler/v1"
+	"github.com/dongwlin/lexi-loop/apps/server/internal/importer/ecdict"
 	"github.com/dongwlin/lexi-loop/apps/server/internal/infra/database"
 	"github.com/dongwlin/lexi-loop/apps/server/internal/service"
 	"github.com/dongwlin/lexi-loop/apps/server/migrations"
@@ -130,10 +131,12 @@ func newTestServer(t *testing.T) *gin.Engine {
 	wordSvc := service.NewWord(db, dictionarySvc)
 	reviewSvc := service.NewReview(db, service.NewWeightedSampler(rand.NewPCG(7, 8)))
 
+	dictImportSvc := service.NewDictImport(db, ecdict.NewImporter(db, ecdict.DefaultBatchSize), "/nonexistent/ecdict.csv", true, zerolog.Nop())
+
 	engine := gin.New()
 	RegisterRoutes(engine, Options{
 		Log: zerolog.Nop(),
-	}, v1.NewWordHandler(wordSvc), v1.NewReviewHandler(reviewSvc), v1.NewVersionHandler())
+	}, v1.NewWordHandler(wordSvc), v1.NewReviewHandler(reviewSvc), v1.NewVersionHandler(), v1.NewDictImportHandler(dictImportSvc))
 	return engine
 }
 

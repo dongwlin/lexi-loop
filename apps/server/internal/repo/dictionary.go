@@ -134,6 +134,22 @@ func (r *DictionaryRepo) UpsertBatch(ctx context.Context, entries []*domain.Dict
 	return normalizeError("upsert dictionary entries", err)
 }
 
+// CountBySource 统计指定来源与版本的词条数，供词典导入的版本完整性
+// 守卫使用：source_version 与 manifest 版本一致且数量达到期望行数时，
+// 视为该版本词典已完整导入（serve 启动守卫，docs/api/meta.md §3）。
+// source 无索引，启动期一次性计数可接受全表扫描。
+func (r *DictionaryRepo) CountBySource(ctx context.Context, source, sourceVersion string) (int, error) {
+	count, err := r.db.NewSelect().
+		Model((*schema.DictionaryEntry)(nil)).
+		Where("source = ?", source).
+		Where("source_version = ?", sourceVersion).
+		Count(ctx)
+	if err != nil {
+		return 0, normalizeError("count dictionary entries by source", err)
+	}
+	return count, nil
+}
+
 // ---- schema ↔ domain 转换（只发生在 repo 内） ----
 
 func toDomainEntry(s *schema.DictionaryEntry) *domain.DictionaryEntry {
