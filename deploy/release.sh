@@ -115,8 +115,12 @@ fi
 RUNTIME="$(resolve_runtime)"
 
 info "运行时: ${RUNTIME} | 版本: ${VERSION} | 镜像: ${IMAGE}:${VERSION} + :latest"
-"${RUNTIME}" build --build-arg "VERSION=${VERSION}" \
-	-t "${IMAGE}:${VERSION}" -t "${IMAGE}:latest" .
+# podman 默认产出 OCI 格式镜像，Dockerfile 的 HEALTHCHECK 会被静默丢弃；
+# 固定 --format docker 保持两种运行时产物一致。
+build_args=(build --build-arg "VERSION=${VERSION}"
+	-t "${IMAGE}:${VERSION}" -t "${IMAGE}:latest")
+[[ "$RUNTIME" == "podman" ]] && build_args+=(--format docker)
+"${RUNTIME}" "${build_args[@]}" .
 
 if [[ "$PUSH" -eq 1 ]]; then
 	for tag in "${VERSION}" latest; do
