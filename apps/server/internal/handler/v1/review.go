@@ -46,6 +46,15 @@ func (h *ReviewHandler) Register(api huma.API) {
 	}, h.submit)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "abandon-review-session",
+		Method:      http.MethodPost,
+		Path:        "/api/v1/reviews/{sessionId}/abandon",
+		Summary:     "放弃一轮进行中的复习（active → abandoned，幂等）",
+		Tags:        []string{"Reviews"},
+		Errors:      []int{http.StatusBadRequest, http.StatusNotFound, http.StatusUnprocessableEntity},
+	}, h.abandon)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "get-review-session",
 		Method:      http.MethodGet,
 		Path:        "/api/v1/reviews/{id}",
@@ -90,6 +99,20 @@ func (h *ReviewHandler) submit(ctx context.Context, input *submitResultInput) (*
 		ItemID:    input.ItemID,
 		Result:    domain.ReviewResult(input.Body.Result),
 	}); err != nil {
+		return nil, httpresp.FromError(err)
+	}
+	return &noDataOutput{Body: httpresp.OK(dto.NoData{})}, nil
+}
+
+// ---- 放弃一轮复习（api/reviews.md §6）----
+
+type abandonSessionInput struct {
+	SessionID uuid.UUID `path:"sessionId"`
+}
+
+// abandon 处理 POST /api/v1/reviews/{sessionId}/abandon。
+func (h *ReviewHandler) abandon(ctx context.Context, input *abandonSessionInput) (*noDataOutput, error) {
+	if err := h.svc.AbandonSession(ctx, service.AbandonSessionRequest{SessionID: input.SessionID}); err != nil {
 		return nil, httpresp.FromError(err)
 	}
 	return &noDataOutput{Body: httpresp.OK(dto.NoData{})}, nil

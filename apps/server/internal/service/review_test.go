@@ -482,6 +482,83 @@ func TestIntegration_ReviewService_GetSession(t *testing.T) {
 	})
 }
 
+func TestIntegration_ReviewService_AbandonSession(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("active → abandoned，重复放弃幂等成功", func(t *testing.T) {
+		resetTables(t)
+		seedWords(t, 3)
+		svc := newTestReview(t)
+		started := mustStart(t, svc, 3)
+
+		require.NoError(t, svc.AbandonSession(ctx, AbandonSessionRequest{SessionID: started.SessionID}))
+		// 重复放弃：幂等成功（api/reviews.md §6）。
+		require.NoError(t, svc.AbandonSession(ctx, AbandonSessionRequest{SessionID: started.SessionID}))
+
+		session, err := repo.NewReviewRepo(testDB).GetSessionByID(ctx, started.SessionID)
+		require.NoError(t, err)
+		assert.Equal(t, domain.ReviewStatusAbandoned, session.Status)
+		assert.Nil(t, session.CompletedAt, "abandoned 不是完成")
+	})
+
+	t.Run("放弃后提交幂等短路且不累计词级统计", func(t *testing.T) {
+		resetTables(t)
+		seedWords(t, 2)
+		svc := newTestReview(t)
+		started := mustStart(t, svc, 2)
+
+		require.NoError(t, svc.AbandonSession(ctx, AbandonSessionRequest{SessionID: started.SessionID}))
+		// session 已非 active：提交契约上幂等短路（api/reviews.md §3），
+		// 不报错也不计入已废弃的轮次。
+		require.NoError(t, svc.SubmitResult(ctx, SubmitResultRequest{
+			SessionID: started.SessionID, ItemID: started.Items[0].ItemID, Result: domain.ReviewResultRemembered,
+		}))
+
+		got, err := svc.GetSession(ctx, GetSessionRequest{SessionID: started.SessionID})
+		require.NoError(t, err)
+		assert.Equal(t, domain.ReviewStatusAbandoned, got.Status)
+		assert.Equal(t, 0, got.Remembered)
+		assert.Equal(t, 0, got.Forgotten)
+		assert.Equal(t, int64(0), countRows(t, "SELECT count(*) FROM user_words WHERE review_count > 0"))
+	})
+
+	t.Run("completed 不可放弃，返回业务前置错误", func(t *testing.T) {
+		resetTables(t)
+		seedWords(t, 1)
+		svc := newTestReview(t)
+		started := mustStart(t, svc, 1)
+		require.NoError(t, svc.SubmitResult(ctx, SubmitResultRequest{
+			SessionID: started.SessionID, ItemID: started.Items[0].ItemID, Result: domain.ReviewResultRemembered,
+		}))
+
+		err := svc.AbandonSession(ctx, AbandonSessionRequest{SessionID: started.SessionID})
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.FailedPrecondition, appErr.Kind)
+		assert.Equal(t, apperr.CodeNoReviewableWords, appErr.Code)
+		assert.Equal(t, "review session is not active", appErr.Message)
+
+		// completed 状态不被放弃破坏。
+		session, err := repo.NewReviewRepo(testDB).GetSessionByID(ctx, started.SessionID)
+		require.NoError(t, err)
+		assert.Equal(t, domain.ReviewStatusCompleted, session.Status)
+	})
+
+	t.Run("不存在时返回未找到", func(t *testing.T) {
+		resetTables(t)
+		svc := newTestReview(t)
+
+		err := svc.AbandonSession(ctx, AbandonSessionRequest{SessionID: uuid.Must(uuid.NewV7())})
+		require.Error(t, err)
+		var appErr *apperr.Error
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, apperr.NotFound, appErr.Kind)
+		assert.Equal(t, apperr.CodeNotFound, appErr.Code)
+		assert.Equal(t, "review session not found", appErr.Message)
+	})
+}
+
 // ---- 用例专属辅助 ----
 
 // newTestReview 构造共享数据库上的 ReviewService（固定随机源保证抽样可复现）。

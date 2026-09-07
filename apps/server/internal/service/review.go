@@ -67,6 +67,11 @@ type GetSessionRequest struct {
 	SessionID uuid.UUID
 }
 
+// AbandonSessionRequest 是放弃一轮复习用例的请求。
+type AbandonSessionRequest struct {
+	SessionID uuid.UUID
+}
+
 // GetSessionItem 是逐词结果读模型（api/reviews.md §5 items）。
 type GetSessionItem struct {
 	Headword string
@@ -268,6 +273,13 @@ func (s *Review) submitResultTx(ctx context.Context, tx bun.Tx, req SubmitResult
 		return err
 	}
 
+	// 1.5. session 已非 active（abandoned / completed）：幂等短路、不再
+	// 计数，防止放弃或完成一轮之后迟到的提交计入已结束的轮次
+	//（api/reviews.md §3；completed 本就全部非 pending，此处一并防御）。
+	if session.Status != domain.ReviewStatusActive {
+		return nil
+	}
+
 	// 2. 按 session_id + item_id 锁定 ReviewItem；不存在或归属不匹配：
 	// 幂等短路，不修改任何统计（structure.md §5.2）。
 	item, err := reviewRepo.LockItem(ctx, req.SessionID, req.ItemID)
@@ -324,6 +336,42 @@ func (s *Review) submitResultTx(ctx context.Context, tx bun.Tx, req SubmitResult
 		}
 	}
 	return nil
+}
+
+// AbandonSession 放弃一轮进行中的复习（api/reviews.md §6）：active →
+// abandoned。持有 session 行锁，与提交共享同一锁顺序（structure.md §5.2），
+// 并发时二者串行：先提交者按契约计数，先放弃者使后续提交幂等短路。
+// 幂等：对已是 abandoned 的 session 重复放弃同样返回成功；completed 不可
+// 放弃，映射为业务前置 422；session 不存在返回 404。
+func (s *Review) AbandonSession(ctx context.Context, req AbandonSessionRequest) error {
+	err := s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		reviewRepo := repo.NewReviewRepo(tx)
+		session, err := reviewRepo.LockSessionByID(ctx, req.SessionID)
+		if err != nil {
+			return err
+		}
+		if session.Status == domain.ReviewStatusAbandoned {
+			return nil
+		}
+		if err := session.Abandon(time.Now()); err != nil {
+			return err
+		}
+		return reviewRepo.UpdateSession(ctx, session)
+	})
+	switch {
+	case err == nil:
+		return nil
+	case errors.Is(err, repo.ErrNotFound):
+		return sessionNotFound(err)
+	case errors.Is(err, domain.ErrSessionNotActive):
+		// 复用标准业务前置 code BASE.BIZ.USER_DISABLED（422）：「不满足
+		// 业务前置条件」的既有语义，message 区分具体场景。
+		return apperr.New(apperr.FailedPrecondition, apperr.CodeNoReviewableWords, "review session is not active", err)
+	case errors.Is(err, repo.ErrConflict):
+		return apperr.New(apperr.Conflict, apperr.CodeConcurrentUpdate, "resource was modified concurrently, please retry", err)
+	default:
+		return internalError(err)
+	}
 }
 
 // GetSession 获取一轮复习的汇总与逐词结果（api/reviews.md §5）。

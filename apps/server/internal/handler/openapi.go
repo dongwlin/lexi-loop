@@ -17,7 +17,8 @@ import (
 // 其余操作的 422 响应是 huma 默认「校验失败」语义的残留——运行时已由
 // httpresp.UseHumaError 降为 400，文档一并移除。
 var keepBusiness422 = map[string]string{
-	"start-review-session": "业务前置条件不满足（无可复习生词，BASE.BIZ.USER_DISABLED）",
+	"start-review-session":   "业务前置条件不满足（无可复习生词，BASE.BIZ.USER_DISABLED）",
+	"abandon-review-session": "业务前置条件不满足（session 已结束，BASE.BIZ.USER_DISABLED）",
 }
 
 // buildOpenAPISpec 构造 /api/v1 的 OpenAPI 3.1 spec。离线执行：不启动

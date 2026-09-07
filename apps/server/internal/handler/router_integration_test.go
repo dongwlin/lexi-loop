@@ -411,6 +411,48 @@ func TestIntegration_ReviewRoutes(t *testing.T) {
 		require.Equal(t, http.StatusBadRequest, rec.Code)
 		assert.Equal(t, "BASE.PARAM.VALIDATION_FAILED", decodeEnvelope(t, rec.Body.Bytes()).Code)
 	})
+
+	t.Run("放弃一轮：幂等、completed 422、不存在 404", func(t *testing.T) {
+		resetTables(t)
+		engine := newTestServer(t)
+		importWordsViaAPI(t, engine, "a1", "a2", "a3")
+
+		started := startSessionViaAPI(t, engine, 3)
+
+		// 放弃 active session：200 + data {}。
+		rec := doJSON(t, engine, "POST", "/api/v1/reviews/"+started.SessionID+"/abandon", nil)
+		require.Equal(t, http.StatusOK, rec.Code)
+		e := decodeEnvelope(t, rec.Body.Bytes())
+		assert.Equal(t, "OK", e.Code)
+		assert.JSONEq(t, "{}", string(e.Data))
+
+		// 重复放弃：幂等 200。
+		rec = doJSON(t, engine, "POST", "/api/v1/reviews/"+started.SessionID+"/abandon", nil)
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		// 经 GET 观察 abandoned。
+		rec = doJSON(t, engine, "GET", "/api/v1/reviews/"+started.SessionID, nil)
+		require.Equal(t, http.StatusOK, rec.Code)
+		var got sessionData
+		require.NoError(t, json.Unmarshal(decodeEnvelope(t, rec.Body.Bytes()).Data, &got))
+		assert.Equal(t, "abandoned", got.Status)
+
+		// 放弃 completed session：422 业务前置错误。
+		completed := startSessionViaAPI(t, engine, 1)
+		require.Equal(t, http.StatusOK, doJSON(t, engine, "POST",
+			submitPath(completed.SessionID, completed.Items[0].ItemID),
+			map[string]any{"result": "remembered"}).Code)
+		rec = doJSON(t, engine, "POST", "/api/v1/reviews/"+completed.SessionID+"/abandon", nil)
+		require.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+		e = decodeEnvelope(t, rec.Body.Bytes())
+		assert.Equal(t, "BASE.BIZ.USER_DISABLED", e.Code)
+		assert.Equal(t, "review session is not active", e.Message)
+
+		// 不存在的 session：404。
+		rec = doJSON(t, engine, "POST", "/api/v1/reviews/01991f3e-7b4c-7a20-8e3f-2c5d7a9b2001/abandon", nil)
+		require.Equal(t, http.StatusNotFound, rec.Code)
+		assert.Equal(t, "BASE.NOT_FOUND.USER", decodeEnvelope(t, rec.Body.Bytes()).Code)
+	})
 }
 
 // ---- 用例专属辅助 ----

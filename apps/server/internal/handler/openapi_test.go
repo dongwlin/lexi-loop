@@ -42,7 +42,7 @@ func TestBuildOpenAPISpec(t *testing.T) {
 	// ---- 路由与操作（docs/api/words.md §1、docs/api/reviews.md §1）----
 
 	ops := operationRefs(t, spec)
-	require.Len(t, ops, 8, "8 个业务操作")
+	require.Len(t, ops, 9, "9 个业务操作")
 
 	wantOps := map[string]string{
 		"post /api/v1/words/import":                       "import-words",
@@ -52,6 +52,7 @@ func TestBuildOpenAPISpec(t *testing.T) {
 		"delete /api/v1/words/{id}":                       "delete-word",
 		"post /api/v1/reviews":                            "start-review-session",
 		"post /api/v1/reviews/{sessionId}/items/{itemId}": "submit-review-result",
+		"post /api/v1/reviews/{sessionId}/abandon":        "abandon-review-session",
 		"get /api/v1/reviews/{id}":                        "get-review-session",
 	}
 	for key, opID := range wantOps {
@@ -67,6 +68,9 @@ func TestBuildOpenAPISpec(t *testing.T) {
 		if key == "post /api/v1/reviews" {
 			assert.True(t, has422, "开始复习契约保留业务前置条件 422")
 			assert.Contains(t, resp422.Description, "BASE.BIZ.USER_DISABLED")
+		} else if key == "post /api/v1/reviews/{sessionId}/abandon" {
+			assert.True(t, has422, "放弃复习契约保留业务前置条件 422")
+			assert.Contains(t, resp422.Description, "BASE.BIZ.USER_DISABLED")
 		} else {
 			assert.False(t, has422, "%s 的校验失败已降为 400，不得文档化 422", key)
 		}
@@ -75,6 +79,7 @@ func TestBuildOpenAPISpec(t *testing.T) {
 
 	for _, key := range []string{
 		"get /api/v1/words/{id}", "delete /api/v1/words/{id}", "get /api/v1/reviews/{id}",
+		"post /api/v1/reviews/{sessionId}/abandon",
 	} {
 		assert.Contains(t, ops[key].Responses, "404", "%s 契约含资源不存在", key)
 	}
