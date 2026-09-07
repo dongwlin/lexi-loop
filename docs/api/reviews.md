@@ -1,6 +1,6 @@
 # Review API（复习）
 
-> 复习接口的契约与两个最重要的约束：一轮开始、逐次作答、获取结果。
+> 复习接口的契约与核心约束：一轮开始、逐次作答、放弃进行中的一轮、获取结果。
 > Session 生命周期与 `review_items` 状态定义见 [review/data-model.md](../review/data-model.md)；抽样与权重算法见 [review/algorithm.md](../review/algorithm.md)。
 > 所有接口遵循 [HTTP API 设计规范](../specs/backend/HTTP%20API%20设计规范.md) 的标准响应结构。
 
@@ -10,6 +10,7 @@
 | --- | --- | --- |
 | POST | `/api/v1/reviews` | 开始一轮复习（抽词 + 建 session） |
 | POST | `/api/v1/reviews/:sessionId/items/:itemId` | 提交一个单词的结果（记得 / 不记得） |
+| POST | `/api/v1/reviews/:sessionId/abandon` | 放弃一轮进行中的复习（active → abandoned） |
 | GET | `/api/v1/reviews/:id` | 获取一轮复习的汇总与逐词结果 |
 
 `sessionId`、`:id` 与 `itemId` 均使用 UUID v7；路径和 JSON 中都按字符串传输。
@@ -131,6 +132,7 @@ RETURNING user_word_id
 - **幂等与归属校验合一**：`AND result = 'pending'` 保证只有未作答的 item 能被作答并计数一次（双击、重试天然短路）；`AND session_id = :session_id` 防止「session A 的 URL + session B 的 item_id」这类组合被错误提交。
 - 只有当上述 UPDATE 实际更新了一行（rows affected = 1），才继续更新 `user_words`：`review_count + 1` → `remember_count` / `forget_count + 1` → 更新 `current_streak` → 更新 `last_reviewed_at`。更新的目标行由 `RETURNING user_word_id` 返回，避免按 item_id 反查或信任客户端。`user_words` 字段见 [dictionary/data-model.md](../dictionary/data-model.md)，统计更新的含义见 [review/data-model.md](../review/data-model.md)。
 - 若 UPDATE 未命中任何行（item 不存在、不属于该 session、或已不是 `pending`），直接返回当前状态，不再计数。
+- session 本身已不是 `active`（abandoned / completed）时，同样幂等短路、不再计数——防止放弃或完成一轮之后，迟到的提交把结果计入已结束的轮次（放弃见第 6 节）。
 - item 条件更新、`user_words` 累计字段更新，以及最后一题触发的 session 汇总与完成必须处于同一个数据库事务；任何一步失败都整体回滚。同一 session 的提交先锁定 session 行并按顺序执行，因此并发提交不同 item 也不会漏掉最后完成；相同 item 的重复提交等待首个事务结束后走幂等短路，不会重复累计。
 
 幂等规则一句话：**只有 `pending` 状态允许被作答并计数一次，且 item 必须属于 URL 中的 session**，条件更新让重复请求与错配请求天然短路。
@@ -196,3 +198,38 @@ session 不存在时返回：
   "data": {}
 }
 ```
+
+## 6. 放弃一轮复习
+
+```text
+POST /api/v1/reviews/:sessionId/abandon
+```
+
+请求无请求体。成功响应：
+
+```json
+{
+  "code": "OK",
+  "message": "success",
+  "data": {}
+}
+```
+
+语义（生命周期见 [review/data-model.md](../review/data-model.md)）：
+
+- 仅 `active` 的 session 可放弃：置 `status = abandoned`（`completed_at` 保持为空），已完成作答的 items 与词级统计保持原样，不回滚。
+- **幂等**：对已是 `abandoned` 的 session 重复放弃同样返回成功，不报错——与提交的幂等短路哲学一致（D005）。
+- 对 `completed` 的 session 放弃属于客户端缺陷（一轮已完成后不存在「放弃」），返回 `422`：
+
+```json
+{
+  "code": "BASE.BIZ.USER_DISABLED",
+  "message": "review session is not active",
+  "data": {}
+}
+```
+
+- session 不存在时返回 `404`（同第 5 节的 `BASE.NOT_FOUND.USER`）。
+- 服务端无独立归属校验的额外要求：MVP 单用户阶段全库共享；V3 引入 `user_id` 后按用户校验归属（同 D005 的归属校验）。
+- 与开始一轮的并发关系：放弃持有 session 行锁，与提交共享同一锁顺序（session → item → user_word）；放弃与提交并发时二者串行，先提交者按第 3 节计数，先放弃者使后续提交幂等短路。
+- 前端「放弃本轮」调用本端点（UI 行为见 [frontend/review-flow.md](../frontend/review-flow.md) §6）；放弃成功后清除本地恢复快照并回到数量配置视图。

@@ -71,7 +71,7 @@ active（本轮所有 item 为 pending）
 边界行为：
 
 - **复习到 12/30 后关闭页面**：session 停留在 `active`，进度由 `review_items` 保存。
-- **重新进入 `/review`**：检测到存在 `active` 的未完成一轮时，提示「继续复习」或「放弃本轮」；继续则回到原进度（12/30），放弃则标记 `abandoned`。MVP 不自动进入旧 Session，也不自动放弃它——是否恢复由用户明确选择（UI 见 [frontend/review-flow.md](../frontend/review-flow.md)）。
+- **重新进入 `/review`**：检测到存在 `active` 的未完成一轮时，提示「继续复习」或「放弃本轮」；继续则回到原进度（12/30），放弃则由前端调用 `POST /api/v1/reviews/:sessionId/abandon` 显式标记 `abandoned`（契约见 [api/reviews.md](../api/reviews.md) §6）。MVP 不自动进入旧 Session，也不自动放弃它——是否恢复由用户明确选择（UI 见 [frontend/review-flow.md](../frontend/review-flow.md)）。
 - **同一时间只允许一个 `active` session**：`POST /api/v1/reviews` 创建新 session 时，若已存在 `active` 的一轮，先将其标记为 `abandoned` 再创建。用户明确开始新一轮，即视为放弃旧一轮。
 - **数据库最终约束**：MVP 单用户阶段通过 `WHERE status = 'active'` 的部分唯一索引保证全库至多一条 active session；创建流程同时使用事务级作用域锁串行化“放弃旧轮次 → 创建新轮次”。V3 引入 `user_id` 后，约束和锁均改为按用户隔离。具体事务顺序见 [backend/structure.md](../backend/structure.md)。
 
