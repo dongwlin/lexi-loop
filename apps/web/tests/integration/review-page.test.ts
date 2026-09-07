@@ -425,6 +425,43 @@ describe('复习页数量选择（review-flow §6）', () => {
     expect(postedBodies).toEqual([{ count: 25 }])
   })
 
+  it('自定义输入无效时隐藏截断提示，输入有效后恢复', async () => {
+    // 可复习量 3 < 预设 50：预设选中时出现 D009 截断提示。
+    server.use(
+      http.get('*/api/v1/words', () =>
+        HttpResponse.json({
+          code: 'OK',
+          message: 'success',
+          data: {
+            list: [],
+            pagination: {
+              page: 1,
+              pageSize: 1,
+              total: 3,
+              totalPages: 3,
+              hasMore: false,
+            },
+          },
+        }),
+      ),
+    )
+    const user = userEvent.setup()
+    await renderAppAtRoute('/review')
+
+    const hint = /当前只有 3 个可复习生词/
+    await user.click(screen.getByRole('button', { name: '50' }))
+    expect(screen.getByText(hint)).toBeInTheDocument()
+
+    // 切到自定义（空输入）：selectedCount 是残留值，提示会失真，一并隐藏。
+    await user.click(screen.getByRole('button', { name: '自定义' }))
+    expect(screen.queryByText(hint)).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+    // 输入有效数量后提示基于新选中值恢复。
+    await user.type(screen.getByLabelText('自定义数量'), '4')
+    expect(screen.getByText(hint)).toBeInTheDocument()
+  })
+
   it('逐键持久化：输入回退到空时停留在最后有效值并恢复', async () => {
     mockAvailableCount()
     const user = userEvent.setup()
