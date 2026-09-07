@@ -14,6 +14,11 @@ import { reviewSessionQueryOptions } from '@/features/review/api/queries'
 import { wordsListQueryOptions } from '@/features/words/api/queries'
 import { formatMeanings } from '@/utils/formatMeanings'
 import {
+  loadReviewCountPreference,
+  PRESET_COUNTS,
+  saveReviewCountPreference,
+} from '@/utils/review-count-preference'
+import {
   describeReviewAbandonError,
   describeReviewStartError,
 } from '@/utils/review-errors'
@@ -46,30 +51,42 @@ const queryClient = useQueryClient()
 
 // ---- 数量选择 ----
 
-const PRESET_COUNTS = [10, 20, 30, 50] as const
-const selectedCount = ref<number>(30)
-const customCountInput = ref('')
+// 预设数量与「自定义」是同一组选项（review-flow.md §6）：预设直接选中；点击
+// 「自定义」后该选项原地替换为数字输入框，有效输入即时生效，无确认按钮。
+// 上次选择（含自定义模式与输入值）持久化并在进入页面时恢复（review-flow.md §6）。
+const storedCountPreference = loadReviewCountPreference()
+
+const selectedCount = ref(storedCountPreference.count)
+const isCustomMode = ref(storedCountPreference.mode === 'custom')
+const customCountInput = ref(
+  storedCountPreference.mode === 'custom'
+    ? String(storedCountPreference.count)
+    : '',
+)
 const customCountError = ref<string | null>(null)
+const customCountInputRef = ref<HTMLInputElement | null>(null)
 
 // 可复习生词量取自 GET /words 分页 total（服务端候选集同为 deleted_at IS NULL 的生词），
 // 仅用于开始前的 D009 提示；截断本身由服务端 min(count, available) 保证。
 const availableCount = ref<number | null>(null)
 
 function selectPreset(count: number) {
-  selectedCount.value = count
-  customCountInput.value = ''
+  isCustomMode.value = false
   customCountError.value = null
+  selectedCount.value = count
+  saveReviewCountPreference({ mode: 'preset', count })
 }
 
-function applyCustomCount() {
-  const raw = customCountInput.value.trim()
-  const parsed = Number(raw)
-  if (!Number.isSafeInteger(parsed) || parsed < 1) {
-    customCountError.value = '请输入正整数'
-    return
-  }
+function enterCustomMode() {
+  isCustomMode.value = true
   customCountError.value = null
-  selectedCount.value = parsed
+  // 输入框带回上次输入的数量时即时生效；为空则保持当前选中值，开始时再校验。
+  const parsed = Number(customCountInput.value.trim())
+  if (Number.isSafeInteger(parsed) && parsed >= 1) {
+    selectedCount.value = parsed
+  }
+  // 「自定义」按钮被输入框替换，焦点移入输入框保持就地输入（交互与可访问性规范 §5.3）。
+  void nextTick(() => customCountInputRef.value?.focus())
 }
 
 // 输入状态必须是字符串：type="number" 上的 v-model 会把可解析输入写成 number，
@@ -77,12 +94,11 @@ function applyCustomCount() {
 function handleCountInput(event: Event) {
   customCountInput.value = (event.target as HTMLInputElement).value
   customCountError.value = null
-}
-
-function handleCountKeydown(event: KeyboardEvent) {
-  if (event.key === 'Enter') {
-    event.preventDefault()
-    applyCustomCount()
+  const parsed = Number(customCountInput.value.trim())
+  if (Number.isSafeInteger(parsed) && parsed >= 1) {
+    // 有效数量即时作为选中值并持久化（无需确认）；无效输入不覆盖上一次的有效选择。
+    selectedCount.value = parsed
+    saveReviewCountPreference({ mode: 'custom', count: parsed })
   }
 }
 
@@ -256,10 +272,14 @@ const isStarting = computed(() => startMutation.isPending.value)
 const startError = ref<string | null>(null)
 
 async function handleStart() {
-  // 自定义输入未点「确认」就直接开始时，先应用输入值，避免按旧预设数量开局。
-  if (customCountInput.value.trim()) {
-    applyCustomCount()
-    if (customCountError.value) return
+  // 自定义模式下直接使用当前输入值（无需确认）；输入无效时就地报错并阻止开始。
+  if (isCustomMode.value) {
+    const parsed = Number(customCountInput.value.trim())
+    if (!Number.isSafeInteger(parsed) || parsed < 1) {
+      customCountError.value = '请输入正整数'
+      return
+    }
+    selectedCount.value = parsed
   }
   await startNewSession(selectedCount.value)
 }
@@ -466,54 +486,48 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
     <template v-else-if="currentMode === 'idle'">
       <p class="mt-4 text-sm text-muted-foreground">今天想复习多少个单词？</p>
 
-      <!-- 预设数量按钮：选中态经 aria-pressed 同步表达（交互与可访问性规范 §10.2，不只依赖颜色） -->
-      <div class="mt-4 flex flex-wrap gap-2">
+      <!-- 数量选项：预设与自定义同一组（review-flow §6）；选中态经 aria-pressed
+           同步表达（交互与可访问性规范 §10.2，不只依赖颜色） -->
+      <div class="mt-4 flex flex-wrap items-center gap-2">
         <Button
           v-for="count in PRESET_COUNTS"
           :key="count"
           :variant="
-            selectedCount === count && !customCountInput ? 'secondary' : 'ghost'
+            !isCustomMode && selectedCount === count ? 'secondary' : 'ghost'
           "
-          :aria-pressed="selectedCount === count && !customCountInput"
+          :aria-pressed="!isCustomMode && selectedCount === count"
           @click="selectPreset(count)"
         >
           {{ count }}
         </Button>
-      </div>
 
-      <!-- 自定义输入 -->
-      <div class="mt-3 flex items-end gap-2">
-        <div class="flex-1">
-          <label for="custom-count" class="block text-sm text-muted-foreground">
-            或者自定义数量
-          </label>
-          <input
-            id="custom-count"
-            :value="customCountInput"
-            type="number"
-            min="1"
-            placeholder="例如 25"
-            class="mt-2 min-h-11 w-full rounded-field border border-field-border bg-field px-3 py-2 text-sm text-foreground shadow-field outline-hidden placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid enabled:hover:bg-field-hover"
-            @keydown="handleCountKeydown"
-            @input="handleCountInput"
-          />
-          <p
-            v-if="customCountError"
-            role="alert"
-            class="mt-1 text-xs text-danger-text"
-          >
-            {{ customCountError }}
-          </p>
-        </div>
-        <Button
-          variant="secondary"
-          class="shrink-0"
-          :disabled="!customCountInput.trim()"
-          @click="applyCustomCount"
-        >
-          确认
+        <!-- 「自定义」点击后原地替换为数字输入框：宽度与选项接近、文字居中，
+             避免其它选项与布局明显位移；有效输入即时生效，无确认按钮 -->
+        <input
+          v-if="isCustomMode"
+          id="custom-count"
+          ref="customCountInputRef"
+          :value="customCountInput"
+          type="number"
+          min="1"
+          aria-label="自定义数量"
+          placeholder="例如 25"
+          class="min-h-11 w-20 rounded-field border border-field-border bg-field px-2 py-2 text-center text-sm text-foreground shadow-field outline-hidden placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid enabled:hover:bg-field-hover"
+          @input="handleCountInput"
+        />
+        <Button v-else variant="ghost" @click="enterCustomMode">
+          自定义
         </Button>
       </div>
+
+      <!-- 自定义输入无效（空 / 非正整数）时就地提示，开始复习被阻止 -->
+      <p
+        v-if="customCountError"
+        role="alert"
+        class="mt-2 text-xs text-danger-text"
+      >
+        {{ customCountError }}
+      </p>
 
       <!-- 截断提示（D009）：开始前提示可用量不足，截断由服务端 min(count, available) 保证 -->
       <p v-if="hasTruncationWarning" class="mt-3 text-sm text-muted-foreground">
