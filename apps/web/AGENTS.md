@@ -4,7 +4,7 @@
 
 ## 当前状态：MVP 业务落地完成，页面基础设施就绪
 
-工程骨架（Vue 3 + vue-router + Pinia + TanStack Query + Tailwind CSS v4 + Reka UI / Radix Colors + Storybook 10）、设计系统主题层（`src/styles/`，Light / Dark / System）、由品牌 PNG 原始轮廓描摹的 SVG favicon（`public/favicon.svg`）、API Client 装配（workspace 包 [`packages/api-client`](../../packages/api-client/)：Orval 生成请求函数与 DTO 类型 + 手写 mutator 统一传输、`{code, message, data}` 解包与 `ApiError` 分类；web 侧装配点为 `src/lib/api.ts`）、Feature 层（`src/features/words/`、`src/features/review/` 的 keys / queries / mutations）、五个路由页面（导入页 `/import`、生词库 `/words`、生词详情 `/words/:id`、复习页 `/review`、复习结果页 `/review/result/:session`）、页面基础设施（路由 meta → `document.title`、SPA 页面级导航后焦点移到新页面主标题、skip link、main landmark、各页面 h1 与状态分支）、质量设施（ESLint + Prettier、jsdom + Testing Library、MSW、@storybook/addon-vitest + addon-a11y、Playwright；细节见《前端技术栈》§10/§11 与 README「质量与品牌」）与页面集成测试（`tests/integration/`，真实 Router + 全新 QueryClient + MSW）均已就绪。服务端契约缺口已补齐（2026-09-07）：列表 / 详情 DTO 返回 `masteryScore` / `reviewWeight`（D011 服务端动态计算，前端只展示），导入接口返回逐词结果，复习结果页「再来一轮」按 review-flow §9 定稿（以上一轮实际词数直接开始）。README 当前登记的 MVP 待办已全部完成；新增工作仍应同步维护 [README.md](README.md) 与此状态段，避免状态失真。
+工程骨架（Vue 3 + vue-router + Pinia + TanStack Query + Tailwind CSS v4 + Reka UI / Radix Colors + Storybook 10）、设计系统主题层（`src/styles/`，Light / Dark / System）、由品牌 PNG 原始轮廓描摹的 SVG favicon（`public/favicon.svg`）、API Client 装配（workspace 包 [`packages/api-client`](../../packages/api-client/)：Orval 生成请求函数与 DTO 类型 + 手写 mutator 统一传输、`{code, message, data}` 解包与 `ApiError` 分类；web 侧装配点为 `src/lib/api.ts`）、Feature 层（`src/features/words/`、`src/features/review/` 的 keys / queries / mutations）、五个路由页面（导入页 `/import`、生词库 `/words`、生词详情 `/words/:id`、复习页 `/review`、复习结果页 `/review/result/:session`）、页面基础设施（路由 meta → `document.title`、SPA 页面级导航后焦点移到新页面主标题、skip link、main landmark、各页面 h1 与状态分支）、质量设施（ESLint + Prettier、jsdom + Testing Library、MSW、@storybook/addon-vitest + addon-a11y、Playwright；细节见《前端技术栈》§10/§11 与 README「质量与品牌」）与页面集成测试（`tests/integration/`，真实 Router + 全新 QueryClient + MSW）均已就绪。服务端契约缺口已补齐（2026-09-07）：列表 / 详情 DTO 返回 `masteryScore` / `reviewWeight`（D011 服务端动态计算，前端只展示），导入接口返回逐词结果，复习结果页「再来一轮」按 review-flow §9 定稿（以上一轮实际词数直接开始）；「放弃本轮」接入 abandon 端点（api/reviews.md §6），复习页状态迁移后焦点跨帧校正回复习区域（修复恢复后快捷键失效）。README 当前登记的 MVP 待办已全部完成；新增工作仍应同步维护 [README.md](README.md) 与此状态段，避免状态失真。
 
 改动本子树任何代码前：先读 [docs/agent-log/](../../docs/agent-log/) 当月文件的最近记录了解上下文，再核对下表对应文档与当前代码。
 
@@ -64,7 +64,7 @@ pnpm -F @lexi-loop/api-client test:run  # api-client mutator / 生成端点单�
 
 - D011：权重 / mastery 由服务端动态计算，前端不复算公式；列表 / 详情 DTO 已返回 `masteryScore` / `reviewWeight`（api/words.md §3–§4），生词库 / 详情只做展示（掌握度百分比、优先级权重数值）。
 - D009：复习数量截断 `min(count, available)` 由服务端保证；前端开始前用 GET /words 分页 total（与复习候选集同为未删除生词）做不足提示，不自行复算公式。
-- D010：全库至多一个 active session，恢复由用户选择（继续 / 放弃）；服务端无 abandon 端点，「放弃本轮」只清本地快照，旧 session 由下一轮开始时自动 abandon（api/reviews.md）。
+- D010：全库至多一个 active session，恢复由用户选择（继续 / 放弃）；「放弃本轮」调用 abandon 端点（api/reviews.md §6）由服务端标记 abandoned，网络 / 5xx 失败保留本地快照可重试，404 / 422 视为轮次已结束清快照回配置视图；用户不放弃而直接开始新一轮时，服务端在开始事务内自动 abandon 旧 active。
 - D007：释义展示取值 `custom ?? review ?? raw` 语义以 dictionary/data-model.md 为准；清除自定义释义（PATCH null）后回退三层取值。
 - D004：删除生词为软删除语义（可重新导入恢复），界面不出现「物理删除」类表述。
 - D012：MVP 只做随机复习，不做到期调度 UI。
