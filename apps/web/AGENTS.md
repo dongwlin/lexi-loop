@@ -6,7 +6,7 @@
 
 阶段状态与后续规划见 [Roadmap](../../docs/product/roadmap.md)，运行、测试与实现入口见 [README.md](README.md)。现行领域规则继续生效；本文件不重复维护完成清单、端点数量或逐次修复记录。
 
-改动本子树任何代码前：先读 [docs/agent-log/](../../docs/agent-log/) 当月文件的最近记录了解上下文，再核对下表对应文档与当前代码。
+改动本子树任何代码前：先读 [docs/agent-log/](../../docs/agent-log/) 最新月份文件头部的最近记录了解上下文，再核对下表对应文档与当前代码。
 
 ## 权威文档速查（改动对象 → 先读）
 
@@ -42,7 +42,9 @@ pnpm -F @lexi-loop/api-client generate  # 后端契约变更（docs/openapi/ 更
 pnpm -F @lexi-loop/api-client test:run  # api-client mutator / 生成端点单测
 ```
 
-纯逻辑单元测试已覆盖 `lib/env`、`lib/storage/local-storage`、`stores/theme`、`utils/`（parseImportText / buildPageItems / parsePositiveInt / formatMeanings / meaningText / formatDateTime / review-snapshot / review-count-preference / review-resume / review-state-machine / review-keyboard / review-errors / isPageLevelNavigation）与各 Feature 的 query keys。质量设施已落地（《前端技术栈》§10/§11、测试规范 §15）：vitest.config.ts 按 projects 拆分——`web`（jsdom + tests/setup.ts 全局设施 + MSW 边界）与 `storybook`（Story 即浏览器测试 + addon-a11y 门禁，全局 `a11y.test: 'error'`，豁免须注释登记）；MSW handler 工厂在 `tests/mocks/`（按 api-client 生成类型构造的响应工厂），页面集成测试在 `tests/integration/`（`helpers.ts` 装配真实 Router + 全新 QueryClient + MSW，现覆盖生词库 / 详情 / 导入反馈 / 复习页（active session 恢复与数量选择）/ 复习结果「再来一轮」跨页行为与 api-client HTTP 边界）；Playwright 用例在 `e2e/`。组件 / 页面集成测试按《前端测试规范》§4 优先级随新增行为补充——新增组件与页面行为须带对应层级的测试，不再有「设施未落地」的豁免理由。
+测试按 [前端测试规范](../../docs/specs/frontend/前端测试规范.md) 选择层级：纯逻辑与页面集成测试使用 Vitest 的 `web` project，页面集成设施位于 `tests/integration/` 与 `tests/mocks/`；组件 Story 使用 `storybook` project 在真实 Chromium 中执行，并通过 axe 门禁；关键用户流程使用 `e2e/` 中的 Playwright 用例。新增组件与页面行为须补充对应层级测试。自动化单次运行 Story 测试用 `pnpm test:storybook --run`，避免停留在 watch 模式。
+
+契约生成与跨 workspace 验证见根 [AGENTS.md](../../AGENTS.md#契约与验证)；测试覆盖现状以当前测试文件为准，不在本文件维护逐项清单。
 
 ## 架构与实现要点
 

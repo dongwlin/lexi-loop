@@ -6,7 +6,7 @@
 
 阶段状态与后续规划见 [Roadmap](../../docs/product/roadmap.md)，运行、测试与实现入口见 [README.md](README.md)。现行领域规则继续生效；本文件不重复维护完成清单、端点数量或逐次修复记录。
 
-改动本子树任何代码前：先读 [docs/agent-log/](../../docs/agent-log/) 当月文件的最近记录了解上下文，再核对下表对应文档与当前代码。
+改动本子树任何代码前：先读 [docs/agent-log/](../../docs/agent-log/) 最新月份文件头部的最近记录了解上下文，再核对下表对应文档与当前代码。
 
 ## 权威文档速查（改动对象 → 先读）
 
@@ -16,7 +16,7 @@
 | `dictionary_entries` / `user_words` 字段与释义取值 | [docs/dictionary/data-model.md](../../docs/dictionary/data-model.md) |
 | `review_sessions` / `review_items` 字段与状态 | [docs/review/data-model.md](../../docs/review/data-model.md) |
 | 权重 / mastery / 抽样 | [docs/review/algorithm.md](../../docs/review/algorithm.md)（公式唯一权威，实现与测试不得另写一套） |
-| Word / Review HTTP 契约 | [docs/api/words.md](../../docs/api/words.md)、[docs/api/reviews.md](../../docs/api/reviews.md) |
+| Word / Review / Meta HTTP 契约 | [docs/api/words.md](../../docs/api/words.md)、[docs/api/reviews.md](../../docs/api/reviews.md)、[docs/api/meta.md](../../docs/api/meta.md) |
 | 响应结构 / 错误码 / 分页 / 路由版本 | [docs/specs/backend/HTTP API 设计规范.md](../../docs/specs/backend/HTTP%20API%20设计规范.md) |
 | 分层 / 事务 / 缓存通用规范 | [docs/specs/backend/Go 单体应用架构规范.md](../../docs/specs/backend/Go%20单体应用架构规范.md) |
 | 测试方法与并发测试要求 | [docs/specs/backend/Go 测试规范.md](../../docs/specs/backend/Go%20测试规范.md)、structure.md §5.4 |
@@ -38,7 +38,9 @@ LEXI_DATABASE_URL='postgres://lexi:lexi@localhost:5432/lexi_loop?sslmode=disable
 go run . openapi                  # 离线生成 /api/v1 的 OpenAPI 3.1 spec 至仓库根 docs/openapi/（不需要数据库；产物不手改）
 ```
 
-`infra/config`、`infra/buildinfo`、`infra/database`、`infra/logger`、`internal/repo`、`migrations`、`internal/apperr`、`internal/handler/httpresp`、`internal/service`、`internal/handler`、`internal/handler/middleware` 与 `internal/importer/ecdict` 已有测试（apperr / httpresp / sampler / ecdict 解析映射 / logger / middleware / buildinfo 默认值 / OpenAPI spec 构造为纯单元测试，其余含集成）：`infra/database`、`internal/repo`、`migrations`、`internal/service`、`internal/handler` 与 `internal/importer/ecdict` 的集成测试各自在包级 `TestMain` 中启动一次共享的真实 PostgreSQL 容器（镜像 `postgres:18-alpine`，全部用例复用；各包 `TestMain` 会先应用全部迁移）；无 Docker 或传 `-short` 时集成用例跳过、单元测试仍运行。structure.md §5.4 列出的并发 / 回滚必测场景（单 active session、同 item 并发提交只累计一次、最后两 item 并发提交后 session 必为 completed、提交中注入失败整体回滚、items 中途失败不留半成品 session）已在 Service 层验证，失败注入使用测试库临时触发器与真实 SQL 篡改，不触碰 migrations；`internal/importer/ecdict` 以小型固定 CSV 验证字段映射、幂等重跑与批次回滚续传。
+集成测试使用 testcontainers + 真实 PostgreSQL；本地无 Docker 或传 `-short` 时会跳过，不能据此判断数据库行为已通过验证。涉及事务与并发时，按 [structure.md §5.4](../../docs/backend/structure.md#54-lexiloop-必测并发与回滚场景) 覆盖必测场景，并运行 `go test -race -count=1 ./...`。测试方法以 [Go 测试规范](../../docs/specs/backend/Go%20测试规范.md) 为准，CI 会拒绝集成测试被跳过。
+
+HTTP 契约变更后，按根 [AGENTS.md](../../AGENTS.md#契约与验证) 完成 OpenAPI 与客户端重新生成，并将生成物与实现一同交付。
 
 ## 分层实现要点
 

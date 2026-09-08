@@ -17,9 +17,26 @@ PRD（product/prd.md：做什么）
 
 新人/Agent 先读 [docs/architecture/overview.md](docs/architecture/overview.md)，再按需下沉；导航与权威关系表见 [docs/README.md](docs/README.md)。在 `apps/server` / `apps/web` 内工作时，先读对应子树级指引（与本文档叠加生效）：[apps/server/AGENTS.md](apps/server/AGENTS.md)、[apps/web/AGENTS.md](apps/web/AGENTS.md)。
 
+## 按任务选择入口
+
+| 任务 | 入口与范围 |
+| --- | --- |
+| 后端实现 | [apps/server/AGENTS.md](apps/server/AGENTS.md) 与 [运行说明](apps/server/README.md) |
+| 前端实现 | [apps/web/AGENTS.md](apps/web/AGENTS.md) 与 [运行说明](apps/web/README.md) |
+| 共享 API 客户端 | [packages/api-client/README.md](packages/api-client/README.md) 与 [前端 API 集成规范](docs/specs/frontend/前端%20API%20与认证集成规范.md) |
+| 构建、词典数据与发布 | [docs/deploy/release.md](docs/deploy/release.md)；发布脚本会提交与推送，执行前确认任务包含发布 |
+| 文档修改 | 下方权威表与 [docs/README.md](docs/README.md)；变更规则时同步显式引用，纯排版不改规则 |
+
+## 契约与验证
+
+- API 契约变更按 `docs/api/*` → 后端 Handler / DTO → `docs/openapi/` → `packages/api-client` → 前端调用方的顺序同步。先在 `apps/server` 执行 `go run . openapi`，再在仓库根执行 `pnpm -F @lexi-loop/api-client generate`；生成流程见 [API 客户端说明](packages/api-client/README.md#重新生成)。OpenAPI、派生 spec 与 `src/generated/` 不手改。
+- 根 `package.json` 的 `build` 只构建 web，`typecheck` / `test:run` 覆盖 pnpm workspace，不包含 Go 后端。后端检查进入 `apps/server` 执行；命令与环境前提见子树指引。
+- 根据改动范围执行相应检查；完整门禁以 [.github/workflows/ci.yml](.github/workflows/ci.yml) 为准。数据库与事务变更须实际运行 PostgreSQL 集成测试；因环境跳过时明确说明，不能记为已验证。
+- 纯文档改动检查本地链接、章节引用与 `git diff --check`，不要求运行应用测试。完成前审阅 diff，确认没有意外生成物或无关改动，再记录实际验证结果。
+
 ## Agent 工作记录
 
-- 开始任何会修改仓库的任务前，查看 [docs/agent-log/](docs/agent-log/) 中最新月份文件的最近记录，用于了解近期改动与上下文。日志只是辅助线索；实际工作前仍须核对相关权威文档和当前文件。
+- 开始任何会修改仓库的任务前，查看 [docs/agent-log/](docs/agent-log/) 中按文件名排序最新的 `YYYY-MM.md` 文件头部的最近记录，用于了解近期改动与上下文。日志只是辅助线索；实际工作前仍须核对相关权威文档和当前文件。
 - 完成一个产生仓库文件变化的工作单元后，由主 Agent 按 [docs/agent-log/README.md](docs/agent-log/README.md) 的格式记录。纯问答、只读分析、未落地的方案和中间命令不记录。
 - 多 Agent 协作时，子 Agent 只向主 Agent 报告结果，由主 Agent 在整体任务完成后统一写入一条日志，避免并发修改。
 - Agent Log 不是产品、架构、API、schema、公式或决策的权威来源，不得用日志替代正文修改。与正式文档冲突时，以本文件指定的领域权威文档为准。
@@ -30,6 +47,8 @@ PRD（product/prd.md：做什么）
 | --- | --- | --- |
 | 产品目标 / MVP | [docs/product/prd.md](docs/product/prd.md) | 引用 |
 | 阶段规划 | [docs/product/roadmap.md](docs/product/roadmap.md) | 引用 |
+| 系统总体架构 / Monorepo 布局 | [docs/architecture/overview.md](docs/architecture/overview.md) | 引用 |
+| 词典方案 / 数据源分工 | [docs/dictionary/overview.md](docs/dictionary/overview.md) | 引用 |
 | 四表关系级模型 | [docs/architecture/data-model.md](docs/architecture/data-model.md) | 引用 |
 | `dictionary_entries` / `user_words` 字段 | [docs/dictionary/data-model.md](docs/dictionary/data-model.md) | 引用 |
 | 词形归一 | [docs/dictionary/normalization.md](docs/dictionary/normalization.md) | 引用 |
@@ -38,7 +57,7 @@ PRD（product/prd.md：做什么）
 | 权重公式 / mastery / 抽样 | [docs/review/algorithm.md](docs/review/algorithm.md) | 引用 |
 | Word API | [docs/api/words.md](docs/api/words.md) | 引用 |
 | Review API | [docs/api/reviews.md](docs/api/reviews.md) | 引用 |
-| Meta API（版本信息） | [docs/api/meta.md](docs/api/meta.md) | 引用 |
+| Meta API（版本信息 / 词典导入进度） | [docs/api/meta.md](docs/api/meta.md) | 引用 |
 | 发布流程（tag → 镜像构建 → compose） | [docs/deploy/release.md](docs/deploy/release.md) | 引用 |
 | 页面与状态机 | [docs/frontend/review-flow.md](docs/frontend/review-flow.md) | 引用 |
 | Go 工程结构 | [docs/backend/structure.md](docs/backend/structure.md) | 引用 |
