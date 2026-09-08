@@ -75,7 +75,7 @@ docs/
 │  ├─ openapi.json            OpenAPI 3.1 spec（由 `lexi-loop openapi` 离线生成，勿手改；契约权威仍是 api/*）
 │  └─ openapi.yaml            同上（YAML 格式）
 ├─ deploy/
-│  └─ release.md              发布流程（tag → release.sh → compose）、词典数据依赖与容器运行时切换
+│  └─ release.md              发布流程（tag → GitHub Actions → GHCR → compose）、词典数据依赖与容器运行时切换
 ├─ specs/
 │  ├─ backend/
 │  │  ├─ Go 技术栈.md          后端框架 / 数据库 / CLI / 日志 / 测试等选型

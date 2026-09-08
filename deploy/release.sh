@@ -6,7 +6,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-IMAGE="${LEXI_IMAGE:-lexi-loop}"
+IMAGE="${LEXI_IMAGE:-ghcr.io/dongwlin/lexi-loop}"
 RUNTIME="${CONTAINER_RUNTIME:-}"
 PUSH=0
 STRICT=0
@@ -23,7 +23,7 @@ server 二进制（infra/buildinfo，经 /api/v1/version 与 lexi-loop version �
 选项:
   -r, --runtime RUNTIME  容器运行时：docker 或 podman；缺省自动探测（先 docker 后
                          podman），也可用环境变量 CONTAINER_RUNTIME 指定
-  -i, --image NAME       镜像名，可含 registry 前缀（缺省 lexi-loop，环境变量 LEXI_IMAGE）
+  -i, --image NAME       镜像名，可含 registry 前缀（缺省 ghcr.io/dongwlin/lexi-loop，环境变量 LEXI_IMAGE）
       --push             构建成功后 push 上述全部镜像 tag
       --strict           严格模式：deploy/dict/ecdict.csv 缺失时构建失败
                          （缺省只警告，产出「无词典数据」镜像，运行期自动导入跳过）

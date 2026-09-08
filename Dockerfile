@@ -35,7 +35,7 @@ WORKDIR /src/apps/server
 
 COPY apps/server ./
 
-# VERSION 由构建方注入；发布构建直接用 deploy/release.sh（见 docs/deploy/release.md），
+# VERSION 由构建方注入；发布构建由 GitHub Actions 或 deploy/release.sh 执行（见 docs/deploy/release.md），
 # 手动构建可传 --build-arg VERSION="$(git describe --tags --always --dirty)"；
 # 未注入时为开发构建占位 dev，构建时间取镜像构建时刻（infra/buildinfo）。
 ARG VERSION=dev

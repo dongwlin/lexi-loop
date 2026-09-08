@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    name: Server
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/server
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: apps/server/go.mod
+          cache-dependency-path: apps/server/go.sum
+      - name: Check formatting
+        run: test -z "$(gofmt -l .)"
+      - run: go vet ./...
+      - run: go build ./...
+      - name: Test with PostgreSQL and race detector
+        shell: bash
+        run: |
+          docker info > /dev/null
+          go test -race -count=1 -json ./... | tee "$RUNNER_TEMP/server-tests.jsonl"
+          # TestMain allows local runs without Docker; CI must never silently skip integration tests.
+          if grep -q 'testcontainers 不可用' "$RUNNER_TEMP/server-tests.jsonl"; then
+            echo '::error::PostgreSQL integration tests were skipped'
+            exit 1
+          fi
+      - name: Check OpenAPI generation
+        run: |
+          go run . openapi
+          git diff --exit-code -- ../../docs/openapi
+
+  web:
+    name: Web and API client
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Enable pinned pnpm
+        run: corepack enable && corepack install
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -F @lexi-loop/web exec playwright install --with-deps chromium
+      - name: Check API client generation
+        run: |
+          pnpm -F @lexi-loop/api-client generate
+          git diff --exit-code -- packages/api-client
+      - run: pnpm typecheck
+      - run: pnpm -F @lexi-loop/web lint
+      - run: pnpm test:run
+      - run: pnpm -F @lexi-loop/web storybook:build
+      # Playwright starts a production build + preview through its webServer configuration.
+      - run: pnpm -F @lexi-loop/web test:e2e

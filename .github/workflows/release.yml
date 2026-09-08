@@ -1,0 +1,91 @@
+name: Release container
+
+on:
+  push:
+    tags: ['v*']
+  # Allows retrying an existing tag that already contains this workflow.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-container
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: Validate release tag
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require a stable version tag
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          if [[ "$REF_TYPE" != tag || ! "$VERSION" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo '::error::Select or push a stable vX.Y.Z tag to publish'
+            exit 1
+          fi
+
+  checks:
+    needs: version
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    name: Publish GHCR image
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: Prepare image name
+        id: image
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: echo "name=ghcr.io/${REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - name: Fetch and verify bundled dictionary
+        run: |
+          deploy/dict/fetch.sh
+          test -s deploy/dict/ecdict.csv
+          test -s deploy/dict/manifest.json
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          # Path context includes dictionary files downloaded above.
+          context: .
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            VERSION=${{ github.ref_name }}
+          tags: |
+            ${{ steps.image.outputs.name }}:${{ github.ref_name }}
+            ${{ steps.image.outputs.name }}:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ github.ref_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Summarize release
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}
+          VERSION: ${{ github.ref_name }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          {
+            echo "Published: \`$IMAGE:$VERSION\` and \`$IMAGE:latest\`"
+            echo
+            echo "Digest: \`$IMAGE@$DIGEST\`"
+          } >> "$GITHUB_STEP_SUMMARY"
