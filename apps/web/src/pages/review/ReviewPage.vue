@@ -551,7 +551,7 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
           :aria-describedby="
             customCountError ? 'custom-count-error' : undefined
           "
-          class="min-h-11 w-20 rounded-field border border-field-border bg-field px-2 py-2 text-center text-sm text-foreground shadow-field outline-hidden placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid enabled:hover:bg-field-hover"
+          class="min-h-11 w-20 rounded-field border border-primary bg-field px-2 py-2 text-center text-sm text-foreground shadow-field outline-hidden placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid enabled:hover:bg-field-hover aria-invalid:border-danger-text aria-invalid:focus-visible:outline-danger-text"
           @input="handleCountInput"
         />
         <Button v-else variant="ghost" class="w-20" @click="enterCustomMode">
