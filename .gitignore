@@ -19,6 +19,9 @@ deploy/dict/ecdict.csv
 deploy/dict/ecdict.csv.part
 deploy/dict/manifest.json
 
+# Markdown review artifacts (md-review-server sidecar comments, local only)
+docs/.reviews/
+
 # OS / editor
 .DS_Store
 .idea/
