@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest'
 import {
   advanceAfterAnswer,
   enterReview,
-  revealCard,
+  chooseReviewResult,
+  correctReviewResult,
 } from './review-state-machine'
 
 describe('enterReview', () => {
@@ -26,21 +27,30 @@ describe('enterReview', () => {
   })
 })
 
-describe('revealCard', () => {
-  it('recalling 且有当前卡时迁入 revealed', () => {
-    expect(revealCard('recalling', true)).toBe('revealed')
+describe('chooseReviewResult', () => {
+  it.each(['remembered', 'forgotten'] as const)(
+    '初选 %s 只进入揭示阶段',
+    (result) => {
+      expect(chooseReviewResult('recalling', true, result)).toEqual({
+        mode: 'revealed',
+        pendingResult: result,
+      })
+    },
+  )
+  it('拒绝重复选择、未开始与无卡状态', () => {
+    expect(chooseReviewResult('revealed', true, 'remembered')).toBeNull()
+    expect(chooseReviewResult('idle', true, 'forgotten')).toBeNull()
+    expect(chooseReviewResult('recalling', false, 'forgotten')).toBeNull()
   })
+})
 
-  it('已 revealed 不迁移（重复揭示被吸收）', () => {
-    expect(revealCard('revealed', true)).toBeNull()
-  })
-
-  it('idle 不迁移（未开始）', () => {
-    expect(revealCard('idle', true)).toBeNull()
-  })
-
-  it('无当前卡不迁移', () => {
-    expect(revealCard('recalling', false)).toBeNull()
+describe('correctReviewResult', () => {
+  it('仅在揭示阶段将认识改为不认识', () => {
+    expect(correctReviewResult('revealed', 'remembered')).toBe('forgotten')
+    expect(correctReviewResult('revealed', 'forgotten')).toBeNull()
+    expect(correctReviewResult('revealed', null)).toBeNull()
+    expect(correctReviewResult('recalling', 'remembered')).toBeNull()
+    expect(correctReviewResult('idle', 'remembered')).toBeNull()
   })
 })
 
