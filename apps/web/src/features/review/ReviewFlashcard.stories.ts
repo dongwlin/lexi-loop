@@ -33,3 +33,21 @@ export const Submitting: Story = {
 export const Retry: Story = {
   args: { mode: 'revealed', error: '提交失败，请点击「下一词」重试。' },
 }
+export const Multiline: Story = {
+  args: {
+    mode: 'revealed',
+    canCorrect: true,
+    meaning: 'adj. 模棱两可的\n含糊不清的',
+  },
+}
+export const LongContent: Story = {
+  args: {
+    mode: 'revealed',
+    word: 'pneumonoultramicroscopicsilicovolcanoconiosis',
+    meaning: Array.from(
+      { length: 12 },
+      (_, i) =>
+        `释义 ${i + 1}：很长的释义应完整展示，并允许按容器宽度自动换行。`,
+    ).join('\n'),
+  },
+}
