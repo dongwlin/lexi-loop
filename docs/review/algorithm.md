@@ -111,7 +111,7 @@ weight ≈ 1 + 2.58 + 2.68 + 2 + 0.57 + 0 ≈ 8.83
 
 ## 6. mastery_score
 
-`mastery_score`（掌握程度）与 `review_weight`（复习优先级）是两个指标，前者衡量「这个词我掌握了吗」，后者衡量「这个词现在值不值得抽出来复习」。一个词 `mastery = 80%`，但两个月没有复习，`review_weight` 仍然可能升高——因为时间因素。产品语义见 [prd.md](../product/prd.md)。
+掌握程度与复习优先级的产品区别见 [PRD §10](../product/prd.md#10-掌握程度与复习优先级是两个指标)。
 
 `mastery_score` 第一版直接从计数推导、不落库，采用平滑处理：
 
@@ -139,29 +139,6 @@ V2 改为统计最近 N 次结果，或对越新的结果赋予更高权重（�
 
 ## 9. 版本边界（算法演进）
 
-```text
-MVP Weight
-↓
-Recent-N / 指数衰减
-↓
-FSRS / 到期复习
-```
-
-### MVP
-
-使用 `encounter_count`、`remember_count`、`forget_count`、`current_streak`、`last_reviewed_at` 足够（即本文档第 3～8 节的公式）。
-
-复习存在两种形态（产品语义见 [roadmap.md](../product/roadmap.md)），第一版只实现 A：
-
-- **A. 随机复习**：用户指定「我现在想背 30 个」，系统加权随机抽取。第一版实现。
-- **B. 到期复习**：系统判断某些词已接近遗忘临界点，提示「今天有 23 个单词建议复习」。传统 SRS 形态，第一版不做。
-
-### V2
-
-加入最近 N 次复习表现统计、对越新结果加权（指数衰减），评估「到期复习」提示。数据来源是逐次的 `review_items`（[review/data-model.md](data-model.md)）。
-
-### V3
-
-再评估 FSRS 这类完整的间隔重复算法，第一版不引入。
+现行算法由第 3～8 节定义。后续 Recent-N / 指数衰减使用逐次 `review_items`（[复习数据模型](data-model.md)）；到期提示与 FSRS 的阶段安排统一见 [Roadmap](../product/roadmap.md)。
 
 > 改公式时，同步更新本文档第 3、4、5 节（公式、新词规则与最终示例），避免三处不一致。

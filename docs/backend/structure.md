@@ -276,27 +276,10 @@ MVP 只实现本地词典 Lookup、Word API、随机复习、复习历史及上�
 - `user_id` 属于 V3；当前通过 `UNIQUE(dictionary_entry_id)` 保证单用户的一词一行。
 - tags、collections、decks、folders、user_word_relations、word_variants 不属于 MVP。
 
-缓存仍默认关闭。只有指标或压测证明数据库读取是实际瓶颈，且业务能接受明确 TTL 内的陈旧时，才能在对应 Service 中引入 Ristretto；启用前必须定义容量 cost、TTL、失效键和 hit / miss / rejection / eviction 等观测指标。届时只缓存不可变值快照，每次命中都构造新的 Domain 值；事务成功提交后再失效相关键，并保证 miss、Set 被拒绝或条目被淘汰时仍以 PostgreSQL 为事实源。强一致读取不经过进程内缓存。
+缓存默认关闭，按证据启用的条件、不可变快照、失效与一致性要求统一见 [Go 单体应用架构规范 §10](../specs/backend/Go%20单体应用架构规范.md#10-缓存策略)。
 
 `dictionary_entries` / `user_words` 拆分、软删除、四表链路、Review Submit 幂等和单 active session 均是 MVP 必须实现的冻结决策，不能作为“后续优化”跳过。
 
 ## 10. 反模式提醒
 
-| 反模式 | 正确做法 |
-| --- | --- |
-| 贫血模型，规则散落在 Service | 不依赖外部资源的规则放入 Domain 方法或纯领域函数 |
-| schema 泄漏 | schema 限定在 `repo/internal/schema` |
-| Handler / Cobra Command 写业务逻辑 | 委托 Service、Importer 或 Domain |
-| Domain 方法查库或访问外部资源 | 外部资源校验由 Service 编排，Domain 只操作自身字段 |
-| Repo 作为长生命周期单例注入 | 在 Service / Importer 方法内用当前 `bun.IDB` 即用即弃 |
-| Service 直接构造 SQL | 所有 PostgreSQL 操作委托 Repo |
-| 事务内混用 `s.db` 与 `tx` | 同一事务中的全部 Repo 都使用传入的 `bun.Tx` |
-| Review item 与累计统计分开提交 | `SubmitResult` 的全部状态变化使用同一事务 |
-| 先查 active 再无保护地创建 | advisory transaction lock + 部分唯一索引 |
-| Service 直接修改 Domain 字段 | 调用 Domain 方法执行状态迁移和不变量检查 |
-| 状态字符串散落在各层 | 在 Domain 定义类型化常量，Repo 集中转换 |
-| 按错误文本分支 | `errors.Is` / `errors.As` + `apperr.Kind/Code` |
-| 各 Handler 自行映射 HTTP 状态 | 统一经过 `handler/httpresp` |
-| 仅为未来替换创建接口 | 出现真实多实现或窄外部边界时再抽取接口 |
-| API 版本复制 Service | 只版本化 Handler/DTO，复用业务用例 |
-| 缓存可变 Domain 指针 | 缓存不可变值快照，每次命中返回新值 |
+通用反模式见 [Go 单体应用架构规范 §12](../specs/backend/Go%20单体应用架构规范.md#12-反模式清单)，各层职责见本文第 4 节。项目特有检查：Cobra 不承载业务逻辑；复习提交不得拆开 item 与累计统计的事务；开始一轮不得绕过作用域锁和单 active 约束（第 5 节）。

@@ -62,7 +62,7 @@ POST /api/v1/reviews
 
 服务器完成：获取候选词（`deleted_at IS NULL` 的 `user_words`，join 词典信息）→ 计算每个词权重（[review/algorithm.md](../review/algorithm.md)）→ 加权随机不放回抽取 → 创建 `review_session`（若已存在 `active` session，先标记 abandoned，规则见 [review/data-model.md](../review/data-model.md)）→ 创建对应数量的 `review_items` → 返回本轮单词。
 
-上述“放弃旧 active session → 抽样 → 创建新 session 与全部 items”在同一数据库事务中完成。MVP 通过事务级作用域锁串行化并发创建，并由 active session 的部分唯一索引兜底；不会向客户端返回只创建了 session、但 items 不完整的结果。具体事务顺序见 [backend/structure.md](../backend/structure.md)。
+上述“放弃旧 active session → 抽样 → 创建新 session 与全部 items”在同一数据库事务中完成。并发创建也必须保证单 active，不会返回 items 不完整的结果。具体事务顺序见 [backend/structure.md](../backend/structure.md)。
 
 ### 契约：count 超出可复习词数 → 截断而不是报错
 
@@ -130,12 +130,10 @@ RETURNING user_word_id
 ```
 
 - **幂等与归属校验合一**：`AND result = 'pending'` 保证只有未作答的 item 能被作答并计数一次（双击、重试天然短路）；`AND session_id = :session_id` 防止「session A 的 URL + session B 的 item_id」这类组合被错误提交。
-- 只有当上述 UPDATE 实际更新了一行（rows affected = 1），才继续更新 `user_words`：`review_count + 1` → `remember_count` / `forget_count + 1` → 更新 `current_streak` → 更新 `last_reviewed_at`。更新的目标行由 `RETURNING user_word_id` 返回，避免按 item_id 反查或信任客户端。`user_words` 字段见 [dictionary/data-model.md](../dictionary/data-model.md)，统计更新的含义见 [review/data-model.md](../review/data-model.md)。
+- 只有当上述 UPDATE 实际更新了一行（rows affected = 1），才继续更新 `user_words`：`review_count + 1` → `remember_count` / `forget_count + 1` → 更新 `current_streak` → 将 `last_reviewed_at` 设为本次作答时间（与 item 的 `reviewed_at` 使用同一个 `now`）。更新的目标行由 `RETURNING user_word_id` 返回，避免按 item_id 反查或信任客户端。`user_words` 字段见 [dictionary/data-model.md](../dictionary/data-model.md)，统计更新的含义见 [review/data-model.md](../review/data-model.md)。
 - 若 UPDATE 未命中任何行（item 不存在、不属于该 session、或已不是 `pending`），直接返回当前状态，不再计数。
 - session 本身已不是 `active`（abandoned / completed）时，同样幂等短路、不再计数——防止放弃或完成一轮之后，迟到的提交把结果计入已结束的轮次（放弃见第 6 节）。
 - item 条件更新、`user_words` 累计字段更新，以及最后一题触发的 session 汇总与完成必须处于同一个数据库事务；任何一步失败都整体回滚。同一 session 的提交先锁定 session 行并按顺序执行，因此并发提交不同 item 也不会漏掉最后完成；相同 item 的重复提交等待首个事务结束后走幂等短路，不会重复累计。
-
-幂等规则一句话：**只有 `pending` 状态允许被作答并计数一次，且 item 必须属于 URL 中的 session**，条件更新让重复请求与错配请求天然短路。
 
 ## 4. streak 更新
 

@@ -4,30 +4,14 @@
 
 ## 1. 数据链路
 
-```text
-导入期（镜像内置，serve 启动后异步执行）
-deploy/dict/ 内置词典（pinned ECDICT）→ serve 后 goroutine 自动导入 → dictionary_entries（本地词典库本体）
-（手动逃生口：lexi-loop import-ecdict 命令保留；导入进度经 Meta API 暴露，见 ../api/meta.md）
-
-运行时（MVP）
-输入 → 本地词典库查询 → 返回
-
-运行时（第二阶段起，按需触发）
-本地词典库未命中 → Lookup → Online Provider → 创建词条
-已有本地词条缺少增强字段 → Enrich → Online Provider → 补英文释义 / 音频 / 例句 → Merge
-```
+ECDICT 在导入期写入 `dictionary_entries`，该表就是本地词典库本体，运行时不会再次查询 ECDICT 文件（D001）。
 
 ```text
-ECDICT
-  ↓（离线导入）
-dictionary_entries（本地词典库本体）
-  ↓
-DictionaryRepository（查 dictionary_entries）
-  ↓
-DictionaryService（Lookup / Enrich）
+导入期：ECDICT → 离线导入 → dictionary_entries
+运行时：业务 → DictionaryService → DictionaryRepository → dictionary_entries
 ```
 
-Online Provider（V2 起）只面向两条在线链路：Lookup 兜底与 Enrich 增强，详见 [enrichment.md](enrichment.md)。
+MVP 查询未命中时创建最小词条。现行异步导入与守卫机制、V2 在线 Lookup / Enrich 设计见 [enrichment.md](enrichment.md)。部署入口见 [release.md](../deploy/release.md)，导入进度见 [Meta API §3](../api/meta.md#3-词典导入进度)。
 
 ## 2. 目标
 
@@ -54,7 +38,7 @@ Online Provider（V2 起）只面向两条在线链路：Lookup 兜底与 Enrich
 
 ### 原则一：本地优先
 
-`dictionary_entries` 就是本地词典库本体（ECDICT 随镜像分发，serve 启动后在进程内异步导入——不阻塞 HTTP 启动，前端右上角展示导入进度），MVP 运行时全部走本地、不依赖网络。复习页面无需等待第三方词典。详细论证见 [enrichment.md](enrichment.md)。
+MVP 查询与复习均使用本地词典库，不等待第三方服务；导入流程见第 1 节。
 
 ### 原则二：AI 不制造词典事实
 
@@ -62,7 +46,7 @@ AI 只做 `raw_meanings → 整理 → review_meanings` 的 presentation / trans
 
 ### 原则三：词典数据 ≠ 用户学习数据
 
-词典字段（音标、释义等）与学习字段（遇词次数、复习结果等）分属 `dictionary_entries` 与 `user_words` 两张表。用户只能覆盖自己的 `user_words`，绝不修改共享的 `dictionary_entries`。见 [data-model.md](data-model.md)。
+词典事实与个人学习状态分开维护；字段归属与个人释义覆盖规则见 [data-model.md](data-model.md)。
 
 ## 4. 为什么不使用实时翻译 API 作为核心方案
 
@@ -79,14 +63,6 @@ AI 只做 `raw_meanings → 整理 → review_meanings` 的 presentation / trans
 
 ## 5. 数据源分工
 
-```text
-ECDICT（本地核心，离线导入期数据源）
-↓
-Free Dictionary API（在线补充，Lookup 兜底 + Enrich 增强）
-↓
-AI（整理层，不制造词典事实）
-```
-
 - **ECDICT** 提供：中文释义、音标、词性、词形变化、lemma / 单词原形、BNC / COCA 词频、Oxford / Collins 等辅助标签、CET4 / CET6 / 高考等考试标签。
 - **Free Dictionary API** 补充：结构化词性、英文释义、英文例句、发音、音频、同义词、反义词。
 - **AI** 只负责压缩过长释义、合并重复义项、整理成适合复习的形式、按考试场景选常用义项——原始词典数据始终保留。
@@ -95,15 +71,7 @@ AI（整理层，不制造词典事实）
 
 ## 6. 能力阶段边界
 
-词典相关能力的阶段状态（完整产品 Roadmap 仍以 [product/roadmap.md](../product/roadmap.md) 为准）：
-
-```text
-MVP    ECDICT only（本地词典库查询 + 最小词条兜底）
-V2     Lookup 在线分支 + Enrich
-V3     AI review_meanings（raw_meanings → AI → review_meanings）
-```
-
-各阶段的能力清单见 [enrichment.md](enrichment.md) 与 [data-model.md](data-model.md) 的说明。
+能力阶段统一见 [Roadmap](../product/roadmap.md#1-版本总览)；在线链路与 AI 整理的设计分别见 [enrichment.md](enrichment.md) 和 [data-model.md](data-model.md)。
 
 ## 7. 文档导览
 

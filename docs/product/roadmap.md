@@ -17,12 +17,7 @@ V3（AI 整理 + 完整 SRS + 多用户）
 
 ### MVP（已完成，现行基线）
 
-- **生词导入**：多行批量粘贴；同一单词重复导入累计遇词次数；词形归并（见 [dictionary/normalization.md](../dictionary/normalization.md)）。
-- **本地词典**：ECDICT 全量随镜像内置，serve 启动后异步导入本地（右上角展示导入进度），导入即自动补全原形 / 音标 / 词性 / 中文释义（见 [dictionary/overview.md](../dictionary/overview.md)）。
-- **加权随机复习**：用户选定本轮数量 → 一轮固定抽取（加权、不放回）→ 先回忆后看释义 → 记得 / 不记得（页面交互见 [frontend/review-flow.md](../frontend/review-flow.md)，算法见 [review/algorithm.md](../review/algorithm.md)）。
-- **复习历史**：`review_sessions` / `review_items` 逐次记录；每词统计、掌握程度与复习优先级展示（数据模型见 [review/data-model.md](../review/data-model.md)）。
-
-MVP 明确不做：到期复习提醒、完整 SRS / FSRS、词典在线增强（Lookup 在线分支与 Enrich）、AI 整理、多用户。MVP 的完成标准见第 3 节。
+已交付生词导入与本地词典、加权随机复习、复习历史与统计。现行能力和排除项见 [PRD §11](prd.md#11-第一版-mvp)，完成依据见第 3 节；后续能力按以下阶段推进。
 
 ### V2（后续规划）
 

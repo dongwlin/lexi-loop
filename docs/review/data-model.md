@@ -37,7 +37,6 @@ created_at
 reviewed_at
 ```
 
-- `user_word_id` 指向 `user_words.id`。
 - `result` 可以是 `remembered`、`forgotten` 或 `pending`（还没回答）。
 - 一个单词可以出现在多次复习记录里（不同轮），一轮复习包含多个单词记录。
 - 同一 session 内 `position` 唯一，同一个 `user_word_id` 至多出现一次，分别由 `UNIQUE(session_id, position)` 与 `UNIQUE(session_id, user_word_id)` 保证。
@@ -49,14 +48,6 @@ reviewed_at
 只有累计数字，算不出「最近一次忘记在什么时候」「连续忘记几次」「最近 10 次正确率」「一个月前的掌握水平」这些后续统计和算法需要的数据。逐次记录（`review_items`）是这些数据的来源。
 
 ## 4. Session 状态迁移
-
-### 状态
-
-```text
-active
-completed
-abandoned
-```
 
 ### 迁移规则（MVP）
 
@@ -77,13 +68,6 @@ active（本轮所有 item 为 pending）
 
 ## 5. 提交结果对 user_words 的影响
 
-一次有效作答（`result = 'pending'` 且归属匹配，见 [api/reviews.md](../api/reviews.md)）后，同步更新目标 `user_words`：
-
-```text
-review_count + 1
-remember_count / forget_count + 1（按结果）
-current_streak 更新（规则见 api/reviews.md 第 4 节）
-last_reviewed_at = now()
-```
+有效提交对累计次数、连续表现及最近复习时间的更新统一见 [Review API §3～4](../api/reviews.md#3-提交一个单词的结果)，与 item 作答及 session 完成原子提交。
 
 `user_words` 各字段的语义见 [dictionary/data-model.md](../dictionary/data-model.md)；`weight` / `mastery` 等派生指标不落库、从这些字段动态计算（[review/algorithm.md](algorithm.md)）。

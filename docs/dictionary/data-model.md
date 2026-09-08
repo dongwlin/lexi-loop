@@ -71,8 +71,6 @@ updated_at
 - `current_streak`：正数 = 连续记得，负数 = 连续忘记。例如 `3` 表示连续 3 次记得，`-2` 表示连续 2 次没记住。复习提交时更新（规则见 [api/reviews.md](../api/reviews.md)）。
 - `mastery`、复习权重等指标从这些字段动态计算、不落库（见 [review/algorithm.md](../review/algorithm.md)）。
 
-`dictionary_entries` 负责语言数据，`user_words` 负责学习数据，两者完全分离。
-
 ## 4. 释义结构（raw_meanings）
 
 ECDICT 导入解析 `translation` 时，将字面量 `\n` 还原为换行，再按行识别词性与义项；实际换行同样支持。
@@ -122,17 +120,7 @@ v.
 
 但用户修改**不能改动 `dictionary_entries`**——那是客观公共词典数据。用户的个人表达应写入 `user_words.custom_review_meaning`（NULL 表示未自定义）。
 
-复习展示按三层结构取释义（即 `effective_review_meaning`）：
-
-```text
-用户自定义（user_words.custom_review_meaning）
-    ↓ 如果为空
-词典层默认复习释义（dictionary_entries.review_meanings）
-    ↓ 如果为空
-原始词典释义（dictionary_entries.raw_meanings）
-```
-
-即：
+复习展示按以下顺序取首个非 NULL 的释义（`effective_review_meaning`）：
 
 ```text
 effective_review_meaning =
@@ -161,8 +149,4 @@ effective_review_meaning =
 
 ## 10. 第一版 MVP 的最小词典要求
 
-第一版只要求自动获得 `lemma`、`phonetic`、`part_of_speech`、`Chinese meaning`，数据来源为 ECDICT（离线导入进本地词典库）。
-
-完成标准示例：用户导入 `derived` → 识别 `derive` → 自动得到 `derive /dɪˈraɪv/ v. 获得；推导；源于` → 词条落在 `dictionary_entries` → 在 `user_words` 建立用户学习行。
-
-MVP 阶段的边界：本地词典库未收录的词（ECDICT 也没有），直接创建仅含 headword 的最小词条并允许用户手动补释义；无法确定 lemma 的输入保留原词（见 [normalization.md](normalization.md)）。在线补充（Lookup 在线分支与 Enrich）属第二阶段。
+MVP 基础信息范围见 [PRD](../product/prd.md#11-第一版-mvp)；未收录词的最小词条兜底见 [Lookup 链路](enrichment.md#2-两条链路的划分)，无法确定 lemma 时保留原词的规则见 [词形归一](normalization.md)。
