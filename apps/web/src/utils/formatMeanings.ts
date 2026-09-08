@@ -1,7 +1,8 @@
 /**
- * 把结构化释义（dictionary/data-model.md §4 的 Meaning 形态）格式化为单行展示文本：
+ * 把结构化释义（dictionary/data-model.md §4 的 Meaning 形态）格式化为展示文本：
  * 「adjective. 模棱两可的；含糊不清的; noun. 歧义」。义项之间用「; 」分隔，
- * 与义项内翻译的「；」区分。入参用结构化局部类型，utils 层不依赖 api-client。
+ * 与义项内翻译的「；」区分；复习页可传入换行作为义项分隔符。
+ * 入参用结构化局部类型，utils 层不依赖 api-client。
  */
 export interface MeaningLike {
   pos?: string
@@ -10,6 +11,7 @@ export interface MeaningLike {
 
 export function formatMeanings(
   meanings: readonly MeaningLike[] | null | undefined,
+  senseSeparator = '; ',
 ): string {
   if (!meanings) return ''
 
@@ -24,5 +26,5 @@ export function formatMeanings(
     const sense = parts.join(' ')
     if (sense.length > 0) senses.push(sense)
   }
-  return senses.join('; ')
+  return senses.join(senseSeparator)
 }

@@ -339,7 +339,11 @@ const currentItem = computed(() => {
 
 const currentMeaning = computed(() => {
   if (!currentItem.value) return ''
-  return formatMeanings(currentItem.value.effectiveReviewMeaning)
+  // 会话条目（含旧快照）不带 meaningSource；在展示时兼容 ECDICT 转义换行。
+  return formatMeanings(
+    currentItem.value.effectiveReviewMeaning,
+    '\n',
+  ).replaceAll('\\n', '\n')
 })
 
 function handleReveal() {
@@ -611,7 +615,7 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
 
         <!-- revealed：显示释义 + 作答按钮 -->
         <template v-else-if="currentMode === 'revealed'">
-          <p class="text-base text-foreground">
+          <p class="max-w-full text-base whitespace-pre-line text-foreground">
             {{ currentMeaning }}
           </p>
           <div class="mt-4 flex gap-4">

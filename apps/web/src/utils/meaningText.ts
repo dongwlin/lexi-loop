@@ -1,8 +1,8 @@
 /**
  * 释义编辑器的文本 ⇄ 结构化释义编解码（review-flow §5 编辑复习释义）。
  * 文本格式：每行一条义项，「pos. 译文一；译文二」——词性前缀可省略，义项内译文用
- * 全角「；」或半角「;」分隔，义项间用换行分隔。与展示层的单行 formatMeanings 区分：
- * 展示用「; 」连接义项、编辑器用换行，两者不混用。入参为结构化局部类型，utils 层
+ * 全角「；」或半角「;」分隔，义项间用换行分隔。与展示层的 formatMeanings 区分：
+ * 编辑器需保证文本可解析回义项，不复用展示层格式化。入参为结构化局部类型，utils 层
  * 不依赖 api-client（与 formatMeanings 同口径）。
  */
 import type { MeaningLike } from './formatMeanings'
