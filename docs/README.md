@@ -36,7 +36,11 @@ lexi-loop/
 └─ docs/                项目文档
 ```
 
-项目 clone 后的标准初始化：`pnpm install`（依赖）、`deploy/dict/fetch.sh`（词典数据，幂等可重跑；产物 gitignore 忽略）、`go mod download`（后端按需）。
+项目 clone 后的标准初始化：
+
+- `pnpm install`（依赖）
+- `deploy/dict/fetch.sh`（词典数据，幂等可重跑；产物 gitignore 忽略）
+- `go mod download`（后端按需）
 
 ## 目录结构
 
