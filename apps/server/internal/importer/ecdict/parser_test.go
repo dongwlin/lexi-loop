@@ -220,6 +220,14 @@ func TestParseTranslation(t *testing.T) {
 		want  []domain.Meaning
 	}{
 		{
+			name:  "ECDICT字面量换行分隔不同词性",
+			input: `vt. （英）把…理想化（等于idealize）\nvi. 形成理想；理想化地表现`,
+			want: []domain.Meaning{
+				{Pos: "transitive verb", Translations: []string{"（英）把…理想化（等于idealize）"}},
+				{Pos: "intransitive verb", Translations: []string{"形成理想", "理想化地表现"}},
+			},
+		},
+		{
 			name:  "多词性按行拆分",
 			input: "n. 模糊；含糊\nadj. 模糊的;含糊的",
 			want: []domain.Meaning{

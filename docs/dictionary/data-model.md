@@ -75,6 +75,8 @@ updated_at
 
 ## 4. 释义结构（raw_meanings）
 
+ECDICT 导入解析 `translation` 时，将字面量 `\n` 还原为换行，再按行识别词性与义项；实际换行同样支持。
+
 不建议把释义只保存成一段 `TEXT`，`raw_meanings` 推荐使用结构化 JSON：
 
 ```json

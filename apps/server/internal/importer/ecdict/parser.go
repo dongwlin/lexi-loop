@@ -210,6 +210,8 @@ func parseTranslation(s string) []domain.Meaning {
 		return nil
 	}
 	meanings := make([]domain.Meaning, 0, 4)
+	// ECDICT CSV 用字面量 \n 编码释义换行；同时兼容实际换行的输入。
+	s = strings.ReplaceAll(s, `\n`, "\n")
 	for _, line := range strings.Split(s, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {

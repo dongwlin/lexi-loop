@@ -57,7 +57,17 @@ const senseLines = computed(() =>
       (text) => text.length > 0,
     )
     if (translations.length === 0) return []
-    return [{ pos: sense.pos, text: translations.join('；') }]
+    const text = translations.join('；')
+    return [
+      {
+        pos: sense.pos,
+        // 兼容旧版 ECDICT 导入器留下的转义换行，不改写用户自定义文本。
+        text:
+          detail.value?.meaningSource === 'raw'
+            ? text.replaceAll('\\n', '\n')
+            : text,
+      },
+    ]
   }),
 )
 
@@ -281,7 +291,7 @@ watchEffect(() => {
             <span v-if="sense.pos" class="text-muted-foreground">
               {{ sense.pos }}.
             </span>
-            {{ sense.text }}
+            <span class="whitespace-pre-line">{{ sense.text }}</span>
           </li>
         </ul>
       </div>
