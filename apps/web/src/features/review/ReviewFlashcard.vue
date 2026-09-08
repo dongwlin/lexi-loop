@@ -20,41 +20,69 @@ defineEmits<{
 </script>
 
 <template>
-  <h2 class="text-3xl font-semibold break-words text-foreground">{{ word }}</h2>
-  <template v-if="mode === 'recalling'">
-    <p class="text-sm text-muted-foreground">先回忆这个单词的意思</p>
-    <div class="mt-4 flex gap-4">
-      <Button variant="outline" @click="$emit('choose', 'forgotten')">
-        <XCircle class="size-4 shrink-0" aria-hidden="true" />不认识
-      </Button>
-      <Button @click="$emit('choose', 'remembered')">
-        <CheckCircle class="size-4 shrink-0" aria-hidden="true" />认识
-      </Button>
+  <div class="flex w-full min-w-0 flex-col items-center gap-6">
+    <h2 class="max-w-full text-3xl font-semibold wrap-anywhere text-foreground">
+      {{ word }}
+    </h2>
+    <!-- 共用内容槽吸收常规释义行数差异；超长内容自然撑开，不隐藏待回忆的释义。 -->
+    <div
+      class="flex min-h-24 w-full flex-col items-center justify-center gap-3 sm:min-h-32"
+    >
+      <p v-if="mode === 'recalling'" class="text-sm text-muted-foreground">
+        先回忆这个单词的意思
+      </p>
+      <template v-else-if="mode === 'revealed'">
+        <p
+          class="max-w-full text-base wrap-anywhere whitespace-pre-line text-foreground"
+        >
+          {{ meaning }}
+        </p>
+        <p
+          v-if="error"
+          role="alert"
+          class="text-sm wrap-anywhere text-danger-text"
+        >
+          {{ error }}
+        </p>
+      </template>
     </div>
-  </template>
-  <template v-else-if="mode === 'revealed'">
-    <p class="max-w-full text-base whitespace-pre-line text-foreground">
-      {{ meaning }}
-    </p>
-    <p v-if="error" role="alert" class="text-sm text-danger-text">
-      {{ error }}
-    </p>
-    <div class="mt-4 flex gap-4">
-      <Button
-        v-if="canCorrect"
-        variant="outline"
-        :disabled="submitting"
-        @click="$emit('correct')"
-      >
-        <XCircle class="size-4 shrink-0" aria-hidden="true" />不认识
-      </Button>
-      <Button :pending="submitting" @click="$emit('next')">下一词</Button>
+    <div class="flex w-full flex-col items-center gap-3">
+      <!-- 下一词保留右列位置，修正入口消失时也不移动触摸目标。 -->
+      <div class="grid w-full max-w-72 grid-cols-2 gap-4">
+        <template v-if="mode === 'recalling'">
+          <Button variant="outline" @click="$emit('choose', 'forgotten')">
+            <XCircle class="size-4 shrink-0" aria-hidden="true" />不认识
+          </Button>
+          <Button @click="$emit('choose', 'remembered')">
+            <CheckCircle class="size-4 shrink-0" aria-hidden="true" />认识
+          </Button>
+        </template>
+        <template v-else-if="mode === 'revealed'">
+          <Button
+            v-if="canCorrect"
+            variant="outline"
+            :disabled="submitting"
+            @click="$emit('correct')"
+          >
+            <XCircle class="size-4 shrink-0" aria-hidden="true" />不认识
+          </Button>
+          <Button
+            class="col-start-2"
+            :pending="submitting"
+            @click="$emit('next')"
+            >下一词</Button
+          >
+        </template>
+      </div>
+      <p class="min-h-8 text-center text-xs text-muted-foreground">
+        <template v-if="mode === 'recalling'"
+          >1 / ← 不认识 · 2 / → 认识</template
+        >
+        <template v-else>
+          <span v-if="canCorrect">1 / ← 修正为不认识 · </span>Space / Enter
+          下一词
+        </template>
+      </p>
     </div>
-  </template>
-  <p class="mt-2 text-center text-xs text-muted-foreground">
-    <template v-if="mode === 'recalling'">1 / ← 不认识 · 2 / → 认识</template>
-    <template v-else>
-      <span v-if="canCorrect">1 / ← 修正为不认识 · </span>Space / Enter 下一词
-    </template>
-  </p>
+  </div>
 </template>
