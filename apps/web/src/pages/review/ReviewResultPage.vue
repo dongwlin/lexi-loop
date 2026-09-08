@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, useTemplateRef, watchPostEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { CheckCircle, RotateCcw } from 'lucide-vue-next'
 import { Button } from '@/components/ui'
@@ -69,6 +69,27 @@ const startMutation = useStartReviewSessionMutation()
 const isStarting = computed(() => startMutation.isPending.value)
 const startError = ref<string | null>(null)
 const startErrorRef = ref<HTMLElement | null>(null)
+
+const resultActionsRef = useTemplateRef<HTMLDivElement>('resultActions')
+let focusedSessionId: string | undefined
+
+// 内容就绪后接管路由的标题焦点；每轮只接管一次，后台刷新不打断用户操作。
+watchPostEffect((onCleanup) => {
+  const id = sessionId.value
+  const button = resultActionsRef.value?.querySelector('button')
+  if (!button || session.value?.total === 0 || focusedSessionId === id) return
+
+  let cancelled = false
+  onCleanup(() => {
+    cancelled = true
+  })
+  // 等全局 afterEach 的 nextTick 完成，兼容缓存命中时同步显示结果。
+  void nextTick(() => {
+    if (cancelled || !button.isConnected || button.disabled) return
+    button.focus()
+    focusedSessionId = id
+  })
+})
 
 async function handleReplay() {
   const previousTotal = session.value?.total ?? 0
@@ -229,7 +250,7 @@ async function handleReplay() {
       </p>
 
       <!-- 操作按钮 -->
-      <div class="mt-6 flex gap-3">
+      <div ref="resultActions" class="mt-6 flex gap-3">
         <Button
           class="gap-2"
           :disabled="isStarting || session.total < 1"

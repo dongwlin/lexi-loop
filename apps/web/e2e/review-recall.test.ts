@@ -27,6 +27,7 @@ for (const scenario of [
       ],
     }))
     const submissions: unknown[] = []
+    const starts: unknown[] = []
     let release: () => void = () => {}
     const blocked = new Promise<void>((resolve) => {
       release = resolve
@@ -49,12 +50,39 @@ for (const scenario of [
         },
       }),
     )
-    await page.route('**/api/v1/reviews', (route) =>
-      route.fulfill({
+    await page.route('**/api/v1/reviews', (route) => {
+      starts.push(route.request().postDataJSON())
+      return route.fulfill({
         json: {
           code: 'OK',
           message: 'ok',
           data: { sessionId, requestedCount: 30, totalCount: 2, items },
+        },
+      })
+    })
+    await page.route(`**/api/v1/reviews/${sessionId}`, (route) =>
+      route.fulfill({
+        json: {
+          code: 'OK',
+          message: 'ok',
+          data: {
+            sessionId,
+            status: starts.length > 1 ? 'active' : 'completed',
+            total: 2,
+            remembered: 1,
+            forgotten: 1,
+            createdAt: '2026-09-09T00:00:00Z',
+            completedAt: starts.length > 1 ? null : '2026-09-09T00:01:00Z',
+            items: items.map((item, index) => ({
+              word: item.word,
+              result:
+                starts.length > 1
+                  ? 'pending'
+                  : index === 0
+                    ? 'forgotten'
+                    : 'remembered',
+            })),
+          },
         },
       }),
     )
@@ -126,6 +154,28 @@ for (const scenario of [
       page.getByRole('button', { name: '认识', exact: true }),
     ).toBeVisible()
     await expect(page.getByRole('button', { name: '下一词' })).toHaveCount(0)
+    // 完成最后一题：通过按钮原生 Enter 提交，进入结果页后直接续练。
+    await page.keyboard.press('2')
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Tab')
+    await expect(page.getByRole('button', { name: '下一词' })).toBeFocused()
+    await page.keyboard.press('Enter')
+    const replay = page.getByRole('button', { name: '再来一轮' })
+    await expect(replay).toBeFocused()
+    await expect(
+      page.getByRole('heading', { name: '复习结果' }),
+    ).not.toBeFocused()
+    await page.screenshot({ path: `/tmp/review-result-${scenario.width}.png` })
+    await page.keyboard.press('Tab')
+    await expect(
+      page.getByRole('link', { name: '回到生词库', exact: true }),
+    ).toBeFocused()
+    await page.keyboard.press('Shift+Tab')
+    await expect(replay).toBeFocused()
+    await page.keyboard.press(scenario.width === 1280 ? 'Enter' : 'Space')
+    await expect(area).toBeFocused()
+    await expect(page.getByRole('heading', { name: 'ambiguous' })).toBeVisible()
+    expect(starts).toEqual([{ count: 30 }, { count: 2 }])
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,

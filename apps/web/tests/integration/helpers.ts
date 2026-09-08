@@ -14,10 +14,17 @@ import { router } from '@/app/router'
 // 跨页面行为的挂载壳：以真实 RouterView 渲染当前路由页面，页面内 router.push 可见。
 const RouterShell = defineComponent({
   name: 'RouterShell',
-  setup: () => () => h(RouterView),
+  setup: () => () =>
+    h('main', { id: 'main-content', tabindex: -1 }, h(RouterView)),
 })
 
-export async function renderAtRoute(component: Component, url: string) {
+export async function renderAtRoute(
+  component: Component,
+  url: string,
+  queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  }),
+) {
   await router.push(url)
   await router.isReady()
 
@@ -27,9 +34,7 @@ export async function renderAtRoute(component: Component, url: string) {
         [
           VueQueryPlugin,
           {
-            queryClient: new QueryClient({
-              defaultOptions: { queries: { retry: false } },
-            }),
+            queryClient,
           },
         ],
         router,
@@ -38,6 +43,6 @@ export async function renderAtRoute(component: Component, url: string) {
   })
 }
 
-export function renderAppAtRoute(url: string) {
-  return renderAtRoute(RouterShell, url)
+export function renderAppAtRoute(url: string, queryClient?: QueryClient) {
+  return renderAtRoute(RouterShell, url, queryClient)
 }
