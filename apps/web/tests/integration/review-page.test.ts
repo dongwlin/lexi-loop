@@ -7,7 +7,7 @@
 import { HttpResponse, http } from 'msw'
 import { screen, waitFor } from '@testing-library/vue'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { saveReviewSnapshot } from '@/utils/review-snapshot'
 
@@ -79,6 +79,12 @@ async function nextFrames(count = 2) {
     await new Promise((resolve) => requestAnimationFrame(() => resolve(null)))
   }
 }
+
+// 首次路由导航会懒加载页面；把 Vite 转换与模块加载放在套件准备阶段，
+// 避免高负载下占用业务用例的 5s 时限。仍使用真实 RouterView 与 HTTP 链路。
+beforeAll(async () => {
+  await import('@/pages/review/ReviewPage.vue')
+})
 
 beforeEach(() => {
   localStorage.clear()
@@ -409,20 +415,24 @@ describe('复习页数量选择（review-flow §6）', () => {
     await user.click(screen.getByRole('button', { name: '自定义' }))
     await user.type(screen.getByLabelText('自定义数量'), '25')
     await user.click(screen.getByRole('button', { name: '20' }))
-    expect(JSON.parse(localStorage.getItem('lexi-loop.review-count')!)).toEqual({
-      version: 1,
-      mode: 'preset',
-      count: 20,
-    })
+    expect(JSON.parse(localStorage.getItem('lexi-loop.review-count')!)).toEqual(
+      {
+        version: 1,
+        mode: 'preset',
+        count: 20,
+      },
+    )
 
     // 再点自定义：输入框带回上一次输入的 25 并即时生效，存储同步回自定义 25。
     await user.click(screen.getByRole('button', { name: '自定义' }))
     expect(screen.getByLabelText('自定义数量')).toHaveValue(25)
-    expect(JSON.parse(localStorage.getItem('lexi-loop.review-count')!)).toEqual({
-      version: 1,
-      mode: 'custom',
-      count: 25,
-    })
+    expect(JSON.parse(localStorage.getItem('lexi-loop.review-count')!)).toEqual(
+      {
+        version: 1,
+        mode: 'custom',
+        count: 25,
+      },
+    )
 
     await user.click(screen.getByRole('button', { name: '开始复习' }))
     expect(postedBodies).toEqual([{ count: 25 }])
@@ -476,11 +486,13 @@ describe('复习页数量选择（review-flow §6）', () => {
     await user.type(input, '{Backspace}{Backspace}')
     // 空输入不覆盖持久化：停留在最后有效值 2，刷新语义下恢复 2。
     expect(input).toHaveValue(null)
-    expect(JSON.parse(localStorage.getItem('lexi-loop.review-count')!)).toEqual({
-      version: 1,
-      mode: 'custom',
-      count: 2,
-    })
+    expect(JSON.parse(localStorage.getItem('lexi-loop.review-count')!)).toEqual(
+      {
+        version: 1,
+        mode: 'custom',
+        count: 2,
+      },
+    )
     first.unmount()
 
     await renderAppAtRoute('/review')

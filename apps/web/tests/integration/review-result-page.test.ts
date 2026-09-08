@@ -4,7 +4,7 @@
 import { HttpResponse, http } from 'msw'
 import { screen, waitFor } from '@testing-library/vue'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { router } from '@/app/router'
 
@@ -21,6 +21,15 @@ const replayItems = ['ambient', 'brisk', 'cite'].map((word, index) => ({
   phonetic: '',
   effectiveReviewMeaning: [],
 }))
+
+// 首次路由导航会懒加载页面；把 Vite 转换与模块加载放在套件准备阶段，
+// 避免高负载下占用业务用例的 5s 时限。仍使用真实 RouterView 与 HTTP 链路。
+beforeAll(async () => {
+  await Promise.all([
+    import('@/pages/review/ReviewPage.vue'),
+    import('@/pages/review/ReviewResultPage.vue'),
+  ])
+})
 
 beforeEach(() => {
   localStorage.clear()

@@ -29,7 +29,7 @@
 cd apps/web
 pnpm dev             # 开发服务器（未设 VITE_API_BASE_URL 时 /api 代理到本地 Go 服务 127.0.0.1:8080）
 pnpm build           # vue-tsc -b + vite build
-pnpm typecheck       # vue-tsc --noEmit
+pnpm typecheck       # vue-tsc -b
 pnpm lint            # ESLint Flat Config（类型感知 TS / Vue / vuejs-accessibility / TanStack Query / import-x）
 pnpm format          # Prettier 格式化（含 Tailwind class 排序）
 pnpm test:run        # vitest 单次执行（web jsdom + storybook 浏览器两个 project；pnpm test 为 watch）
