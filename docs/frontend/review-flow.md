@@ -192,17 +192,20 @@ adj. 模棱两可的；含糊不清的；有歧义的
 
 ## 10. 前端状态机与键盘操作
 
-复习页面明确地定义状态：
+复习页面的 `ReviewMode` 仅包含 `idle`、`recalling`、`revealed`：
 
 ```text
-idle → recalling → revealed → submitting → recalling → ... → finished
-                      ↑            │
-                      └── 失败重试 ─┘
+idle → recalling → revealed ── 提交成功 ──→ recalling（下一卡）
+                      └──── 最后一题提交成功 ──→ 跳转结果页
 ```
 
+- **idle**：数量选择阶段。
 - **recalling**：只显示单词，按钮「不认识 / 认识」；选择暂定结果后进入 revealed。
-- **revealed**：显示释义，尚未完成作答；提交前允许 remembered → forgotten 单向修正。
-- **submitting**：点击「下一词」后提交 API，禁用操作；成功后 index++ 并清空暂定结果，最后一题跳转 `/review/result/:session`。失败回到 revealed 并保留结果供重试。
+- **revealed**：显示释义；首次提交前允许 remembered → forgotten 单向修正。提交期间及提交失败后仍保持此模式。
+
+`isSubmitting` 是 revealed 阶段的独立提交状态，不属于 `ReviewMode`。点击「下一词」时同步设为 `true` 并提交 API，禁用按钮与快捷操作，阻止重复提交；请求处理结束时在 `finally` 中重置为 `false`。成功后清空暂定结果，非最后一题 index++ 并进入下一卡的 recalling；最后一题的推进结果为 `finished`，页面跳转 `/review/result/:session`（`finished` 也不是 `ReviewMode`）。失败时保持 revealed、当前卡、释义和结果，解除提交中状态后允许重试。
+
+`submissionStarted` 表示本卡是否已发起过提交，用于锁定最终结果；失败后仍为 `true`，因此重试前不能再修正，重试发送相同结果。它与仅表示提交处理中的 `isSubmitting` 相互独立。
 
 快捷键仅在复习区域内生效，忽略长按重复、输入法组合与带修饰键的事件：
 

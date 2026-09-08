@@ -1,9 +1,11 @@
 // 复习页状态机的纯迁移逻辑（review-flow.md §10）：
-// idle → recalling → revealed → submitting → recalling → ... → finished（跳转结果页）。
+// ReviewMode：idle → recalling → revealed；提交成功后进入下一卡 recalling 或跳转结果页。
+// isSubmitting 是页面在 revealed 阶段持有的独立提交状态，提交中与失败后均保持 revealed；
+// finished 仅为推进结果，不属于 ReviewMode。
 // 页面（pages/review/ReviewPage.vue）持有 ref 状态并承担副作用（提交 API / 焦点 / 路由），
 // 迁移判定与推进计算收敛在这里，非法迁移（idle 选择、revealed 向上修正等）不发生。
 
-/** 复习页闪卡模式：idle 为数量选择阶段，recalling 只见单词，revealed 显示释义待最终提交。 */
+/** 复习页闪卡模式：idle 为数量选择阶段，recalling 只见单词，revealed 显示释义（含提交中与失败重试）。 */
 export type ReviewMode = 'idle' | 'recalling' | 'revealed'
 
 /** 进入一轮复习的起点：模式与当前卡下标。 */

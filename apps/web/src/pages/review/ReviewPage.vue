@@ -41,7 +41,9 @@ import {
 } from '@/utils/review-state-machine'
 
 // review-flow.md §6–§8、§10：复习页。
-// 状态机 idle → recalling → revealed → submitting → recalling → ... → finished（跳转结果页），
+// ReviewMode：idle → recalling → revealed；提交成功后进入下一卡 recalling 或跳转结果页。
+// isSubmitting 是 revealed 阶段的独立提交状态，提交中与失败后均保持 revealed；
+// finished 仅为推进结果，不属于 ReviewMode。
 // 迁移判定与推进收敛在 utils/review-state-machine（本页持有 ref 状态与副作用）。
 // 键盘操作绑定在复习区域：1 / 2 初选，Space / Enter 最终提交（§10、§5.4），
 // 按键 → 操作的映射在 utils/review-keyboard，本页只负责 DOM 归约（焦点是否在控件上）与 preventDefault。
@@ -384,7 +386,8 @@ function handleCorrectToForgotten() {
 }
 
 const submitMutation = useSubmitReviewResultMutation()
-// 同步置位，拦住同一渲染周期内的重复激活。
+// revealed 阶段的独立提交状态：同步置位以拦住同一渲染周期内的重复激活，finally 重置。
+// 失败后仍保持 revealed；submissionStarted 继续锁定结果，供相同结果重试。
 const isSubmitting = ref(false)
 
 async function handleNext() {
