@@ -17,10 +17,10 @@
 ├─ /import         导入生词
 ├─ /review         开始复习
 ├─ /review/result/:session  本轮复习结果（对应具体 Session）
-└─ /about          关于（版本信息）
+└─ /about          关于（版本信息与源码仓库链接）
 ```
 
-`/` 重定向至 `/review`，未知路径展示 404 页面。关于页展示版本信息，数据契约见 [api/meta.md](../api/meta.md)。`/statistics` 和 `/settings` 尚未实现，新增时先在 [Roadmap](../product/roadmap.md) 明确范围。
+`/` 重定向至 `/review`，未知路径展示 404 页面。关于页展示版本信息与源码仓库链接（外链新标签打开），版本数据契约见 [api/meta.md](../api/meta.md)。`/statistics` 和 `/settings` 尚未实现，新增时先在 [Roadmap](../product/roadmap.md) 明确范围。
 
 ## 2. 导入页面 `/import`
 

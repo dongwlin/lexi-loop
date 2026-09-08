@@ -80,6 +80,20 @@ const rows = computed(() => {
         LexiLoop（词环）：英语生词复习系统。
       </p>
       <dl class="mt-6 space-y-2.5 text-sm">
+        <!-- 仓库地址是页面静态内容，不属于版本接口；显式文字色覆盖浏览器
+             :visited 样式，避免点击后变色。 -->
+        <div class="flex items-baseline justify-between gap-6">
+          <dt class="text-muted-foreground">Source Code</dt>
+          <dd>
+            <a
+              href="https://github.com/dongwlin/lexi-loop"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="font-medium text-primary-text no-underline hover:underline"
+              >GitHub</a
+            >
+          </dd>
+        </div>
         <div
           v-for="row in rows"
           :key="row.label"
