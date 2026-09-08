@@ -3,14 +3,25 @@
 > 发布流程（打 tag → 构建镜像）的唯一权威文档。
 > 版本号在运行时的展示契约（`/api/v1/version`、CLI、dev 占位规则）见 [Meta API](../api/meta.md)，本文只约定构建与部署流程。
 
-## 1. 发布流程：打 tag → GitHub Actions → GHCR → compose
+## 1. 发布流程：tag-release.sh → GitHub Actions → GHCR → compose
 
-版本的单一来源是 git tag（命名 `vX.Y.Z`）。构建镜像时版本经 `--build-arg VERSION` 注入 server 二进制（`internal/infra/buildinfo`），前端「关于」页经 API 读取，web 构建不在前端重复注入。
+版本的单一来源是 git tag（命名 `vX.Y.Z`）。镜像版本经 `--build-arg VERSION` 注入 server 二进制（`internal/infra/buildinfo`），前端「关于」页经 API 读取，web 构建不在前端重复注入。仓库另有三处 workspace 版本号（根、`apps/web`、`packages/api-client` 的 `package.json`）作为发布标识，发版时必须与 tag 同步；[Release 工作流](../../.github/workflows/release.yml)会校验两者一致，不一致直接失败。
+
+**推荐：一条命令发版**——[deploy/tag-release.sh](../../deploy/tag-release.sh) 依次完成 workspace 版本号 bump（三处 `package.json`）、提交、push 分支、打 annotated tag、push tag（触发 Release 工作流构建并发布镜像）：
 
 ```bash
-# 确认发布内容已提交，使用未发布过的新版本号；以下以 v0.0.3 为例
-git tag -a v0.0.3 -m "LexiLoop v0.0.3"
+deploy/tag-release.sh v0.0.4
+```
+
+脚本前置检查：工作区干净、当前在 main、版本号符合稳定版格式且 tag 未发布过、三处 `package.json` 版本一致。
+
+手动等价流程（了解脚本行为或脚本不可用时使用；注意第 1 步易被遗漏）：
+
+```bash
+# 1. 将根 / apps/web / packages/api-client 三处 package.json 的 version 改为新版本并提交
+# 2. 确认发布内容已提交，使用未发布过的新版本号；以下以 v0.0.3 为例
 git push origin main
+git tag -a v0.0.3 -m "LexiLoop v0.0.3"
 git push origin v0.0.3
 ```
 
@@ -26,6 +37,8 @@ git push origin v0.0.3
 发布 job 依赖全部检查通过；PR 检查不登录 GHCR、不发布镜像。推送 tag 只发布容器，不自动变更运行中的部署。
 
 ## 2. 本地备用发布：release.sh
+
+`tag-release.sh` 只负责发版编排（版本号 bump 与 tag 推送），镜像构建交给 GitHub Actions；若需要在本地构建镜像（如验证或无法用 Actions），用本节的 `release.sh`。
 
 ```text
 deploy/release.sh [选项] [版本]
@@ -44,7 +57,8 @@ deploy/release.sh [选项] [版本]
 
 1. 工作区干净——发布内容必须可追溯；
 2. 版本对应的 tag 存在且指向当前 HEAD——防止拿未发布的内容打出正确的版本号；
-3. 词典数据 `deploy/dict/ecdict.csv` 存在（缺失时警告；`--strict` 下失败）。
+3. workspace 版本（根 `package.json`）与 tag 一致——经 `tag-release.sh` 正常发版即可满足；
+4. 词典数据 `deploy/dict/ecdict.csv` 存在（缺失时警告；`--strict` 下失败）。
 
 示例：
 

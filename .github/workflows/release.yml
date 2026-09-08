@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@v6
       - name: Require a stable version tag
         env:
           REF_TYPE: ${{ github.ref_type }}
@@ -26,6 +27,15 @@ jobs:
         run: |
           if [[ "$REF_TYPE" != tag || ! "$VERSION" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
             echo '::error::Select or push a stable vX.Y.Z tag to publish'
+            exit 1
+          fi
+      - name: Require workspace version to match tag
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          pkg="$(node -p "require('./package.json').version")"
+          if [[ "$pkg" != "${VERSION#v}" ]]; then
+            echo "::error::Workspace version (package.json: ${pkg}) does not match tag ${VERSION}; bump the workspace version first (deploy/tag-release.sh)"
             exit 1
           fi
 

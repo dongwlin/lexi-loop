@@ -35,7 +35,9 @@ server 二进制（infra/buildinfo，经 /api/v1/version 与 lexi-loop version �
 
 前置检查（不满足即失败退出，不做任何构建）:
   1. 工作区干净（git status 无未提交改动）；
-  2. 版本对应的 tag 存在且指向当前 HEAD——防止拿未发布的内容打出正确的版本号。
+  2. 版本对应的 tag 存在且指向当前 HEAD——防止拿未发布的内容打出正确的版本号；
+  3. workspace 版本（根 package.json）与 tag 一致——正常经 deploy/tag-release.sh
+     发版即可满足。
 
 示例:
   git tag -a v0.0.1 -m "LexiLoop v0.0.1"
@@ -126,6 +128,11 @@ else
 	[[ "$tag_commit" == "$(git rev-parse HEAD)" ]] ||
 		die "tag '${VERSION}' 不指向当前 HEAD；请 checkout 到该 tag 再构建，或在当前 HEAD 上重新打 tag"
 fi
+
+pkg_version="$(sed -n 's/^  "version": "\(.*\)",$/\1/p' package.json)"
+[[ -n "$pkg_version" ]] || die "package.json 未匹配到顶层 version 字段，请人工检查"
+[[ "$pkg_version" == "${VERSION#v}" ]] ||
+	die "workspace 版本（根 package.json: ${pkg_version}）与 tag '${VERSION}' 不一致；用 deploy/tag-release.sh 发版或先补齐版本号提交"
 
 RUNTIME="$(resolve_runtime)"
 

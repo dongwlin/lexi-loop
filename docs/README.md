@@ -29,7 +29,7 @@ lexi-loop/
 │  └─ api-client/       API 客户端（Orval 从 docs/openapi/ 自动生成）
 ├─ deploy/
 │  ├─ dict/fetch.sh     词典数据依赖初始化（pinned ECDICT，见 deploy/release.md）
-│  └─ …                 Caddyfile / docker-entrypoint.sh / release.sh
+│  └─ …                 Caddyfile / docker-entrypoint.sh / release.sh / tag-release.sh
 ├─ Dockerfile           多阶段构建（web + server + 运行镜像，词典随镜像 COPY）
 ├─ pnpm-workspace.yaml  pnpm 工作区配置
 ├─ package.json         根 package.json（脚本入口）
@@ -75,7 +75,7 @@ docs/
 │  ├─ openapi.json            OpenAPI 3.1 spec（由 `lexi-loop openapi` 离线生成，勿手改；契约权威仍是 api/*）
 │  └─ openapi.yaml            同上（YAML 格式）
 ├─ deploy/
-│  └─ release.md              发布流程（tag → GitHub Actions → GHCR → compose）、词典数据依赖与容器运行时切换
+│  └─ release.md              发布流程（tag-release.sh → GitHub Actions → GHCR → compose）、词典数据依赖与容器运行时切换
 ├─ specs/
 │  ├─ backend/
 │  │  ├─ Go 技术栈.md          后端框架 / 数据库 / CLI / 日志 / 测试等选型
