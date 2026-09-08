@@ -84,6 +84,7 @@ async function nextFrames(count = 2) {
 // 避免高负载下占用业务用例的 5s 时限。仍使用真实 RouterView 与 HTTP 链路。
 beforeAll(async () => {
   await import('@/pages/review/ReviewPage.vue')
+  await import('@/pages/review/ReviewResultPage.vue')
 })
 
 beforeEach(() => {
@@ -497,5 +498,189 @@ describe('复习页数量选择（review-flow §6）', () => {
 
     await renderAppAtRoute('/review')
     expect(screen.getByLabelText('自定义数量')).toHaveValue(2)
+  })
+})
+
+// 主动回忆：真实页面与 HTTP 边界共同验证暂定结果不会提前提交。
+describe('先判断再揭示释义', () => {
+  async function startCards() {
+    const submissions: { itemId: string; result: string }[] = []
+    let failNext = false
+    const cards = snapshotItems.map((item) => ({
+      ...item,
+      effectiveReviewMeaning: [
+        { pos: 'noun', translations: [`${item.word}释义`] },
+      ],
+    }))
+    mockActiveSession()
+    server.use(
+      http.post('*/api/v1/reviews', () =>
+        HttpResponse.json({
+          code: 'OK',
+          message: 'ok',
+          data: {
+            sessionId: SESSION_ID,
+            requestedCount: 30,
+            totalCount: 3,
+            items: cards,
+          },
+        }),
+      ),
+      http.post(
+        `*/api/v1/reviews/${SESSION_ID}/items/:itemId`,
+        async ({ params, request }) => {
+          const body = (await request.json()) as { result: string }
+          submissions.push({
+            itemId: String(params.itemId),
+            result: body.result,
+          })
+          if (failNext) {
+            failNext = false
+            return HttpResponse.json(
+              { code: 'ERROR', message: 'error', data: {} },
+              { status: 500 },
+            )
+          }
+          return HttpResponse.json({ code: 'OK', message: 'ok', data: {} })
+        },
+      ),
+    )
+    const user = userEvent.setup()
+    const view = await renderAppAtRoute('/review')
+    await user.click(await screen.findByRole('button', { name: '开始复习' }))
+    await screen.findByRole('heading', { name: 'ambient' })
+    return {
+      user,
+      submissions,
+      view,
+      fail: () => {
+        failNext = true
+      },
+    }
+  }
+
+  it.each([
+    ['认识', false, 'remembered'],
+    ['不认识', false, 'forgotten'],
+    ['认识', true, 'forgotten'],
+  ] as const)(
+    '初选 %s、修正 %s：下一词才提交 %s',
+    async (label, correct, result) => {
+      const { user, submissions } = await startCards()
+      expect(screen.queryByText('noun. ambient释义')).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: '查看释义' }),
+      ).not.toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: label }))
+      expect(screen.getByText('noun. ambient释义')).toBeInTheDocument()
+      expect(submissions).toEqual([])
+      expect(
+        screen.queryByRole('button', { name: '认识' }),
+      ).not.toBeInTheDocument()
+      if (correct)
+        await user.click(screen.getByRole('button', { name: '不认识' }))
+      if (result === 'forgotten')
+        expect(
+          screen.queryByRole('button', { name: '不认识' }),
+        ).not.toBeInTheDocument()
+      expect(
+        screen.getByRole('heading', { name: 'ambient' }),
+      ).toBeInTheDocument()
+      expect(submissions).toEqual([])
+      await user.click(screen.getByRole('button', { name: '下一词' }))
+      await screen.findByRole('heading', { name: 'brisk' })
+      expect(submissions).toEqual([{ itemId: snapshotItems[0].itemId, result }])
+      expect(screen.queryByText('noun. brisk释义')).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: '下一词' }),
+      ).not.toBeInTheDocument()
+      await nextFrames()
+      expect(document.activeElement?.textContent).toContain('brisk')
+    },
+  )
+
+  it('提交失败保留释义与最终结果，重试不会改变本卡结果', async () => {
+    const { user, submissions, fail } = await startCards()
+    await user.click(screen.getByRole('button', { name: '认识' }))
+    fail()
+    await user.click(screen.getByRole('button', { name: '下一词' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('提交失败')
+    expect(screen.getByText('noun. ambient释义')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: '不认识' }),
+    ).not.toBeInTheDocument()
+    await nextFrames()
+    await user.keyboard('1')
+    await user.keyboard('{Enter}')
+    await screen.findByRole('heading', { name: 'brisk' })
+    expect(submissions.map((item) => item.result)).toEqual([
+      'remembered',
+      'remembered',
+    ])
+  })
+
+  it('键盘初选、单向修正与最后一题提交后进入结果页', async () => {
+    const { user, submissions } = await startCards()
+    await nextFrames()
+    await user.keyboard('2')
+    expect(submissions).toHaveLength(0)
+    await nextFrames()
+    await user.keyboard('1')
+    await nextFrames()
+    await user.keyboard('2') // 看过答案后不可向上修正。
+    await user.keyboard(' ')
+    await screen.findByRole('heading', { name: 'brisk' })
+    await nextFrames()
+    await user.keyboard('{ArrowLeft}')
+    await nextFrames()
+    await user.keyboard('{Enter}')
+    await screen.findByRole('heading', { name: 'cite' })
+    await nextFrames()
+    await user.keyboard('{ArrowRight}')
+    expect(submissions).toHaveLength(2)
+    server.use(
+      http.get(`*/api/v1/reviews/${SESSION_ID}`, () =>
+        HttpResponse.json({
+          code: 'OK',
+          message: 'ok',
+          data: {
+            sessionId: SESSION_ID,
+            status: 'completed',
+            total: 3,
+            remembered: 1,
+            forgotten: 2,
+            completedAt: '2026-09-08T08:00:00Z',
+            items: serverItems.map((item, index) => ({
+              ...item,
+              result: index === 2 ? 'remembered' : 'forgotten',
+            })),
+          },
+        }),
+      ),
+    )
+    await nextFrames()
+    await user.keyboard('{Enter}')
+    await screen.findByText('本轮完成')
+    expect(submissions.map((item) => item.result)).toEqual([
+      'forgotten',
+      'forgotten',
+      'remembered',
+    ])
+    expect(localStorage.getItem('lexi-loop.review-snapshot')).toBeNull()
+  })
+
+  it('未提交的暂定结果不持久化，恢复从服务端 pending 卡重新判断', async () => {
+    const { user, submissions, view } = await startCards()
+    await user.click(screen.getByRole('button', { name: '认识' }))
+    expect(submissions).toHaveLength(0)
+    view.unmount()
+    await renderAppAtRoute('/review')
+    await user.click(await screen.findByRole('button', { name: '继续复习' }))
+    await screen.findByRole('heading', { name: 'brisk' })
+    expect(screen.queryByText('noun. brisk释义')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '认识' })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: '下一词' }),
+    ).not.toBeInTheDocument()
   })
 })

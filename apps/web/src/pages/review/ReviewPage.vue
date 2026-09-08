@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQueryClient } from '@tanstack/vue-query'
-import { CheckCircle, XCircle } from 'lucide-vue-next'
+import ReviewFlashcard from '@/features/review/ReviewFlashcard.vue'
 import { Button } from '@/components/ui'
 import { isApiError } from '@/lib/api'
 import {
@@ -34,14 +34,16 @@ import {
 import {
   advanceAfterAnswer,
   enterReview,
-  revealCard,
+  chooseReviewResult,
+  correctReviewResult,
+  type ReviewResult,
   type ReviewMode,
 } from '@/utils/review-state-machine'
 
 // review-flow.md §6–§8、§10：复习页。
-// 状态机 idle → recalling → revealed → answered → recalling → ... → finished（跳转结果页），
+// 状态机 idle → recalling → revealed → submitting → recalling → ... → finished（跳转结果页），
 // 迁移判定与推进收敛在 utils/review-state-machine（本页持有 ref 状态与副作用）。
-// 键盘操作绑定在复习区域：Space 揭示释义；1 / ← 不记得；2 / → 记得（§10、§5.4），
+// 键盘操作绑定在复习区域：1 / 2 初选，Space / Enter 最终提交（§10、§5.4），
 // 按键 → 操作的映射在 utils/review-keyboard，本页只负责 DOM 归约（焦点是否在控件上）与 preventDefault。
 // D010：进入时检测 active session，由用户选择继续 / 放弃；放弃调用 abandon
 // 端点由服务端标记 abandoned（api/reviews.md §6），失败时保留快照供重试。
@@ -235,6 +237,7 @@ function enterWithSnapshot(snapshot: ReviewSnapshot, resumeIndex = 0) {
   const entry = enterReview(snapshot.items.length, resumeIndex)
   currentIndex.value = entry.currentIndex
   currentMode.value = entry.mode
+  resetPendingResult()
   focusReviewAreaAfterTransition()
 }
 
@@ -311,6 +314,7 @@ async function startNewSession(count: number) {
     const entry = enterReview(response.items.length)
     currentIndex.value = entry.currentIndex
     currentMode.value = entry.mode
+    resetPendingResult()
 
     saveReviewSnapshot({
       sessionId: response.sessionId,
@@ -327,6 +331,19 @@ async function startNewSession(count: number) {
 // ---- 复习状态机 ----
 
 const currentMode = ref<ReviewMode>('idle')
+const pendingResult = ref<ReviewResult | null>(null)
+const submissionStarted = ref(false)
+const submitError = ref<string | null>(null)
+
+function resetPendingResult() {
+  pendingResult.value = null
+  submissionStarted.value = false
+  submitError.value = null
+}
+
+const canCorrect = computed(
+  () => pendingResult.value === 'remembered' && !submissionStarted.value,
+)
 const items = ref<ReviewSnapshot['items']>([])
 const currentIndex = ref(0)
 const sessionId = ref<string | null>(null)
@@ -346,33 +363,51 @@ const currentMeaning = computed(() => {
   ).replaceAll('\\n', '\n')
 })
 
-function handleReveal() {
-  const revealed = revealCard(currentMode.value, currentItem.value !== null)
-  if (!revealed) return
-  currentMode.value = revealed
-  // 揭示后「查看释义」按钮随分支卸载，焦点移回复习区域保住键盘操作（§5.3）。
+function handleInitialAnswer(result: ReviewResult) {
+  const selection = chooseReviewResult(
+    currentMode.value,
+    currentItem.value !== null,
+    result,
+  )
+  if (!selection) return
+  pendingResult.value = selection.pendingResult
+  currentMode.value = selection.mode
+  focusReviewAreaAfterTransition()
+}
+
+function handleCorrectToForgotten() {
+  if (!canCorrect.value || isSubmitting.value) return
+  const result = correctReviewResult(currentMode.value, pendingResult.value)
+  if (!result) return
+  pendingResult.value = result
   focusReviewAreaAfterTransition()
 }
 
 const submitMutation = useSubmitReviewResultMutation()
-const isSubmitting = computed(() => submitMutation.isPending.value)
+// 同步置位，拦住同一渲染周期内的重复激活。
+const isSubmitting = ref(false)
 
-async function handleAnswer(result: 'remembered' | 'forgotten') {
+async function handleNext() {
   if (
     currentMode.value !== 'revealed' ||
     !currentItem.value ||
+    !pendingResult.value ||
     isSubmitting.value
   )
     return
   if (!sessionId.value) return
 
+  isSubmitting.value = true
+  submissionStarted.value = true
+  submitError.value = null
   try {
     await submitMutation.mutateAsync({
       sessionId: sessionId.value,
       itemId: currentItem.value.itemId,
-      result,
+      result: pendingResult.value,
     })
 
+    resetPendingResult()
     const advance = advanceAfterAnswer(currentIndex.value, items.value.length)
 
     if (advance.outcome === 'next') {
@@ -388,7 +423,11 @@ async function handleAnswer(result: 'remembered' | 'forgotten') {
       })
     }
   } catch {
-    // 提交失败，保持当前状态，用户可重试
+    // 响应丢失时服务端可能已接收；重试保持同一个最终结果。
+    submitError.value = '提交失败，请点击「下一词」重试。'
+    focusReviewAreaAfterTransition()
+  } finally {
+    isSubmitting.value = false
   }
 }
 
@@ -397,8 +436,25 @@ async function handleAnswer(result: 'remembered' | 'forgotten') {
 // 绑定在复习区域元素上（代替 document 级监听）：快捷键只在复习区域持有焦点时生效，
 // 不抢占页头导航 / 主题菜单等处的按键（交互与可访问性规范 §5.4）。
 function handleKeydown(event: KeyboardEvent) {
+  if (
+    event.repeat ||
+    event.isComposing ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.shiftKey
+  ) {
+    if (event.repeat) event.preventDefault()
+    return
+  }
+
   // 焦点落在按钮 / 链接等控件上时，Space / Enter 保留原生激活行为，不拦截。
   const target = event.target
+  if (
+    target instanceof HTMLElement &&
+    target.closest('input, textarea, select, [contenteditable]')
+  )
+    return
   const onControl =
     target instanceof HTMLElement &&
     target.closest('button, a, input, textarea, select, [contenteditable]') !==
@@ -408,16 +464,20 @@ function handleKeydown(event: KeyboardEvent) {
     { key: event.key, code: event.code },
     currentMode.value,
     onControl,
+    canCorrect.value ? pendingResult.value : null,
   )
   if (!action) return
 
   event.preventDefault()
-  if (action === 'reveal') {
-    void handleReveal()
-  } else if (action === 'answerForgotten') {
-    void handleAnswer('forgotten')
+  if (isSubmitting.value) return
+  if (action === 'next') {
+    void handleNext()
+  } else if (action === 'correctForgotten') {
+    handleCorrectToForgotten()
   } else {
-    void handleAnswer('remembered')
+    handleInitialAnswer(
+      action === 'answerForgotten' ? 'forgotten' : 'remembered',
+    )
   }
 }
 
@@ -603,77 +663,18 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
         class="mt-8 flex flex-col items-center gap-6 text-center outline-hidden"
         @keydown="handleKeydown"
       >
-        <h2 class="text-3xl font-semibold break-words text-foreground">
-          {{ currentItem.word }}
-        </h2>
-
-        <!-- recalling：提示回忆 -->
-        <template v-if="currentMode === 'recalling'">
-          <p class="text-sm text-muted-foreground">先回忆这个单词的意思</p>
-          <Button class="mt-4" @click="handleReveal"> 查看释义 </Button>
-        </template>
-
-        <!-- revealed：显示释义 + 作答按钮 -->
-        <template v-else-if="currentMode === 'revealed'">
-          <p class="max-w-full text-base whitespace-pre-line text-foreground">
-            {{ currentMeaning }}
-          </p>
-          <div class="mt-4 flex gap-4">
-            <Button
-              variant="outline"
-              class="gap-2"
-              :disabled="isSubmitting"
-              @click="void handleAnswer('forgotten')"
-            >
-              <XCircle class="size-4 shrink-0" aria-hidden="true" />
-              不记得
-            </Button>
-            <Button
-              class="gap-2"
-              :disabled="isSubmitting"
-              @click="void handleAnswer('remembered')"
-            >
-              <CheckCircle class="size-4 shrink-0" aria-hidden="true" />
-              记得
-            </Button>
-          </div>
-        </template>
+        <ReviewFlashcard
+          :word="currentItem.word"
+          :meaning="currentMeaning"
+          :mode="currentMode"
+          :can-correct="canCorrect"
+          :submitting="isSubmitting"
+          :error="submitError"
+          @choose="handleInitialAnswer"
+          @correct="handleCorrectToForgotten"
+          @next="void handleNext()"
+        />
       </div>
-
-      <!-- 快捷键提示 -->
-      <p class="mt-8 text-center text-xs text-muted-foreground">
-        <template v-if="currentMode === 'recalling'">
-          按
-          <kbd
-            class="rounded-field bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs"
-            >Space</kbd
-          >
-          查看释义
-        </template>
-        <template v-else-if="currentMode === 'revealed'">
-          <kbd
-            class="rounded-field bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs"
-            >1</kbd
-          >
-          /
-          <kbd
-            class="rounded-field bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs"
-            >←</kbd
-          >
-          不记得
-          <span class="mx-2">·</span>
-          <kbd
-            class="rounded-field bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs"
-            >2</kbd
-          >
-          /
-          <kbd
-            class="rounded-field bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs"
-            >→</kbd
-          >
-          记得
-        </template>
-      </p>
     </template>
   </section>
 </template>

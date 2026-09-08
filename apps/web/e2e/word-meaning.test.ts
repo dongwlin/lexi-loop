@@ -77,7 +77,7 @@ for (const newline of ['\n', '\\n']) {
     for (const width of [1280, 375]) {
       await page.setViewportSize({ width, height: 900 })
       await expect(page.getByText(first, { exact: false })).not.toBeVisible()
-      await page.getByRole('button', { name: '查看释义' }).click()
+      await page.getByRole('button', { name: '认识', exact: true }).click()
       const meaning = page.getByText(first, { exact: false })
       await expect(meaning).not.toContainText('\\n')
       const layout = await meaning.evaluate(

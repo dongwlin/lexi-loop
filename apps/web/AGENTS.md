@@ -56,7 +56,7 @@ pnpm -F @lexi-loop/api-client test:run  # api-client mutator / 生成端点单�
 - 无状态纯函数放 `src/utils/`（架构规范 §4.5 / §4.8），跨 Feature 客户端状态放 `src/stores/`（Pinia，§4.6），跨 Feature 带状态的 composable 放 `src/composables/`（§4.5）；状态归属决策顺序见 §7.1。
 - 基础组件 `src/components/ui/` 每组件独立文件夹（`Button.vue` + 同目录 Story），经 `components/ui/index.ts` 统一导出；保持业务无关——不 import stores / api-client / 路由（架构规范 §4.4）；视觉配方以设计系统方案 §8 为准，不在组件里另起一套。
 - 主题：偏好 Light / Dark / System 持久化在 `localStorage`（`lexi-loop.theme`），`main.ts` 在应用挂载前初始化，解析后的主题类互斥挂 `<html>`（设计系统方案 §11）。
-- 可访问性基线随页面落地，不后补：页面 h1 与 landmark、Loading / Empty / Error 分支（架构规范 §11、交互与可访问性规范 §6.1）、焦点移动与快捷键（同规范 §5.3–§5.4）；路由 meta → `document.title` 与页面级导航后的焦点移动（新页 h1，兜底 `#main-content`；判定经 `utils/isPageLevelNavigation`）统一由 `router.afterEach` 管理（WordDetailPage 保留动态标题覆盖）；AppShell 含 skip link（`#main-content`）与 `<main id="main-content">` landmark；复习页键盘映射 Space / 1 / 2 / ← / → 以 review-flow.md 为准。
+- 可访问性基线随页面落地，不后补：页面 h1 与 landmark、Loading / Empty / Error 分支（架构规范 §11、交互与可访问性规范 §6.1）、焦点移动与快捷键（同规范 §5.3–§5.4）；路由 meta → `document.title` 与页面级导航后的焦点移动（新页 h1，兜底 `#main-content`；判定经 `utils/isPageLevelNavigation`）统一由 `router.afterEach` 管理（WordDetailPage 保留动态标题覆盖）；AppShell 含 skip link（`#main-content`）与 `<main id="main-content">` landmark；复习页键盘映射 Space / Enter / 1 / 2 / ← / → 以 review-flow.md 为准。
 - 可分享页面状态（搜索、分页、恢复进度）写 URL（架构规范 §6.2、交互与可访问性规范 §6.2）。
 
 ## MVP 边界与冻结决策（web 侧）
