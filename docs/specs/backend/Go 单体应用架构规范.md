@@ -2,9 +2,11 @@
 
 ## 1. 概述
 
+> 本规范在 LexiLoop 中的具体落地见 [Go 工程结构](../../backend/structure.md)。
+
 本规范定义 Go 单体应用的分层结构：依赖方向清晰，不为形式上的”解耦”引入无收益的接口、版本目录和转换层。
 
-核心思路：**Repo 是仅依赖 `bun.IDB` 的无状态临时适配器，由 Service 在方法内按需构造；Repo 内部维护 `repo/internal/schema` 并完成 `schema` ↔ `domain` 转换，利用 Go 的 `internal` 规则阻止其他层导入。Domain 封装不依赖外部资源的业务规则；Service 负责用例编排、事务边界和预期错误映射；Handler 负责 HTTP 协议适配。API 版本只作用于 Handler 与 DTO，Service 默认不随传输协议版本复制。预期错误通过类型化应用错误传递，任何层都不得依赖 `err.Error()` 文本进行分支。缓存默认关闭，仅在测量证明有收益后作为允许未命中、允许被淘汰的优化加入。**
+核心思路：**Repo 是仅依赖 `bun.IDB` 的无状态临时适配器，由 Service 在方法内按需构造；Repo 内部维护 `repo/internal/schema` 并完成 `schema` ↔ `domain` 转换，利用 Go 的 `internal` 规则阻止其他层导入。Domain 封装不依赖外部资源的业务规则；`service` 包提供业务接口与用例类型，`service/v1` 子包实现用例编排、事务边界和预期错误映射；Handler 依赖接口，负责 HTTP 协议适配，可注入 mock 独立测试。Service 实现版本与 HTTP API 版本独立，默认不随传输协议版本复制。预期错误通过类型化应用错误传递，任何层都不得依赖 `err.Error()` 文本进行分支。缓存默认关闭，仅在测量证明有收益后作为允许未命中、允许被淘汰的优化加入。**
 
 ---
 
@@ -15,8 +17,9 @@
 | 层          | 职责                                      | 依赖                            |
 | ---------- | --------------------------------------- | ----------------------------- |
 | middleware | HTTP 横切关注点（auth、cors、recovery、logger 等），handler 的子包 | Service（按需）                  |
-| handler    | 处理 HTTP 请求和响应；按 API 版本组织 Handler 与 DTO          | Service（具体类型）               |
-| service    | 业务用例编排、事务边界、预期错误映射；默认不按 API 版本复制       | `*bun.DB`、Repo、Domain、外部端口接口 |
+| handler    | 处理 HTTP 请求和响应；按 API 版本组织 Handler 与 DTO          | Service 接口               |
+| service    | 业务接口、用例请求/结果类型                  | 标准库、Domain、稳定值类型          |
+| service/v1 | Service 接口的具体实现：用例编排、事务、预期错误映射 | service、`*bun.DB`、Repo、Domain、apperr、外部端口接口 |
 | repo       | 纯粹的数据访问，通过 `bun.IDB` 执行数据库操作            | `bun.IDB`、Domain、schema（私有）   |
 | schema     | bun ORM 映射的数据结构，位于 `repo/internal/schema`  | bun                            |
 | domain     | 领域模型：数据字段 + 操作自身字段的业务方法；sentinel error 定义于此 | 无 Web、ORM、数据库或基础设施依赖       |
@@ -42,9 +45,12 @@ internal/
 │       ├── auth.go
 │       ├── cors.go
 │       └── logger.go
-├── service/                    // 业务层（具体 Service + 用例请求/结果类型）
+├── service/                    // 业务接口 + 用例请求/结果类型
 │   ├── user.go
-│   └── order.go
+│   ├── order.go
+│   └── v1/                     // 具体实现（实现版本独立于 HTTP API 版本）
+│       ├── user.go
+│       └── order.go
 ├── apperr/                     // 类型化应用错误，不包含 HTTP/Gin 依赖
 │   └── error.go
 ├── repo/                       // 数据访问（无状态临时适配器）
@@ -71,22 +77,24 @@ internal/
 各层之间的依赖方向：
 
 ```
-app → handler/v1 → service → repo → domain
-service → apperr
+app → handler/v1 → service → domain
+app → service/v1 → service
+service/v1 → repo → domain
+service/v1 → apperr
 handler/v1 → apperr
 app → infra（组装）
 handler/middleware → service（按需）
 repo → repo/internal/schema（由 Go internal 规则限制导入）
 ```
 
-依赖方向是单向的：Handler 依赖具体 Service；Service 知道 Repo、Domain 与 `apperr`；Repo 知道 Domain 以及私有 schema。Domain 不依赖应用层。Middleware 是 Handler 的子包，与具体业务 Handler 互不依赖。`app` 是组合根，其他包不得导入 `app`。
+依赖方向是单向的：Handler 只依赖 `service` 接口包，不导入 `service/v1`；具体实现依赖接口包、Repo、Domain 与 `apperr`。`service` 接口包不得反向导入实现子包、Repo 或基础设施，避免循环依赖和持久化细节泄漏；Repo 知道 Domain 以及私有 schema。Domain 不依赖应用层。Middleware 是 Handler 的子包，与具体业务 Handler 互不依赖。`app` 是组合根，其他包不得导入 `app`。
 
 ### 2.2 组合根管理的组件
 
 组合根管理**长生命周期**组件：
 
 - Handler（v1 业务 handler 与路由入口）
-- Service（构造函数返回具体指针，如 `*service.User`）
+- Service 实现（在 `service/v1` 中构造，按 `service.User` 等接口注入 Handler）
 - `*bun.DB`、`*redis.Client` 等基础设施组件（infra 层产物）
 - 邮件、时钟、对象存储、第三方 API 等需要替换的外部端口实现
 
@@ -289,7 +297,7 @@ func (s *UserService) ChangeEmail(ctx context.Context, id uuid.UUID, newEmail st
 Repo 不持有任何长期状态，仅在 Service 方法内按需创建，生命周期仅限于当前调用：
 
 ```go
-// internal/service/user.go（完整结构见第 5 章）
+// internal/service/v1/user.go（完整结构见第 5 章）
 func (s *User) GetUser(ctx context.Context, id uuid.UUID) (*domain.User, error) {
     userRepo := repo.NewUserRepo(s.db)
     return userRepo.FindByID(ctx, id)
@@ -439,9 +447,9 @@ var (
 
 ## 5. Service 层设计
 
-### 5.1 具体 Service，不按 API 版本复制
+### 5.1 Service 提供接口，v1 子包提供实现
 
-Service 默认使用具体类型，构造函数返回具体指针。请求/结果类型与 Service 放在同一个包中，不含 `json` 标签；JSON 契约由版本化 DTO 定义。
+`internal/service` 只定义对外业务接口与用例请求/结果类型，不保存数据库连接或实现业务流程。接口按业务能力划分，避免把所有用例合成一个大接口；涉及 I/O 或可取消工作的用例方法接收 `context.Context`；纯内存只读快照等操作可省略上下文。参数和返回值使用 Domain 或本包用例类型，不暴露 Gin、HTTP DTO、bun 或 Repo 类型。请求/结果类型不含 `json` 标签，JSON 契约由 Handler 的 DTO 定义。
 
 ```go
 // internal/service/user.go
@@ -451,7 +459,35 @@ import (
     "context"
 
     "yourproject/internal/domain"
+
+    "github.com/google/uuid"
+)
+
+type User interface {
+    GetProfile(ctx context.Context, id uuid.UUID) (*domain.User, error)
+    ActivateUser(ctx context.Context, id uuid.UUID) error
+}
+
+type UpdateProfileRequest struct {
+    Nickname *string
+    Avatar   *string
+}
+```
+
+具体结构体、构造函数与方法放在 `internal/service/v1`。构造函数返回具体指针，组合根通过接口注入调用方；使用编译期断言确保实现满足接口。用例类型只在父包定义，子包通过 `service.XxxRequest` / `service.XxxResult` 引用，不复制定义。
+
+```go
+// internal/service/v1/user.go
+package v1
+
+import (
+    "context"
+    "errors"
+
+    "yourproject/internal/apperr"
+    "yourproject/internal/domain"
     "yourproject/internal/repo"
+    "yourproject/internal/service"
 
     "github.com/google/uuid"
     "github.com/uptrace/bun"
@@ -461,31 +497,52 @@ type User struct {
     db *bun.DB
 }
 
+var _ service.User = (*User)(nil)
+
 func NewUser(db *bun.DB) *User {
     return &User{db: db}
 }
 
-type UpdateProfileRequest struct {
-    Nickname *string
-    Avatar   *string
+func (s *User) GetProfile(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+    user, err := repo.NewUserRepo(s.db).FindByID(ctx, id)
+    if errors.Is(err, repo.ErrNotFound) {
+        return nil, apperr.New(apperr.NotFound, apperr.CodeUserNotFound, "user not found", err)
+    }
+    if err != nil {
+        return nil, apperr.Internal(err)
+    }
+    return user, nil
 }
 
-func (s *User) GetProfile(ctx context.Context, id uuid.UUID) (*domain.User, error) {
-    return repo.NewUserRepo(s.db).FindByID(ctx, id)
+// ActivateUser 的实现见 §5.3，同样位于本包。
+```
+
+组合根同时导入 Handler 与 Service 实现时使用别名区分：
+
+```go
+// internal/app/provider.go
+package app
+
+import (
+    handlerv1 "yourproject/internal/handler/v1"
+    servicev1 "yourproject/internal/service/v1"
+
+    "github.com/uptrace/bun"
+)
+
+func NewUserHandler(db *bun.DB) *handlerv1.UserHandler {
+    userSvc := servicev1.NewUser(db)
+    return handlerv1.NewUserHandler(userSvc)
 }
 ```
 
-API 的 `/v1`、`/v2` 只对应 `handler/v1`、`handler/v2` 及各自 DTO。两个 API 版本可以调用同一个 Service；只有业务用例本身确实需要长期并存的两套行为时，才为行为创建明确命名的新方法或实现，不机械创建 `service/v2`。
+`service/v1` 的 `v1` 表示业务实现版本，不与 HTTP `/v1` 绑定。`handler/v1` 和未来的 `handler/v2` 可以注入同一个实现；只有业务行为确实需要长期并存时，才引入新的实现子包，由组合根选择。父包接口保持独立，不因新增 API 版本机械复制。
 
-接口只在存在以下至少一个理由时引入：
-
-- 有两个需要同时支持的真实实现
-- 边界涉及邮件、时钟、对象存储或第三方 API，需要稳定替换或测试失败路径
-- 调用方确实只需要一个很小的能力集合，而具体依赖会造成明显耦合
-
-不要仅为了 DI 或“以后可能替换”给每个 Service/Repo 预先创建一一对应的接口。
+Service 接口是 Handler mock 测试的替换边界，属于明确的测试需求。Repo 仍使用具体类型，不为 mock Handler 额外抽象 Repo。邮件、时钟、对象存储等外部端口仍按所需能力声明窄接口；仅供实现使用的端口可定义于实现包，避免加入面向 Handler 的业务接口。
 
 ### 5.2 职责边界
+
+下文的 Service 编排、事务与缓存职责及具体方法示例均属于 `service/v1` 实现包；`service` 父包仅提供契约。
 
 | 职责 | 说明 |
 |------|------|
@@ -506,6 +563,7 @@ API 的 `/v1`、`/v2` 只对应 `handler/v1`、`handler/v2` 及各自 DTO。两�
 判定标准：数据存储于 PostgreSQL → 走具体 Repo；外部设施 → 通过能表达业务所需能力的窄端口访问，不把通用客户端 API 扩散到 Service：
 
 ```go
+// internal/service/v1/verification.go：实现所需的外部端口
 type VerificationCodeStore interface {
     Save(ctx context.Context, key, code string, ttl time.Duration) error
     Consume(ctx context.Context, key, code string) (bool, error)
@@ -521,7 +579,7 @@ type Verification struct {
 Service 从 Repo 获取领域模型 → 调用 Domain 方法执行业务规则 → 通过 Repo 写回：
 
 ```go
-// ActivateUser 激活用户（internal/service/user.go）
+// ActivateUser 激活用户（internal/service/v1/user.go）
 func (s *User) ActivateUser(ctx context.Context, id uuid.UUID) error {
     userRepo := repo.NewUserRepo(s.db)
     user, err := userRepo.FindByID(ctx, id)
@@ -556,7 +614,7 @@ func (s *User) ActivateUser(ctx context.Context, id uuid.UUID) error {
 
 ### 6.1 结构体定义
 
-业务 Handler 位于 `handler/v1/`，持有具体 Service，负责 HTTP 协议适配。Handler 与 DTO 按 API 版本组织；通用 Middleware 不参与版本化：
+业务 Handler 位于 `handler/v1/`，持有 `service` 接口，负责 HTTP 协议适配。Handler 与 DTO 按 API 版本组织；通用 Middleware 不参与版本化：
 
 ```go
 // internal/handler/v1/user.go
@@ -569,10 +627,10 @@ import (
 )
 
 type UserHandler struct {
-    svc *service.User
+    svc service.User
 }
 
-func NewUserHandler(svc *service.User) *UserHandler {
+func NewUserHandler(svc service.User) *UserHandler {
     return &UserHandler{svc: svc}
 }
 ```
@@ -720,9 +778,9 @@ Middleware 是 HTTP 层的横切关注点，作为 `handler` 的子包组织（`
 | 响应控制 | 校验不通过时直接中断请求链 |
 | 不写业务逻辑 | 不做业务规则判断，业务逻辑一律委托给 Service |
 
-### 8.2 可以依赖具体 Service
+### 8.2 按需依赖 Service 接口
 
-Middleware 可以直接接收需要的具体 Service；不要为了中间件额外复制一套接口。与外部设施交互的可替换端口仍由 Service 自己声明：
+Middleware 接收 `service` 包中需要的业务接口，不导入 `service/v1`；不要为了中间件额外复制一套接口。与外部设施交互的可替换端口仍由 Service 自己声明：
 
 ```go
 // internal/handler/middleware/auth.go
@@ -738,8 +796,8 @@ import (
     "github.com/gin-gonic/gin"
 )
 
-// Auth 认证中间件 — 直接依赖具体 Token Service
-func Auth(tokenSvc *service.Token) gin.HandlerFunc {
+// Auth 认证中间件 — 依赖 service.Token 接口（声明 ValidateToken 方法）
+func Auth(tokenSvc service.Token) gin.HandlerFunc {
     return func(c *gin.Context) {
         header := c.GetHeader("Authorization")
         if header == "" || !strings.HasPrefix(header, "Bearer ") {
@@ -810,7 +868,7 @@ import (
 func RegisterRoutes(
     r *gin.Engine,
     log zerolog.Logger,
-    tokenSvc *service.Token,
+    tokenSvc service.Token,
     userH *v1.UserHandler,
     orderH *v1.OrderHandler,
 ) {
@@ -835,13 +893,15 @@ func RegisterRoutes(
 
 ### 8.4 依赖方向
 
-Middleware 按需依赖具体 Service，但 Service 不感知 Middleware。app 作为组合根，知道双方并完成装配。
+Middleware 按需依赖 Service 接口，但 Service 不感知 Middleware。app 作为组合根，知道双方并完成装配。
 
 ```
-handler/middleware → service → repo → domain
+handler/middleware → service → domain
+app → service/v1 → service
+service/v1 → repo → domain
 ```
 
-Middleware 是 Handler 的子包，与具体业务 Handler 互不依赖；两者都可以按需依赖具体 Service。
+Middleware 是 Handler 的子包，与具体业务 Handler 互不依赖；两者都可以按需依赖 Service 接口。
 
 ---
 
@@ -859,7 +919,7 @@ Middleware 是 Handler 的子包，与具体业务 Handler 互不依赖；两者
 Service 通过 `s.db.RunInTx` 开启事务闭包，并把同一个 `tx` 传给事务内所有 Repo：
 
 ```go
-func (s *Order) CreateOrder(ctx context.Context, req CreateOrderRequest) error {
+func (s *Order) CreateOrder(ctx context.Context, req service.CreateOrderRequest) error {
     return s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
         orderRepo := repo.NewOrderRepo(tx)
         inventoryRepo := repo.NewInventoryRepo(tx)
@@ -1107,7 +1167,7 @@ Repo 层使用 `testcontainers` 进行集成测试，验证数据库操作与真
 
 ### 11.3 Service 层测试
 
-Service 默认与具体 Repo 一起使用 testcontainers 测试，不为测试强行创建 Repo 接口。重点验证：
+`service/v1` 中的具体实现与 Repo 一起使用 testcontainers 测试，不为测试强行创建 Repo 接口。重点验证：
 
 - 事务提交、回滚、锁顺序和乐观锁冲突
 - Domain / Repo 错误是否映射为正确的 `apperr.Kind` 与稳定 `code`
@@ -1115,6 +1175,60 @@ Service 默认与具体 Repo 一起使用 testcontainers 测试，不为测试�
 - 启用缓存时，miss、淘汰、Set 被拒绝和失效遗漏均不影响数据库事实
 
 邮件、时钟、对象存储和第三方 API 等已声明窄端口的外部边界，可以使用 fake/stub 测试失败路径。
+
+### 11.4 Handler 接口 mock 测试
+
+Handler 单元测试使用 `httptest`，注入实现 `service` 接口的 mock/stub，不构造 `service/v1`、Repo 或数据库。简单接口可手写替身；接口方法较多时可以生成 mock，但生成物限于测试用途。替身必须实现完整接口，并用编译期断言检查；未配置的方法调用应使测试失败，避免静默返回成功。
+
+```go
+// internal/handler/v1/user_test.go（与 §6.1、§6.2 配套；省略 import）
+type userServiceStub struct {
+    t        *testing.T
+    activate func(context.Context, uuid.UUID) error
+}
+
+var _ service.User = (*userServiceStub)(nil)
+
+func (s *userServiceStub) GetProfile(context.Context, uuid.UUID) (*domain.User, error) {
+    s.t.Fatal("unexpected GetProfile call")
+    return nil, nil
+}
+
+func (s *userServiceStub) ActivateUser(ctx context.Context, id uuid.UUID) error {
+    if s.activate == nil {
+        s.t.Fatal("unexpected ActivateUser call")
+        return nil
+    }
+    return s.activate(ctx, id)
+}
+
+func TestUserHandler_ActivateUser_NotFound(t *testing.T) {
+    id := uuid.Must(uuid.NewV7())
+    calls := 0
+    svc := &userServiceStub{t: t, activate: func(ctx context.Context, got uuid.UUID) error {
+        calls++
+        require.Equal(t, id, got)
+        return apperr.New(apperr.NotFound, apperr.CodeUserNotFound, "user not found", nil)
+    }}
+    h := NewUserHandler(svc)
+    r := gin.New()
+    r.POST("/users/:id/activate", h.ActivateUser)
+
+    w := httptest.NewRecorder()
+    req := httptest.NewRequest(http.MethodPost, "/users/"+id.String()+"/activate", nil)
+    r.ServeHTTP(w, req)
+
+    require.Equal(t, 1, calls)
+    require.Equal(t, http.StatusNotFound, w.Code)
+    var body struct {
+        Code string `json:"code"`
+    }
+    require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+    require.Equal(t, apperr.CodeUserNotFound, body.Code)
+}
+```
+
+覆盖参数绑定与 DTO 转换、非法参数不调用 Service、请求上下文与参数传递、成功响应、应用错误的 HTTP 状态与稳定 code、未知错误返回 500 且不泄漏 cause。Middleware 可同样注入接口替身验证放行与中断路径。少量真实 Service + PostgreSQL 的 HTTP 集成测试保留用于验证组装和整条链路；mock 测试不能替代 §11.3 的事务与业务错误映射验证。完整测试要求见 [Go 测试规范](Go%20测试规范.md)。
 
 ---
 
@@ -1126,6 +1240,8 @@ Service 默认与具体 Repo 一起使用 testcontainers 测试，不为测试�
 |--------|------|----------|
 | 贫血模型 | 业务规则散落在 Service 的 if-else 里，直接改字段 | 规则收归 Domain 方法，状态变更只能经方法执行 |
 | schema 泄漏 | handler/service/domain 试图导入持久化模型 | schema 放在 `repo/internal/schema`，由编译器限制 |
+| Handler 绑定 Service 实现 | 字段或构造参数使用 `*servicev1.User`，测试被迫连接数据库 | 依赖 `service.User` 接口，注入 mock/stub |
+| Service 接口反向依赖实现 | `service` 导入 `service/v1` 或暴露 bun/Repo 类型 | 接口包只声明业务契约，由组合根选择实现 |
 | Handler 写业务逻辑 | handler 里做业务判断或直接访问 repo | 委托 Service，handler 只做协议适配 |
 | 模型方法查库 | domain 方法接收 repo/db 参数做查询 | 外部资源校验留在 Service 层 |
 | repo 无谓入 DI | repo 成为长生命周期单例，或仅为 mock 创建一一对应接口 | Service 方法内按需创建；需要替换时再抽象 |
@@ -1133,7 +1249,7 @@ Service 默认与具体 Repo 一起使用 testcontainers 测试，不为测试�
 | 状态字符串散落 | `"active"` / `"disabled"` 字面量散落各层 | domain 类型化常量 + 统一转换 |
 | 教条式 getter/setter | 每个字段都封装方法 | 只有状态机/不变量字段需要封装（见 §3.2） |
 | 按错误文本分支 | `switch err.Error()` 或比较驱动错误文本 | `errors.Is` / `errors.As` + `apperr.Kind/Code` |
-| API 版本复制 Service | 每新增 `/v2` 就复制整个 `service/v2` | 只版本化 Handler/DTO，复用业务用例 |
+| API 版本复制 Service | 每新增 `/v2` 就复制整个 `service/v2` | API 版本与实现版本独立，由组合根选择并复用实现 |
 | 读改写无并发控制 | 先查再更新，但无锁也无 version 条件 | 事务行锁或乐观锁 |
 | 缓存可变指针 | 多个请求共享 `*domain.Xxx` 并原地修改 | 缓存不可变值快照，每次命中返回副本 |
 
@@ -1141,11 +1257,12 @@ Service 默认与具体 Repo 一起使用 testcontainers 测试，不为测试�
 
 ## 13. 方案要点总结
 
-- **分层清晰**：app / Handler / Middleware → Service → Repo → Domain，infra 独立成层，每层职责单一、依赖单向；repo → schema 仅在 Repo 内部发生
-- **只版本化传输契约**：Handler 与 DTO 按 API 版本组织；Service 使用具体类型，默认不随 `/vN` 复制
-- **横切独立**：Middleware 作为 Handler 的子包处理 HTTP 横切关注点，定义与挂载分离，需要业务能力时直接依赖具体 Service
+- **分层清晰**：Handler / Middleware → service 接口；app 组装 service/v1 实现 → Repo → Domain，infra 独立成层，每层职责单一、依赖单向；repo → schema 仅在 Repo 内部发生
+- **接口与实现分离**：service 提供接口与用例类型，service/v1 提供实现；实现版本独立于 Handler/DTO 的 API 版本
+- **横切独立**：Middleware 作为 Handler 的子包处理 HTTP 横切关注点，定义与挂载分离，需要业务能力时直接依赖 Service 接口
 - **Domain 纯净**：领域层不携带 ORM 映射或基础设施依赖，业务规则附着在 Domain 上而非散落在 Service 中
 - **错误契约化**：Domain/Repo 返回可识别错误，Service 映射为 `apperr.Kind/Code`，Handler 不比较错误文本
+- **Handler 易测**：注入 Service 接口的 mock/stub，用 httptest 验证协议适配，无需启动数据库
 - **Domain 易测**：领域逻辑无运行时基础设施，单元测试不需要数据库或 mock，错误用 `errors.Is` 断言
 - **schema 私有**：bun 持久化映射收敛在 Repo 的 schema 子包中，转换只在 Repo 内部发生，持久化细节不泄漏到其他层
 - **依赖极简**：组合根显式组装长生命周期组件；Repo、Domain、Middleware、schema 不创建无收益的 DI 绑定

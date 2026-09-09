@@ -21,13 +21,13 @@ TDD 的三个收益：
 
 ## 2. 测试金字塔与分层测试策略
 
-按照 [Go 单体应用架构规范](Go%20单体应用架构规范.md) 的分层架构（handler → service → repo → domain，middleware 为 handler 子包），测试策略应与分层对应：
+按照 [Go 单体应用架构规范](Go%20单体应用架构规范.md) 的分层架构（接口与实现的依赖方向见该规范 §2，middleware 为 handler 子包），测试策略应与分层对应：
 
 | 层 | 测试类型 | 依赖 | 速度 |
 | --- | --- | --- | --- |
 | Domain | 单元测试 | 无运行时基础设施 | 极快 |
 | Service + Repo | 集成测试 | testcontainers（真实 PostgreSQL） | 中等 |
-| Handler | 组件测试 | httptest + 真实 Service/Test DB | 中等 |
+| Handler | 单元测试为主，少量集成测试 | httptest + Service 接口 mock/stub；集成测试使用真实 Service/Test DB | 单元快，集成中等 |
 | CLI | 组件测试 | Cobra command + 可控输入输出 | 快 |
 | 离线导入 / Migration | 集成测试 | 小型 fixture + testcontainers | 中等 |
 | 外部端口 | 单元测试 | fake/stub 邮件、时钟、对象存储、第三方 API | 快 |
@@ -36,10 +36,10 @@ TDD 的三个收益：
 
 - Domain 层的业务规则不依赖运行时基础设施，纯逻辑测试成本很低
 - Service 默认与具体 Repo 一起通过 testcontainers 验证编排、事务和错误映射，不为 mock 强行创建 Repo 接口
-- Handler 的绑定、状态码和响应契约使用 `httptest` 验证；纯响应辅助函数可以单独做单元测试
+- Handler 的绑定、状态码和响应契约通过 `httptest` 与 Service 接口替身独立验证；接口边界和示例见 [Go 单体应用架构规范 §11.4](Go%20单体应用架构规范.md#114-handler-接口-mock-测试)。少量集成测试验证真实组装与完整链路；纯响应辅助函数可以单独做单元测试
 - Cobra command 测试只验证命令路由、参数绑定、退出码与输出，不在 CLI 测试中重复业务规则
 - 离线导入使用小型固定 CSV 与真实 PostgreSQL 验证幂等重跑、批次回滚和字段映射；迁移至少验证空库可完整 up
-- 只有真实外部边界使用窄接口和测试替身
+- Service 接口作为 Handler 测试的替换边界；其他外部端口按实际替换需求使用窄接口和测试替身，不为此给 Repo 创建接口
 
 ---
 
@@ -229,7 +229,7 @@ import (
 
 ## 8. 测试替身
 
-测试替身只用于已经因真实替换需求而存在的窄外部端口，不用于模拟 Repo 或数据库。`bun.IDB` 是数据库执行接口，不是业务 Repo 接口。
+测试替身用于 Handler 所依赖的 Service 接口，以及因真实替换需求而存在的窄外部端口，不用于模拟 Repo 或数据库。`bun.IDB` 是数据库执行接口，不是业务 Repo 接口。
 
 ### 8.1 替身类型
 
@@ -280,7 +280,7 @@ func (m *MockMessageSender) SendVerificationCode(ctx context.Context, target, co
 ```
 
 > [!note]
-> Repo 和 Service 的关系型数据路径使用 testcontainers 跑真实 PostgreSQL，同时验证 SQL、事务、约束和 `schema` ↔ `domain` 转换。不要为了获得快速 mock 测试而改变生产架构。
+> Repo 和 Service 的关系型数据路径使用 testcontainers 跑真实 PostgreSQL，同时验证 SQL、事务、约束和 `schema` ↔ `domain` 转换。Handler 使用 Service 接口替身验证协议适配，不能替代这条真实数据路径的集成测试。
 
 ---
 
@@ -318,7 +318,7 @@ func BenchmarkUserService_Deactivate(b *testing.B) {
 运行：
 
 ```bash
-go test -bench BenchmarkUserService_Deactivate -benchmem ./internal/service/
+go test -bench BenchmarkUserService_Deactivate -benchmem ./internal/service/v1/
 ```
 
 > [!tip]

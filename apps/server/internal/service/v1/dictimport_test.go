@@ -1,4 +1,4 @@
-package service
+package v1
 
 // DictImport 自动导入编排的 testcontainers 集成测试：守卫完整跳过、
 // 不完整导入、失败语义、开关与缺文件跳过、优雅关闭语义。异步 goroutine
@@ -20,6 +20,7 @@ import (
 	"github.com/dongwlin/lexi-loop/apps/server/internal/domain"
 	"github.com/dongwlin/lexi-loop/apps/server/internal/importer/ecdict"
 	"github.com/dongwlin/lexi-loop/apps/server/internal/repo"
+	"github.com/dongwlin/lexi-loop/apps/server/internal/service"
 )
 
 // fixtureCSV 是三词条的小型 ECDICT CSV（含词形 lemma 与不同音标）。
@@ -43,13 +44,13 @@ func writeDictFixture(t *testing.T, csvData, version string, rowsTotal int64) st
 }
 
 // waitForState 轮询快照直到到达期望状态或超时，返回最终快照。
-func waitForState(t *testing.T, svc *DictImport, want ...DictImportState) DictImportSnapshot {
+func waitForState(t *testing.T, svc *DictImport, want ...service.DictImportState) service.DictImportSnapshot {
 	t.Helper()
-	allowed := make(map[DictImportState]bool, len(want))
+	allowed := make(map[service.DictImportState]bool, len(want))
 	for _, s := range want {
 		allowed[s] = true
 	}
-	var snap DictImportSnapshot
+	var snap service.DictImportSnapshot
 	require.Eventually(t, func() bool {
 		snap = svc.Snapshot()
 		return allowed[snap.State]
@@ -84,7 +85,7 @@ func TestDictImport_CompleteGuardSkipsImport(t *testing.T) {
 	// 单飞：第二次启动是无副作用的 no-op。
 	svc.StartAutoImport(ctx)
 
-	snap := waitForState(t, svc, DictImportStateCompleted)
+	snap := waitForState(t, svc, service.DictImportStateCompleted)
 	assert.Equal(t, "guard-v1", snap.SourceVersion)
 	assert.Equal(t, int64(2), snap.RowsTotal)
 	assert.Equal(t, int64(2), snap.RowsProcessed, "守卫路径按实际计数收敛")
@@ -111,7 +112,7 @@ func TestDictImport_ImportsIncompleteDictionary(t *testing.T) {
 	svc := NewDictImport(db, ecdict.NewImporter(db, 0), csvPath, true, zerolog.Nop())
 	svc.StartAutoImport(ctx)
 
-	snap := waitForState(t, svc, DictImportStateCompleted)
+	snap := waitForState(t, svc, service.DictImportStateCompleted)
 	assert.Equal(t, "import-v1", snap.SourceVersion)
 	assert.Equal(t, int64(3), snap.RowsTotal)
 	assert.Equal(t, int64(3), snap.RowsProcessed)
@@ -141,7 +142,7 @@ func TestDictImport_FailsOnMalformedCSV(t *testing.T) {
 	svc := NewDictImport(db, ecdict.NewImporter(db, 1), csvPath, true, zerolog.Nop())
 	svc.StartAutoImport(ctx)
 
-	snap := waitForState(t, svc, DictImportStateFailed)
+	snap := waitForState(t, svc, service.DictImportStateFailed)
 	assert.Equal(t, "fail-v1", snap.SourceVersion)
 	assert.Equal(t, int64(2), snap.RowsTotal)
 	assert.Equal(t, int64(1), snap.EntriesWritten, "失败前的已提交批次保留")
@@ -158,15 +159,15 @@ func TestDictImport_DisabledOrMissingDataStaysIdle(t *testing.T) {
 		svc.StartAutoImport(ctx)
 		// 开关关闭时无需等待后台调度。
 		snap := svc.Snapshot()
-		assert.Equal(t, DictImportStateIdle, snap.State)
+		assert.Equal(t, service.DictImportStateIdle, snap.State)
 		assert.True(t, snap.StartedAt.IsZero())
 	})
 
 	t.Run("CSV 不存在视为非镜像运行静默跳过", func(t *testing.T) {
 		svc := NewDictImport(nil, nil, filepath.Join(t.TempDir(), "missing.csv"), true, zerolog.Nop())
 		svc.StartAutoImport(ctx)
-		snap := waitForState(t, svc, DictImportStateIdle)
-		assert.Equal(t, DictImportStateIdle, snap.State)
+		snap := waitForState(t, svc, service.DictImportStateIdle)
+		assert.Equal(t, service.DictImportStateIdle, snap.State)
 		assert.True(t, snap.StartedAt.IsZero())
 	})
 }
@@ -188,7 +189,7 @@ func TestDictImport_PreCanceledContextStopsAsShutdown(t *testing.T) {
 		return svc.Snapshot().SourceVersion == "cancel-v1"
 	}, time.Second, time.Millisecond)
 	snap := svc.Snapshot()
-	assert.Equal(t, DictImportStateChecking, snap.State)
+	assert.Equal(t, service.DictImportStateChecking, snap.State)
 	assert.Equal(t, "cancel-v1", snap.SourceVersion)
 	assert.False(t, snap.StartedAt.IsZero())
 
@@ -209,7 +210,7 @@ func TestDictImport_MalformedManifestSkips(t *testing.T) {
 
 	svc := NewDictImport(nil, nil, csvPath, true, zerolog.Nop())
 	svc.StartAutoImport(ctx)
-	snap := waitForState(t, svc, DictImportStateIdle)
-	assert.Equal(t, DictImportStateIdle, snap.State, "manifest 不可用时静默跳过")
+	snap := waitForState(t, svc, service.DictImportStateIdle)
+	assert.Equal(t, service.DictImportStateIdle, snap.State, "manifest 不可用时静默跳过")
 	assert.True(t, snap.StartedAt.IsZero())
 }

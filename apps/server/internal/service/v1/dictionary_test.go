@@ -1,4 +1,4 @@
-package service
+package v1
 
 // DictionaryService 集成测试：真实 PostgreSQL 上的本地 Lookup 用例
 // （structure.md §4.3：归一 → 命中 → 词形归并 → 未命中创建最小词条）。

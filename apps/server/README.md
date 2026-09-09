@@ -88,7 +88,7 @@ go test -short ./...                # 只跑单元测试（跳过 testcontainers
 go test -race ./internal/infra/... ./internal/repo/... ./internal/service/... ./internal/handler/... ./internal/importer/... ./migrations
 ```
 
-`internal/infra/database`、`migrations`、`internal/repo`、`internal/service`、`internal/handler` 与 `internal/importer/ecdict` 的集成测试各自在包级 `TestMain` 中启动一次共享的真实 PostgreSQL 容器（镜像 `postgres:18-alpine`，全部用例复用；各包 `TestMain` 会先应用全部迁移）；Docker 不可用或传 `-short` 时集成用例跳过、纯单元测试仍运行（见 [Go 测试规范](../../docs/specs/backend/Go 测试规范.md)）。structure.md §5.4 的并发 / 回滚必测场景（单 active session、并发提交幂等、最后两题并发提交必完成、注入失败整体回滚、items 中途失败不留半成品）已在 Service 层用真实 PostgreSQL 验证；`internal/handler` 组件测试经 httptest 驱动完整 HTTP 栈验证端点契约，OpenAPI spec 单元测试（离线构造，不依赖 Docker）验证操作路由与 Error 模型 schema；`internal/importer/ecdict` 以小型固定 CSV 验证字段映射、幂等重跑与批次回滚续传。
+`internal/infra/database`、`migrations`、`internal/repo`、`internal/service/v1`、`internal/handler` 与 `internal/importer/ecdict` 的集成测试各自在包级 `TestMain` 中启动一次共享的真实 PostgreSQL 容器（镜像 `postgres:18-alpine`，全部用例复用；各包 `TestMain` 会先应用全部迁移）；Docker 不可用或传 `-short` 时集成用例跳过、纯单元测试仍运行（见 [Go 测试规范](../../docs/specs/backend/Go 测试规范.md)）。structure.md §5.4 的并发 / 回滚必测场景（单 active session、并发提交幂等、最后两题并发提交必完成、注入失败整体回滚、items 中途失败不留半成品）已在 Service 层用真实 PostgreSQL 验证；`internal/handler/v1` 单元测试通过 Service 接口替身与 httptest 独立验证 HTTP 协议适配（`go test ./internal/handler/v1` 无需 Docker）；`internal/handler` 集成测试继续驱动真实 Service 与完整 HTTP 栈验证端点契约，OpenAPI spec 单元测试（离线构造，不依赖 Docker）验证操作路由与 Error 模型 schema；`internal/importer/ecdict` 以小型固定 CSV 验证字段映射、幂等重跑与批次回滚续传。
 
 ## 模块
 

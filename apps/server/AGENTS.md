@@ -50,8 +50,8 @@ HTTP 契约变更后，按根 [AGENTS.md](../../AGENTS.md#契约与验证) 完�
 - Domain 结构体不带 bun tag / `bun.BaseModel`，方法只操作自身字段、不查库；实体创建用 `domain.NewXxx` 工厂生成 UUID v7 与 UTC 时间戳（§2、§4.1）。
 - 状态迁移与累计更新走 Domain 方法（如 `ApplyReview` / `Submit` / `Complete`），Service 不直改有不变量的字段（§4.3）。
 - Repo 无状态，由 Service / Importer 方法内以当前 `bun.IDB`（含 `bun.Tx`）按需构造，不做长生命周期注入；bun schema 只允许在 `repo/internal/schema`，`schema ↔ domain` 转换只在 Repo 内（§4.2）。
-- Service 编排用例与事务，不直接构造 SQL；同一事务内的全部 Repo 都使用传入的 `bun.Tx`（§4.3、§10）。
-- JSON 契约只由 `handler/v1/dto` 定义；Service 请求 / 结果类型不带 json tag。API 版本只作用于 Handler / DTO，不复制 Service（§4.3–§4.4）。
+- `service` 提供接口与用例类型，`service/v1` 实现并编排用例与事务，不直接构造 SQL；同一事务内的全部 Repo 都使用传入的 `bun.Tx`（§4.3、§10）。
+- JSON 契约只由 `handler/v1/dto` 定义；Service 请求 / 结果类型不带 json tag。Handler 依赖 `service` 接口；实现版本独立于 API 版本，不随 Handler / DTO 版本复制 Service（§4.3–§4.4）。
 - huma 接入的定制点集中两处：`handler/httpresp`（`Envelope` / 错误模型 / `UseHumaError` 装配）与 `handler/openapi.go`（spec 的 422 语义归一）；新增端点在 `handler/v1` 用 huma schema 标签声明校验（required / minLength / minimum / minItems / enum 等），不得回到手写绑定或另建错误渲染。
 - 成功 / 失败响应与 `apperr.Kind → HTTP 状态` 映射只存在于 `handler/httpresp`；Handler 与 Middleware 不得自行复制（§4.4）。
 - 错误用 `errors.Is` / `errors.As` + `apperr` 识别，禁止按 `err.Error()` 文本分支（§4.5）。

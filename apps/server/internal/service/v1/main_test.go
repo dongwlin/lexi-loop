@@ -1,4 +1,4 @@
-package service
+package v1
 
 // 集成测试公共设施：包级 TestMain 启动一次共享的真实 PostgreSQL
 //（postgres:18-alpine，testcontainers），应用 migrations 里的全部迁移后，

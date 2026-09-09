@@ -1,4 +1,4 @@
-package service
+package v1
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/dongwlin/lexi-loop/apps/server/internal/domain"
 	"github.com/dongwlin/lexi-loop/apps/server/internal/repo"
+	"github.com/dongwlin/lexi-loop/apps/server/internal/service"
 )
 
 func TestIntegration_InflectionMeanings(t *testing.T) {
@@ -28,7 +29,7 @@ func TestIntegration_InflectionMeanings(t *testing.T) {
 			wordSvc := newTestWord(t)
 			_, err := wordSvc.ImportWords(ctx, importReq(tt.word, 1))
 			require.NoError(t, err)
-			list, err := wordSvc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 20})
+			list, err := wordSvc.ListWords(ctx, service.ListWordsRequest{Page: 1, PageSize: 20})
 			require.NoError(t, err)
 			require.Len(t, list.Items, 1)
 			id := list.Items[0].UserWord.ID
@@ -44,14 +45,14 @@ func TestIntegration_InflectionMeanings(t *testing.T) {
 			assert.Equal(t, detail.EffectiveMeaning, review.Items[0].EffectiveMeaning)
 			assert.Equal(t, tt.word, review.Items[0].Headword)
 			custom := []domain.Meaning{{Translations: []string{"自己的释义"}}}
-			require.NoError(t, wordSvc.UpdateReviewMeaning(ctx, id, UpdateReviewMeaningRequest{CustomReviewMeaning: custom}))
+			require.NoError(t, wordSvc.UpdateReviewMeaning(ctx, id, service.UpdateReviewMeaningRequest{CustomReviewMeaning: custom}))
 			detail, err = wordSvc.GetWord(ctx, id)
 			require.NoError(t, err)
 			assert.Equal(t, custom, detail.EffectiveMeaning)
 			assert.Equal(t, domain.MeaningSourceCustom, detail.MeaningSource)
 			customReview := mustStart(t, newTestReview(t), 1)
 			assert.Equal(t, custom, customReview.Items[0].EffectiveMeaning)
-			require.NoError(t, wordSvc.UpdateReviewMeaning(ctx, id, UpdateReviewMeaningRequest{}))
+			require.NoError(t, wordSvc.UpdateReviewMeaning(ctx, id, service.UpdateReviewMeaningRequest{}))
 			restored, err := wordSvc.GetWord(ctx, id)
 			require.NoError(t, err)
 			assert.Equal(t, want, restored.EffectiveMeaning)
@@ -131,7 +132,7 @@ func TestIntegration_InflectionLegacyAndMixedBase(t *testing.T) {
 			svc := newTestWord(t)
 			_, err := svc.ImportWords(ctx, importReq(tt.word, 1))
 			require.NoError(t, err)
-			list, err := svc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 20})
+			list, err := svc.ListWords(ctx, service.ListWordsRequest{Page: 1, PageSize: 20})
 			require.NoError(t, err)
 			require.Len(t, list.Items, 1)
 			detail, err := svc.GetWord(ctx, list.Items[0].UserWord.ID)
@@ -164,7 +165,7 @@ func TestIntegration_InflectionLegacyLexicalNewlines(t *testing.T) {
 			svc := newTestWord(t)
 			_, err := svc.ImportWords(ctx, importReq("worked", 1))
 			require.NoError(t, err)
-			list, err := svc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 20})
+			list, err := svc.ListWords(ctx, service.ListWordsRequest{Page: 1, PageSize: 20})
 			require.NoError(t, err)
 			require.Len(t, list.Items, 1)
 			id := list.Items[0].UserWord.ID
@@ -176,7 +177,7 @@ func TestIntegration_InflectionLegacyLexicalNewlines(t *testing.T) {
 			assert.Equal(t, source, detail.MeaningSource)
 			review := mustStart(t, newTestReview(t), 1)
 			assert.Equal(t, want, review.Items[0].EffectiveMeaning)
-			require.NoError(t, svc.UpdateReviewMeaning(ctx, id, UpdateReviewMeaningRequest{CustomReviewMeaning: legacy}))
+			require.NoError(t, svc.UpdateReviewMeaning(ctx, id, service.UpdateReviewMeaningRequest{CustomReviewMeaning: legacy}))
 			custom, err := svc.GetWord(ctx, id)
 			require.NoError(t, err)
 			assert.Equal(t, legacy, custom.EffectiveMeaning, "用户自定义不做解码")

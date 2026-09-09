@@ -11,16 +11,17 @@
 
 ```text
 main → cmd → app / importer / migrations（迁移）
-app → handler / service / importer / infra（组装）
+app → handler / service/v1 / importer / infra（组装）
 handler/router → handler/v1 / handler/middleware / httpresp（错误模型装配）
 handler/v1 → service / httpresp / apperr
 handler/middleware → service（按需）/ httpresp
-service → repo / domain / apperr / importer（词典导入编排）/ 外部端口（按需）
+service → domain
+service/v1 → service / repo / domain / apperr / importer（词典导入编排）/ 外部端口（按需）
 repo → domain / repo/internal/schema
 importer → repo / domain
 ```
 
-核心思路：Domain 封装不依赖外部资源的业务规则；Repo 是仅依赖 `bun.IDB` 的无状态临时适配器，由 Service 或 Importer 在方法内按需构造；Service 负责业务用例编排、事务边界和预期错误映射；Importer 负责编排离线数据导入；Handler 负责 HTTP 协议适配，Middleware 作为 Handler 子包处理 HTTP 横切逻辑。API 版本只作用于 Handler 与 DTO，Service 默认不随传输协议版本复制。
+核心思路：Domain 封装不依赖外部资源的业务规则；Repo 是仅依赖 `bun.IDB` 的无状态临时适配器，由 Service 或 Importer 在方法内按需构造；service 父包提供业务接口与用例类型，service/v1 实现业务用例编排、事务边界和预期错误映射；Importer 负责编排离线数据导入；Handler 依赖 service 接口，负责 HTTP 协议适配，Middleware 作为 Handler 子包处理 HTTP 横切逻辑。Handler 与 DTO 按 API 版本组织；service/v1 的实现版本独立于传输协议版本，不随 HTTP /vN 机械复制。
 
 ## 2. `apps/server/` 目录结构
 
@@ -61,13 +62,20 @@ apps/server/
 │  │        ├─ user_word.go
 │  │        ├─ review.go
 │  │        └─ jsonb.go          jsonb 列的 Valuer / Scanner 通用包装
-│  ├─ service/                   业务用例编排（具体类型，不按 API 版本复制）
-│  │  ├─ word.go                 WordService
-│  │  ├─ dictionary.go           DictionaryService（MVP：本地 Lookup）
-│  │  ├─ review.go               ReviewService
-│  │  ├─ dictimport.go           DictImportService（serve 期词典自动导入编排 + 进程内进度）
-│  │  ├─ tx.go                   可重放事务的有上限重试与内部错误包装
-│  │  └─ sampler.go              具体的 WeightedSampler
+│  ├─ service/                   业务接口与用例请求 / 结果类型
+│  │  ├─ doc.go                  接口包依赖边界
+│  │  ├─ word.go                 Word 接口与用例类型
+│  │  ├─ dictionary.go           Dictionary 接口（本地 Lookup）
+│  │  ├─ review.go               Review 接口与用例类型
+│  │  ├─ dictimport.go           DictImport 只读接口与进度快照
+│  │  └─ v1/                     具体实现及对应测试
+│  │     ├─ word.go              生词用例编排
+│  │     ├─ dictionary.go        词典查询与事务内 lookup
+│  │     ├─ dictionary_meaning.go 展示释义组装
+│  │     ├─ review.go            复习用例与事务
+│  │     ├─ dictimport.go        自动导入编排与进程内状态
+│  │     ├─ tx.go                可重放事务的有上限重试与内部错误包装
+│  │     └─ sampler.go           具体的 WeightedSampler
 │  ├─ importer/
 │  │  └─ ecdict/                 ECDICT CSV 适配器与导入用例
 │  │     ├─ parser.go             CSV 解析与源字段映射
@@ -130,7 +138,7 @@ lexi-loop version               输出版本号（-b 携带构建时间 / Go 版
 - `cmd` 可以依赖 `app`、`importer` 和基础设施构造函数；任何业务包不得反向依赖 `cmd`。
 - `app` 只是最外层组合根；Handler、Service、Repo、Domain、Importer 和 Infra 都不得反向导入 `app`。
 
-组合根只管理长生命周期组件：`*bun.DB`、配置与日志等基础设施、具体 Service、版本化 Handler，以及未来真实需要替换的外部端口实现。Repo、Domain 和 schema 不进入长生命周期依赖图；Middleware 在 `handler/middleware/` 中定义，由 `handler/router.go` 构造并挂载。默认手写构造函数，不为了 DI 预先给每个组件创建接口。
+组合根只管理长生命周期组件：`*bun.DB`、配置与日志等基础设施、Service 实现（以接口注入 Handler）、版本化 Handler，以及未来真实需要替换的外部端口实现。Repo、Domain 和 schema 不进入长生命周期依赖图；Middleware 在 `handler/middleware/` 中定义，由 `handler/router.go` 构造并挂载。默认手写构造函数，不为了 DI 预先给每个组件创建接口。
 
 ## 4. 各层职责边界
 
@@ -163,21 +171,23 @@ Repo 返回 domain 类型；数据库操作使用 schema 类型，`schema` ↔ `
 
 ### 4.3 service
 
-Service 使用具体类型，构造函数返回具体指针。请求/结果类型与 Service 放在同一个包中且不含 `json` 标签；JSON 契约只由版本化 DTO 定义。
+接口与实现分包遵循 [Go 单体应用架构规范 §5.1](../specs/backend/Go%20单体应用架构规范.md#51-service-提供接口v1-子包提供实现)。`service` 父包声明 Word、Dictionary、Review、DictImport 接口及用例请求/结果类型；`service/v1` 提供具体实现与构造函数，并用编译期断言检查接口满足关系。父包不依赖实现子包、Repo 或基础设施；请求/结果类型不含 `json` 标签，JSON 契约只由版本化 DTO 定义。
+
+`DictImport` 接口仅暴露 `Snapshot()`，这是无 I/O 的进程内只读操作，不需要请求上下文。`StartAutoImport(ctx)` 保留在具体实现上，由组合根管理后台生命周期，不成为 HTTP 调用方的依赖。下文 Service 的编排职责均指 `service/v1` 中的实现。
 
 Service 从 Repo 获取领域模型，调用 Domain 方法，再通过 Repo 写回。所有 PostgreSQL 操作委托给 Repo，Service 不直接构造 bun 查询、也不绕过 Domain 方法直接修改有不变量的字段。Service 负责用例事务、外部资源校验、随机抽样以及 Domain/Repo 错误到 `apperr.Error` 的映射。
 
 数据访问分为两类：PostgreSQL 关系数据一律通过具体 Repo 访问；Redis、时钟、对象存储或第三方 API 等外部设施，只在出现真实需求时由调用方按业务能力定义窄端口，实现放在 `infra` 中。不把 Redis 或第三方客户端的通用 API 直接扩散到 Service。
 
-跨 Service 的数据库用例不得开启彼此独立的嵌套事务。需要加入调用方事务的内部流程，在 `service` 包内提供接收 `bun.IDB` 的非导出方法；例如 `ImportWords` 在自己的事务中调用 `DictionaryService.lookup(ctx, tx, word)`，由该方法用同一个 `tx` 构造 Dictionary Repo。对外的 `Lookup` 再用 `s.db` 委托给同一内部实现，避免维护两套规则。
+跨 Service 的数据库用例不得开启彼此独立的嵌套事务。需要加入调用方事务的内部流程，在 `service/v1` 实现包内提供接收 `bun.IDB` 的非导出方法；例如 `ImportWords` 在自己的事务中调用 `DictionaryService.lookup(ctx, tx, word)`，由该方法用同一个 `tx` 构造 Dictionary Repo。Word 实现在包内持有具体 Dictionary，以复用这个私有方法；`bun.IDB` 不进入父包业务接口。对外的 `Lookup` 再用 `s.db` 委托给同一内部实现，避免维护两套规则。
 
 `DictionaryService` 的 MVP 职责是纯字符串归一 → lemma 解析 → 本地词典 Lookup → 未命中时创建最小词条。在线 Provider 的 Lookup 分支与 Enrich 均为 V2 能力，届时通过窄外部端口注入；ECDICT 始终不是运行时 Provider。
 
 ### 4.4 handler、router 与 httpresp
 
-`app/server.go` 作为组合根创建 Gin Engine，并将日志、CORS Origin 白名单、具体 Service 和版本化 Handler 传给 `handler.RegisterRoutes`。`handler/router.go` 是 HTTP 挂载的唯一入口：它构造并挂载全局 Middleware（自定义实现位于 `handler/middleware/`，CORS 封装官方 gin-contrib/cors），经 humagin 适配器构造 huma API 并注册 `/api/v1` 业务操作（操作路径自带 `/api/v1` 前缀，huma 把 `{param}` 转换为 gin 的 `:param`；不挂载 `/openapi`、`/docs` 等文档路由，spec 由 `handler/openapi.go` 离线生成落盘 docs/openapi/）。
+`app/provider.go` 作为组合根创建 Gin Engine 和 `service/v1` 实现，将实现注入版本化 Handler，再将日志、CORS Origin 白名单与 Handler 传给 `handler.RegisterRoutes`；`app/server.go` 负责 HTTP 与后台导入的生命周期。`handler/router.go` 是 HTTP 挂载的唯一入口：它构造并挂载全局 Middleware（自定义实现位于 `handler/middleware/`，CORS 封装官方 gin-contrib/cors），经 humagin 适配器构造 huma API 并注册 `/api/v1` 业务操作（操作路径自带 `/api/v1` 前缀，huma 把 `{param}` 转换为 gin 的 `:param`；不挂载 `/openapi`、`/docs` 等文档路由，spec 由 `handler/openapi.go` 离线生成落盘 docs/openapi/）。
 
-版本化 Handler 持有具体 Service；请求绑定、基础格式校验与请求体 schema 由 huma 按 DTO 的 schema 标签声明式完成，操作函数只负责 DTO 转换和 Service 调用；Domain 可作为 DTO 转换的读取来源，但不是 JSON 契约。Middleware 在 `handler/middleware/` 中定义，可按需依赖具体 Service，但不得包含业务规则，也不与具体业务 Handler 相互依赖。
+版本化 Handler 持有 `service` 接口，不导入实现子包；请求绑定、基础格式校验与请求体 schema 由 huma 按 DTO 的 schema 标签声明式完成，操作函数只负责 DTO 转换和 Service 调用；Domain 可作为 DTO 转换的读取来源，但不是 JSON 契约。Middleware 在 `handler/middleware/` 中定义，可按需依赖 `service` 接口，但不得包含业务规则，也不与具体业务 Handler 相互依赖。
 
 所有成功外壳（`Envelope[T]`）、错误模型与 `apperr.Kind → HTTP status` 映射都定义在 `handler/httpresp`；`httpresp.UseHumaError` 把该错误模型装配为 huma 的错误工厂（校验失败 422 降为 400，spec 的 `components.schemas.Error` 亦由该模型派生）。Handler 与 Middleware 不得各自复制响应结构或状态映射。
 
@@ -241,9 +251,9 @@ Repo 的条件 UPDATE 是持久化层并发保护，Domain 方法是业务状态
 
 ## 6. 抽样与算法模块
 
-权重和 mastery 是只依赖 `UserWord` 与显式时间参数的纯业务计算，因此按分层规范放在 Domain。`service/sampler.go` 只保留具体 `WeightedSampler`，负责把权重用于加权随机不放回抽样。
+权重和 mastery 是只依赖 `UserWord` 与显式时间参数的纯业务计算，因此按分层规范放在 Domain。`service/v1/sampler.go` 只保留具体 `WeightedSampler`，负责把权重用于加权随机不放回抽样。
 
-MVP 只有一个真实实现，不提前声明 `Sampler` 接口。若以后确有两种需要长期共存的抽样实现，再按调用方所需的最小能力抽取接口。为测试确定性而需要替换随机源时，将随机源作为 `WeightedSampler` 的构造参数，不为 Repo 或 Service 制造接口。
+MVP 只有一个真实实现，不提前声明 `Sampler` 接口。若以后确有两种需要长期共存的抽样实现，再按调用方所需的最小能力抽取接口。为测试确定性而需要替换随机源时，将随机源作为 `WeightedSampler` 的构造参数，不为 Repo 或抽样内部实现额外制造接口；面向 Handler 的 Service 接口按 §4.3 提供。
 
 算法公式只在 [review/algorithm.md](../review/algorithm.md) 维护；实现及测试不得复制另一套说明。
 
@@ -263,7 +273,7 @@ ECDICT Importer：Import()
 
 `internal/importer/ecdict` 负责 CSV 解析、源字段到 Domain 的映射、批处理和可重入导入；`cmd/import_ecdict.go` 只是它的 Cobra 入口。解析器属于离线输入适配器，不放进 Domain 或 Service。
 
-镜像内置词典的自动导入由 `service.DictImportService` 编排（组合根在 serve 启动后拉起，goroutine 生命周期随 ctx）：读取镜像内置 CSV → 版本完整性守卫（repo.CountBySource 对比 manifest 期望行数）→ 不完整时经 ECDICT Importer 异步导入；进度为进程内存态，经版本化 DTO 由 `GET /api/v1/dictionary-import` 暴露（契约见 [api/meta.md](../api/meta.md)）。importer 保持同步可调（CLI 依赖此语义），异步与状态归 Service 编排；依赖方向为 service → importer（§1）。数据获取、构建期 pin 与部署见 [deploy/release.md](../deploy/release.md)。
+镜像内置词典的自动导入由 `service/v1.DictImport` 编排（组合根在 serve 启动后拉起，goroutine 生命周期随 ctx）：读取镜像内置 CSV → 版本完整性守卫（repo.CountBySource 对比 manifest 期望行数）→ 不完整时经 ECDICT Importer 异步导入；进度为进程内存态，经版本化 DTO 由 `GET /api/v1/dictionary-import` 暴露（契约见 [api/meta.md](../api/meta.md)）。importer 保持同步可调（CLI 依赖此语义），异步与状态归 Service 编排；依赖方向为 service/v1 → importer（§1）。数据获取、构建期 pin 与部署见 [deploy/release.md](../deploy/release.md)。
 
 ECDICT 是导入期数据源，运行时不读取 CSV。导入后 `dictionary_entries` 就是本地词典库本身，运行时查询只走数据库。详细设计见 [dictionary/enrichment.md](../dictionary/enrichment.md)。
 

@@ -15,12 +15,12 @@ import (
 
 // ReviewHandler 是复习端点（docs/api/reviews.md）的 HTTP 适配层。
 type ReviewHandler struct {
-	svc *service.Review
+	svc service.Review
 }
 
 // NewReviewHandler 构造 ReviewHandler。svc 为 nil 时仅用于离线 OpenAPI
 // spec 生成（操作函数不会被调用）。
-func NewReviewHandler(svc *service.Review) *ReviewHandler {
+func NewReviewHandler(svc service.Review) *ReviewHandler {
 	return &ReviewHandler{svc: svc}
 }
 
