@@ -53,9 +53,7 @@ func findDisplayEntries(ctx context.Context, entryRepo *repo.DictionaryRepo, ids
 	semantics := make(map[string][]domain.Meaning, len(bases))
 	for _, base := range bases {
 		meanings, _ := domain.EffectiveReviewMeaning(nil, base.ReviewMeanings, base.RawMeanings)
-		if domain.HasLexicalMeaning(meanings) {
-			semantics[base.Headword] = meanings
-		}
+		semantics[base.Headword] = domain.LexicalMeanings(meanings)
 	}
 	for id, target := range targets {
 		result[id].supplement = semantics[target]

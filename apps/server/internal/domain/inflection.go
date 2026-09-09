@@ -18,11 +18,7 @@ func InflectionLemma(entry *DictionaryEntry) string {
 	textLemma := ""
 	for _, meaning := range meanings {
 		for _, translation := range meaning.Translations {
-			for _, part := range strings.FieldsFunc(translation, func(r rune) bool { return r == ';' || r == '；' || r == '\n' }) {
-				part = strings.TrimSpace(part)
-				if part == "" {
-					continue
-				}
+			for _, part := range relationParts(translation) {
 				match := inflectionRelation.FindStringSubmatch(part)
 				if match == nil {
 					return ""
@@ -54,18 +50,46 @@ func InflectionLemma(entry *DictionaryEntry) string {
 	return target
 }
 
-// HasLexicalMeaning 排除空内容与全部由词形关系组成的目标释义。
-// 不尝试解析目标的下一跳，从而不会递归或循环查询。
-func HasLexicalMeaning(meanings []Meaning) bool {
-	for _, meaning := range meanings {
-		for _, translation := range meaning.Translations {
-			for _, part := range strings.FieldsFunc(translation, func(r rune) bool { return r == ';' || r == '；' || r == '\n' }) {
-				part = strings.TrimSpace(part)
-				if part != "" && !inflectionRelation.MatchString(part) {
-					return true
-				}
-			}
+// relationParts 统一处理新旧词典数据的换行与分号，只返回非空片段。
+func relationParts(translation string) []string {
+	decoded := strings.ReplaceAll(translation, `\n`, "\n")
+	parts := strings.FieldsFunc(decoded, func(r rune) bool { return r == ';' || r == '；' || r == '\n' })
+	result := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part = strings.TrimSpace(part); part != "" {
+			result = append(result, part)
 		}
 	}
-	return false
+	return result
+}
+
+// LexicalMeanings 返回仅含实际语义的独立副本，保留词性和义项顺序。
+// 原形自身的关系说明不能成为下一层词形的补充，也不继续追溯。
+func LexicalMeanings(meanings []Meaning) []Meaning {
+	var result []Meaning
+	for _, meaning := range meanings {
+		var translations []string
+		for _, translation := range meaning.Translations {
+			parts := relationParts(translation)
+			var lexical []string
+			for _, part := range parts {
+				if !inflectionRelation.MatchString(part) {
+					lexical = append(lexical, part)
+				}
+			}
+			if len(lexical) == 0 {
+				continue
+			}
+			if len(lexical) == len(parts) {
+				// 没有关系片段时保持原有展示格式。
+				translations = append(translations, translation)
+			} else {
+				translations = append(translations, strings.Join(lexical, "；"))
+			}
+		}
+		if len(translations) > 0 {
+			result = append(result, Meaning{Pos: meaning.Pos, Translations: translations})
+		}
+	}
+	return result
 }

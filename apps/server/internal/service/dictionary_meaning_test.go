@@ -112,3 +112,38 @@ func TestIntegration_InflectionStructuredAndReviewMeanings(t *testing.T) {
 	assert.Equal(t, meanings, again)
 	assert.Equal(t, raw, got[entry.ID].ReviewMeanings)
 }
+
+func TestIntegration_InflectionLegacyAndMixedBase(t *testing.T) {
+	for _, tt := range []struct {
+		name, word, base, relation string
+		baseMeanings, supplement   []domain.Meaning
+	}{
+		{"旧关系词条", "worked", "work", `work的过去式\nwork的过去分词`, []domain.Meaning{{Translations: []string{"工作"}}}, []domain.Meaning{{Translations: []string{"工作"}}}},
+		{"旧原形只有关系", "worked", "work", "work的过去式", []domain.Meaning{{Translations: []string{`act的过去式\nact的过去分词`}}}, nil},
+		{"混合原形不带第二层关系", "laid", "lay", "lay的过去式和过去分词", []domain.Meaning{{Pos: "v", Translations: []string{"放置"}}, {Translations: []string{"lie的过去式"}}}, []domain.Meaning{{Pos: "v", Translations: []string{"放置"}}}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			resetTables(t)
+			ctx := context.Background()
+			raw := []domain.Meaning{{Translations: []string{tt.relation}}}
+			mustInsertEntry(t, testEntry(tt.word, tt.word, nil, raw, nil))
+			mustInsertEntry(t, testEntry(tt.base, tt.base, nil, tt.baseMeanings, nil))
+			svc := newTestWord(t)
+			_, err := svc.ImportWords(ctx, importReq(tt.word, 1))
+			require.NoError(t, err)
+			list, err := svc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 20})
+			require.NoError(t, err)
+			require.Len(t, list.Items, 1)
+			detail, err := svc.GetWord(ctx, list.Items[0].UserWord.ID)
+			require.NoError(t, err)
+			want := append(append([]domain.Meaning{}, raw...), tt.supplement...)
+			assert.Equal(t, want, list.Items[0].EffectiveMeaning)
+			assert.Equal(t, want, detail.EffectiveMeaning)
+			review := mustStart(t, newTestReview(t), 1)
+			assert.Equal(t, want, review.Items[0].EffectiveMeaning)
+			base, err := repo.NewDictionaryRepo(testDB).FindByHeadword(ctx, tt.base)
+			require.NoError(t, err)
+			assert.Equal(t, tt.baseMeanings, base.RawMeanings)
+		})
+	}
+}
