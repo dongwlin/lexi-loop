@@ -2,6 +2,8 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQueryClient } from '@tanstack/vue-query'
+import ReviewSettings from '@/features/review/ReviewSettings.vue'
+import { useReviewSettings } from '@/features/review/useReviewSettings'
 import ReviewFlashcard from '@/features/review/ReviewFlashcard.vue'
 import { Button } from '@/components/ui'
 import { isApiError } from '@/lib/api'
@@ -51,6 +53,7 @@ import {
 // 端点由服务端标记 abandoned（api/reviews.md §6），失败时保留快照供重试。
 // 恢复检查复用 Feature 层查询（queryClient.fetchQuery），按 ApiError 区分 404 与瞬时失败。
 
+const { autoPlayPronunciation } = useReviewSettings()
 const router = useRouter()
 const queryClient = useQueryClient()
 
@@ -527,9 +530,12 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
 
 <template>
   <section class="rounded-card bg-surface p-6 shadow-surface">
-    <h1 tabindex="-1" class="text-lg font-semibold text-foreground">
-      开始复习
-    </h1>
+    <div class="flex items-center justify-between gap-4">
+      <h1 tabindex="-1" class="text-lg font-semibold text-foreground">
+        开始复习
+      </h1>
+      <ReviewSettings v-model="autoPlayPronunciation" />
+    </div>
 
     <!-- 加载恢复状态中 -->
     <div v-if="recoveryState === 'checking'" class="mt-4">
@@ -668,6 +674,8 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
       >
         <ReviewFlashcard
           :word="currentItem.word"
+          :auto-play-pronunciation="autoPlayPronunciation"
+          :phonetic="currentItem.phonetic"
           :meaning="currentMeaning"
           :mode="currentMode"
           :can-correct="canCorrect"

@@ -1,17 +1,23 @@
 <script setup lang="ts">
 import { CheckCircle, XCircle } from 'lucide-vue-next'
+import ReviewPronunciation from './ReviewPronunciation.vue'
 import { Button } from '@/components/ui'
 import type { ReviewMode, ReviewResult } from '@/utils/review-state-machine'
 
 // 页面负责会话、提交与焦点；闪卡仅展示当前阶段并发出用户意图。
-defineProps<{
-  word: string
-  meaning: string
-  mode: ReviewMode
-  canCorrect: boolean
-  submitting: boolean
-  error: string | null
-}>()
+withDefaults(
+  defineProps<{
+    autoPlayPronunciation?: boolean
+    phonetic?: string
+    word: string
+    meaning: string
+    mode: ReviewMode
+    canCorrect: boolean
+    submitting: boolean
+    error: string | null
+  }>(),
+  { autoPlayPronunciation: true, phonetic: '' },
+)
 defineEmits<{
   choose: [result: ReviewResult]
   correct: []
@@ -21,9 +27,18 @@ defineEmits<{
 
 <template>
   <div class="flex w-full min-w-0 flex-col items-center gap-6">
-    <h2 class="max-w-full text-3xl font-semibold wrap-anywhere text-foreground">
-      {{ word }}
-    </h2>
+    <div class="flex max-w-full flex-col items-center gap-1">
+      <h2
+        class="max-w-full text-3xl font-semibold wrap-anywhere text-foreground"
+      >
+        {{ word }}
+      </h2>
+      <ReviewPronunciation
+        :word="word"
+        :phonetic="phonetic"
+        :auto-play-pronunciation="autoPlayPronunciation"
+      />
+    </div>
     <!-- 共用内容槽吸收常规释义行数差异；超长内容自然撑开，不隐藏待回忆的释义。 -->
     <div
       class="flex min-h-24 w-full flex-col items-center justify-center gap-3 sm:min-h-32"
