@@ -60,6 +60,7 @@ func TestLexicalMeanings(t *testing.T) {
 		name        string
 		input, want []Meaning
 	}{
+		{"纯词义的旧换行", []Meaning{{Translations: []string{`工作\n运转`}}}, []Meaning{{Translations: []string{"工作\n运转"}}}},
 		{"纯关系的旧换行", []Meaning{{Translations: []string{`work的过去式\nwork的过去分词`}}}, nil},
 		{"混合义项保留词性", []Meaning{{Pos: "v", Translations: []string{"放置"}}, {Pos: "v", Translations: []string{"lie的过去式"}}}, []Meaning{{Pos: "v", Translations: []string{"放置"}}}},
 		{"同一translation混合", []Meaning{{Pos: "v", Translations: []string{`放置；lie的过去式\n铺设`}}}, []Meaning{{Pos: "v", Translations: []string{"放置；铺设"}}}},

@@ -81,8 +81,8 @@ func LexicalMeanings(meanings []Meaning) []Meaning {
 				continue
 			}
 			if len(lexical) == len(parts) {
-				// 没有关系片段时保持原有展示格式。
-				translations = append(translations, translation)
+				// 纯词义也解码旧换行，避免展示入口依赖原词的 meaningSource。
+				translations = append(translations, strings.ReplaceAll(translation, `\n`, "\n"))
 			} else {
 				translations = append(translations, strings.Join(lexical, "；"))
 			}

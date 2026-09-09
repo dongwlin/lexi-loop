@@ -147,3 +147,42 @@ func TestIntegration_InflectionLegacyAndMixedBase(t *testing.T) {
 		})
 	}
 }
+
+func TestIntegration_InflectionLegacyLexicalNewlines(t *testing.T) {
+	for _, source := range []domain.MeaningSource{domain.MeaningSourceRaw, domain.MeaningSourceReview} {
+		t.Run(string(source), func(t *testing.T) {
+			resetTables(t)
+			ctx := context.Background()
+			relation := []domain.Meaning{{Translations: []string{"work的过去式"}}}
+			entry := testEntry("worked", "worked", nil, relation, nil)
+			if source == domain.MeaningSourceReview {
+				entry.ReviewMeanings = relation
+			}
+			mustInsertEntry(t, entry)
+			legacy := []domain.Meaning{{Translations: []string{`工作\n运转`}}}
+			mustInsertEntry(t, testEntry("work", "work", nil, legacy, nil))
+			svc := newTestWord(t)
+			_, err := svc.ImportWords(ctx, importReq("worked", 1))
+			require.NoError(t, err)
+			list, err := svc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 20})
+			require.NoError(t, err)
+			require.Len(t, list.Items, 1)
+			id := list.Items[0].UserWord.ID
+			detail, err := svc.GetWord(ctx, id)
+			require.NoError(t, err)
+			want := []domain.Meaning{{Translations: []string{"work的过去式"}}, {Translations: []string{"工作\n运转"}}}
+			assert.Equal(t, want, list.Items[0].EffectiveMeaning)
+			assert.Equal(t, want, detail.EffectiveMeaning)
+			assert.Equal(t, source, detail.MeaningSource)
+			review := mustStart(t, newTestReview(t), 1)
+			assert.Equal(t, want, review.Items[0].EffectiveMeaning)
+			require.NoError(t, svc.UpdateReviewMeaning(ctx, id, UpdateReviewMeaningRequest{CustomReviewMeaning: legacy}))
+			custom, err := svc.GetWord(ctx, id)
+			require.NoError(t, err)
+			assert.Equal(t, legacy, custom.EffectiveMeaning, "用户自定义不做解码")
+			base, err := repo.NewDictionaryRepo(testDB).FindByHeadword(ctx, "work")
+			require.NoError(t, err)
+			assert.Equal(t, legacy, base.RawMeanings, "不改数据库")
+		})
+	}
+}
