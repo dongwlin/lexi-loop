@@ -21,11 +21,23 @@ for (const scenario of [
           ),
         scenario.theme,
       )
+      await page.addInitScript(() => {
+        Object.defineProperty(window, 'speechSynthesis', {
+          value: {
+            speak: (utterance: SpeechSynthesisUtterance) => {
+              document.documentElement.dataset.spokenWord = utterance.text
+            },
+            cancel: () => {
+              delete document.documentElement.dataset.spokenWord
+            },
+          },
+        })
+      })
       const sessionId = '0f0f3d5a-0000-5000-8000-00000000c001'
       const items = ['ambiguous', 'brisk'].map((word, index) => ({
         itemId: `0f0f3d5a-0000-6000-8000-00000000000${index + 1}`,
         word,
-        phonetic: '',
+        phonetic: index === 0 ? '/æmˈbɪɡjuəs/' : '',
         effectiveReviewMeaning: [
           { pos: 'adj', translations: ['模棱两可的；含糊不清的；有歧义的'] },
         ],
@@ -105,6 +117,23 @@ for (const scenario of [
         .locator('div[tabindex="-1"]')
         .filter({ has: page.getByRole('heading', { name: 'ambiguous' }) })
       await expect(area).toBeFocused()
+      await expect(
+        page.getByText('/æmˈbɪɡjuəs/', { exact: true }),
+      ).toBeVisible()
+      const playButton = page.getByRole('button', {
+        name: '播放 ambiguous 的发音',
+      })
+      const target = await playButton.boundingBox()
+      expect(target!.width).toBeGreaterThanOrEqual(44)
+      expect(target!.height).toBeGreaterThanOrEqual(44)
+      await playButton.click()
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-spoken-word',
+        'ambiguous',
+      )
+      await expect(page.getByText('先回忆这个单词的意思')).toBeVisible()
+      expect(submissions).toEqual([])
+      await area.focus()
       // 验证真实媒体能力与计算样式，避免只缩小视口却仍模拟桌面输入。
       expect(
         await page.evaluate(
@@ -136,6 +165,19 @@ for (const scenario of [
       await page.screenshot({
         path: `/tmp/review-${scenario.hasTouch ? 'touch' : 'pointer'}-recall-${scenario.width}-revealed.png`,
       })
+      // 新发音入口支持原生键盘激活，不提交或改变揭示阶段。
+      await page.keyboard.press('Tab')
+      const pronunciation = page.getByRole('button', {
+        name: '播放 ambiguous 的发音',
+      })
+      await expect(pronunciation).toBeFocused()
+      await page.keyboard.press('Enter')
+      await page.keyboard.press('Space')
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-spoken-word',
+        'ambiguous',
+      )
+      expect(submissions).toEqual([])
       // Tab 到修正按钮，用原生 Enter 激活，焦点恢复到区域。
       await page.keyboard.press('Tab')
       await expect(
@@ -160,6 +202,7 @@ for (const scenario of [
       })
       expect(submissions).toEqual([])
       await page.keyboard.press('Tab')
+      await page.keyboard.press('Tab')
       await expect(page.getByRole('button', { name: '下一词' })).toBeFocused()
       await page.keyboard.press('Space')
       await expect(page.getByRole('button', { name: '下一词' })).toBeDisabled()
@@ -179,8 +222,15 @@ for (const scenario of [
         page.getByRole('button', { name: '认识', exact: true }),
       ).toBeVisible()
       await expect(page.getByRole('button', { name: '下一词' })).toHaveCount(0)
+      await expect(page.locator('html')).not.toHaveAttribute('data-spoken-word')
+      await page.getByRole('button', { name: '播放 brisk 的发音' }).click()
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-spoken-word',
+        'brisk',
+      )
       // 完成最后一题：通过按钮原生 Enter 提交，进入结果页后直接续练。
       await page.keyboard.press('2')
+      await page.keyboard.press('Tab')
       await page.keyboard.press('Tab')
       await page.keyboard.press('Tab')
       await expect(page.getByRole('button', { name: '下一词' })).toBeFocused()

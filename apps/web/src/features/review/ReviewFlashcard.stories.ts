@@ -6,6 +6,7 @@ const meta = {
   component: ReviewFlashcard,
   args: {
     word: 'ambiguous',
+    phonetic: '/æmˈbɪɡjuəs/',
     meaning: 'adj. 模棱两可的；含糊不清的；有歧义的',
     mode: 'recalling',
     canCorrect: false,
@@ -51,3 +52,5 @@ export const LongContent: Story = {
     ).join('\n'),
   },
 }
+
+export const WithoutPhonetic: Story = { args: { phonetic: '' } }

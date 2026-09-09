@@ -668,6 +668,7 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
       >
         <ReviewFlashcard
           :word="currentItem.word"
+          :phonetic="currentItem.phonetic"
           :meaning="currentMeaning"
           :mode="currentMode"
           :can-correct="canCorrect"
