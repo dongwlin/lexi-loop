@@ -2,7 +2,7 @@ package handler
 
 // 词典导入进度端点的组件测试：快照是进程内存态，纯单元测试即可覆盖
 // 响应契约（初始 checking / idle → 各字段缺省映射为 null / 0）；状态机行为本身
-// 由 service 包的集成测试覆盖。Handler 的 DictImport 只读快照，
+// 由 service/v1 包的集成测试覆盖。Handler 的 DictImport 只读快照，
 // nil db / nil importer 不参与该路径。
 
 import (
@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	v1 "github.com/dongwlin/lexi-loop/apps/server/internal/handler/v1"
-	"github.com/dongwlin/lexi-loop/apps/server/internal/service"
+	servicev1 "github.com/dongwlin/lexi-loop/apps/server/internal/service/v1"
 )
 
 type dictImportData struct {
@@ -43,7 +43,7 @@ func TestDictImportRoute(t *testing.T) {
 			engine := gin.New()
 			// 不调用 StartAutoImport，覆盖 HTTP 已可用但后台尚未调度的窗口；
 			// db / importer 为 nil（快照路径不触达）。
-			svc := service.NewDictImport(nil, nil, "/nonexistent/ecdict.csv", tc.autoCheck, zerolog.Nop())
+			svc := servicev1.NewDictImport(nil, nil, "/nonexistent/ecdict.csv", tc.autoCheck, zerolog.Nop())
 			RegisterRoutes(engine, Options{Log: zerolog.Nop()},
 				v1.NewWordHandler(nil), v1.NewReviewHandler(nil), v1.NewVersionHandler(),
 				v1.NewDictImportHandler(svc))

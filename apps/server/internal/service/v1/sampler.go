@@ -1,10 +1,10 @@
-// Package service 提供业务用例编排：具体 Service 类型，构造返回具体指针；
-// 请求/结果类型放本包且不含 json 标签。JSON 契约由版本化 DTO 定义
+// Package v1 实现 service 父包的业务接口，构造函数返回具体指针；
+// 请求/结果类型由父包定义，JSON 契约由 Handler 的版本化 DTO 定义
 // （docs/backend/structure.md §4.3）。
 //
 // Service 负责用例事务、外部资源校验、随机抽样以及 Domain / Repo 错误到
 // apperr.Error 的映射；复习用例的事务与并发边界见 structure.md §5。
-package service
+package v1
 
 import (
 	"cmp"

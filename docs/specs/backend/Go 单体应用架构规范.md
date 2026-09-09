@@ -2,7 +2,7 @@
 
 ## 1. 概述
 
-> 本次修订仅更新规范，未迁移现有代码；[Go 工程结构](../../backend/structure.md) 中的当前落地描述不代表已采用本文的接口与实现分包。
+> 本规范在 LexiLoop 中的具体落地见 [Go 工程结构](../../backend/structure.md)。
 
 本规范定义 Go 单体应用的分层结构：依赖方向清晰，不为形式上的”解耦”引入无收益的接口、版本目录和转换层。
 
@@ -449,7 +449,7 @@ var (
 
 ### 5.1 Service 提供接口，v1 子包提供实现
 
-`internal/service` 只定义对外业务接口与用例请求/结果类型，不保存数据库连接或实现业务流程。接口按业务能力划分，避免把所有用例合成一个大接口；方法接收 `context.Context`，参数和返回值使用 Domain 或本包用例类型，不暴露 Gin、HTTP DTO、bun 或 Repo 类型。请求/结果类型不含 `json` 标签，JSON 契约由 Handler 的 DTO 定义。
+`internal/service` 只定义对外业务接口与用例请求/结果类型，不保存数据库连接或实现业务流程。接口按业务能力划分，避免把所有用例合成一个大接口；涉及 I/O 或可取消工作的用例方法接收 `context.Context`；纯内存只读快照等操作可省略上下文。参数和返回值使用 Domain 或本包用例类型，不暴露 Gin、HTTP DTO、bun 或 Repo 类型。请求/结果类型不含 `json` 标签，JSON 契约由 Handler 的 DTO 定义。
 
 ```go
 // internal/service/user.go

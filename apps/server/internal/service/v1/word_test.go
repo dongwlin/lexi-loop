@@ -1,4 +1,4 @@
-package service
+package v1
 
 // WordService 集成测试：真实 PostgreSQL 上的生词库用例（docs/api/words.md），
 // 含导入聚合、归一累计、软删除恢复、三层释义取值与分页搜索。
@@ -16,6 +16,7 @@ import (
 	"github.com/dongwlin/lexi-loop/apps/server/internal/apperr"
 	"github.com/dongwlin/lexi-loop/apps/server/internal/domain"
 	"github.com/dongwlin/lexi-loop/apps/server/internal/repo"
+	"github.com/dongwlin/lexi-loop/apps/server/internal/service"
 )
 
 func TestIntegration_WordService_ImportWords(t *testing.T) {
@@ -27,7 +28,7 @@ func TestIntegration_WordService_ImportWords(t *testing.T) {
 		wordA := uniqWord(t, "alpha")
 		wordB := uniqWord(t, "beta")
 
-		res, err := svc.ImportWords(ctx, ImportWordsRequest{Words: []ImportWordItem{
+		res, err := svc.ImportWords(ctx, service.ImportWordsRequest{Words: []service.ImportWordItem{
 			{Word: "  " + wordA + " ", Count: 2},
 			{Word: wordB, Count: 1},
 		}})
@@ -38,8 +39,8 @@ func TestIntegration_WordService_ImportWords(t *testing.T) {
 
 		// 逐词结果与输入对应（word 归一为小写）。
 		require.Len(t, res.Items, 2)
-		assert.Equal(t, ImportWordOutcome{Word: wordA, Count: 2, Created: true}, res.Items[0])
-		assert.Equal(t, ImportWordOutcome{Word: wordB, Count: 1, Created: true}, res.Items[1])
+		assert.Equal(t, service.ImportWordOutcome{Word: wordA, Count: 2, Created: true}, res.Items[0])
+		assert.Equal(t, service.ImportWordOutcome{Word: wordB, Count: 1, Created: true}, res.Items[1])
 
 		// 词条与学习行：最小词条 lemma 保留原词，遇词次数按输入累计。
 		entry, err := repo.NewDictionaryRepo(testDB).FindByHeadword(ctx, wordA)
@@ -71,7 +72,7 @@ func TestIntegration_WordService_ImportWords(t *testing.T) {
 		assert.Equal(t, 0, second.Created)
 		assert.Equal(t, 1, second.Updated)
 		assert.Equal(t, 3, second.Encounters)
-		assert.Equal(t, []ImportWordOutcome{{Word: word, Count: 3, Created: false}}, second.Items)
+		assert.Equal(t, []service.ImportWordOutcome{{Word: word, Count: 3, Created: false}}, second.Items)
 
 		words, total, err := repo.NewUserWordRepo(testDB).List(ctx, repo.ListParams{Page: 1, PageSize: 100})
 		require.NoError(t, err)
@@ -88,7 +89,7 @@ func TestIntegration_WordService_ImportWords(t *testing.T) {
 		mustInsertEntry(t, testEntry(base, base, map[string]string{"0": base}, nil, nil))
 		mustInsertEntry(t, testEntry(inflected, inflected, map[string]string{"0": base}, nil, nil))
 
-		res, err := svc.ImportWords(ctx, ImportWordsRequest{Words: []ImportWordItem{
+		res, err := svc.ImportWords(ctx, service.ImportWordsRequest{Words: []service.ImportWordItem{
 			{Word: base, Count: 1},
 			{Word: base, Count: 2},
 			{Word: inflected, Count: 3},
@@ -100,8 +101,8 @@ func TestIntegration_WordService_ImportWords(t *testing.T) {
 		// 逐词结果是单词粒度：归一到同一新建词条的输入词形都记 created，
 		// 与行粒度的聚合统计（created=1）计量单位不同（api/words.md §2）。
 		require.Len(t, res.Items, 2)
-		assert.Equal(t, ImportWordOutcome{Word: base, Count: 3, Created: true}, res.Items[0])
-		assert.Equal(t, ImportWordOutcome{Word: inflected, Count: 3, Created: true}, res.Items[1])
+		assert.Equal(t, service.ImportWordOutcome{Word: base, Count: 3, Created: true}, res.Items[0])
+		assert.Equal(t, service.ImportWordOutcome{Word: inflected, Count: 3, Created: true}, res.Items[1])
 
 		words, _, err := repo.NewUserWordRepo(testDB).List(ctx, repo.ListParams{Page: 1, PageSize: 100})
 		require.NoError(t, err)
@@ -118,7 +119,7 @@ func TestIntegration_WordService_ImportWords(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, first.Created)
 
-		items, err := svc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 100})
+		items, err := svc.ListWords(ctx, service.ListWordsRequest{Page: 1, PageSize: 100})
 		require.NoError(t, err)
 		require.Len(t, items.Items, 1)
 		wordID := items.Items[0].UserWord.ID
@@ -128,7 +129,7 @@ func TestIntegration_WordService_ImportWords(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 0, second.Created)
 		assert.Equal(t, 1, second.Updated)
-		assert.Equal(t, []ImportWordOutcome{{Word: word, Count: 2, Created: false}}, second.Items,
+		assert.Equal(t, []service.ImportWordOutcome{{Word: word, Count: 2, Created: false}}, second.Items,
 			"恢复软删除在逐词结果中记 updated")
 
 		restored, err := repo.NewUserWordRepo(testDB).FindByID(ctx, wordID)
@@ -141,10 +142,10 @@ func TestIntegration_WordService_ImportWords(t *testing.T) {
 		resetTables(t)
 		svc := newTestWord(t)
 
-		for name, req := range map[string]ImportWordsRequest{
-			"空列表":      {Words: []ImportWordItem{}},
-			"计数为零":     {Words: []ImportWordItem{{Word: "abc", Count: 0}}},
-			"归一后为空字符串": {Words: []ImportWordItem{{Word: "   ", Count: 1}}},
+		for name, req := range map[string]service.ImportWordsRequest{
+			"空列表":      {Words: []service.ImportWordItem{}},
+			"计数为零":     {Words: []service.ImportWordItem{{Word: "abc", Count: 0}}},
+			"归一后为空字符串": {Words: []service.ImportWordItem{{Word: "   ", Count: 1}}},
 		} {
 			t.Run(name, func(t *testing.T) {
 				_, err := svc.ImportWords(ctx, req)
@@ -163,7 +164,7 @@ func TestIntegration_WordService_ImportWords(t *testing.T) {
 		word := uniqWord(t, "race")
 
 		type result struct {
-			res *ImportWordsResult
+			res *service.ImportWordsResult
 			err error
 		}
 		results := make(chan result, 2)
@@ -205,13 +206,13 @@ func TestIntegration_WordService_ListWords(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		res, err := svc.ListWords(ctx, ListWordsRequest{Page: 2, PageSize: 2})
+		res, err := svc.ListWords(ctx, service.ListWordsRequest{Page: 2, PageSize: 2})
 		require.NoError(t, err)
 		assert.Equal(t, int64(5), res.Total)
 		require.Len(t, res.Items, 2)
 
 		// created_at 倒序：第 2 页应是第 3、4 新的两行。
-		all, err := svc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 100})
+		all, err := svc.ListWords(ctx, service.ListWordsRequest{Page: 1, PageSize: 100})
 		require.NoError(t, err)
 		assert.Equal(t, all.Items[2:4], res.Items)
 	})
@@ -231,17 +232,17 @@ func TestIntegration_WordService_ListWords(t *testing.T) {
 		require.NoError(t, err)
 
 		// uniqWord 生成的词共享用例名前缀，按各自独有的尾部子串搜索。
-		byHeadword, err := svc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 100, Search: "ambiguous"})
+		byHeadword, err := svc.ListWords(ctx, service.ListWordsRequest{Page: 1, PageSize: 100, Search: "ambiguous"})
 		require.NoError(t, err)
 		require.Len(t, byHeadword.Items, 1)
 		assert.Equal(t, word, byHeadword.Items[0].Entry.Headword)
 
-		byMeaning, err := svc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 100, Search: "模棱两可"})
+		byMeaning, err := svc.ListWords(ctx, service.ListWordsRequest{Page: 1, PageSize: 100, Search: "模棱两可"})
 		require.NoError(t, err)
 		require.Len(t, byMeaning.Items, 1)
 		assert.Equal(t, entry.ID, byMeaning.Items[0].Entry.ID)
 
-		none, err := svc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 100, Search: "不存在的搜索词xyz"})
+		none, err := svc.ListWords(ctx, service.ListWordsRequest{Page: 1, PageSize: 100, Search: "不存在的搜索词xyz"})
 		require.NoError(t, err)
 		assert.Empty(t, none.Items)
 		assert.Equal(t, int64(0), none.Total)
@@ -257,7 +258,7 @@ func TestIntegration_WordService_ListWords(t *testing.T) {
 		_, err = svc.ImportWords(ctx, importReq(drop, 1))
 		require.NoError(t, err)
 
-		items, err := svc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 100})
+		items, err := svc.ListWords(ctx, service.ListWordsRequest{Page: 1, PageSize: 100})
 		require.NoError(t, err)
 		require.Len(t, items.Items, 2)
 		var dropID string
@@ -269,7 +270,7 @@ func TestIntegration_WordService_ListWords(t *testing.T) {
 		require.NotEmpty(t, dropID)
 		require.NoError(t, svc.DeleteWord(ctx, mustParseUUID(t, dropID)))
 
-		after, err := svc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 100})
+		after, err := svc.ListWords(ctx, service.ListWordsRequest{Page: 1, PageSize: 100})
 		require.NoError(t, err)
 		assert.Equal(t, int64(1), after.Total)
 		assert.Equal(t, keep, after.Items[0].Entry.Headword)
@@ -289,7 +290,7 @@ func TestIntegration_WordService_GetWord(t *testing.T) {
 		_, err := svc.ImportWords(ctx, importReq(word, 3))
 		require.NoError(t, err)
 
-		list, err := svc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 100})
+		list, err := svc.ListWords(ctx, service.ListWordsRequest{Page: 1, PageSize: 100})
 		require.NoError(t, err)
 		require.Len(t, list.Items, 1)
 		id := list.Items[0].UserWord.ID
@@ -309,7 +310,7 @@ func TestIntegration_WordService_GetWord(t *testing.T) {
 
 		// 自定义后：取 custom 层。
 		custom := []domain.Meaning{{Pos: "adjective", Translations: []string{"我的记忆方式"}}}
-		require.NoError(t, svc.UpdateReviewMeaning(ctx, id, UpdateReviewMeaningRequest{CustomReviewMeaning: custom}))
+		require.NoError(t, svc.UpdateReviewMeaning(ctx, id, service.UpdateReviewMeaningRequest{CustomReviewMeaning: custom}))
 		customized, err := svc.GetWord(ctx, id)
 		require.NoError(t, err)
 		assert.Equal(t, domain.MeaningSourceCustom, customized.MeaningSource)
@@ -325,7 +326,7 @@ func TestIntegration_WordService_GetWord(t *testing.T) {
 		_, err := svc.ImportWords(ctx, importReq(word, 1))
 		require.NoError(t, err)
 
-		list, err := svc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 100})
+		list, err := svc.ListWords(ctx, service.ListWordsRequest{Page: 1, PageSize: 100})
 		require.NoError(t, err)
 		detail, err := svc.GetWord(ctx, list.Items[0].UserWord.ID)
 		require.NoError(t, err)
@@ -339,7 +340,7 @@ func TestIntegration_WordService_GetWord(t *testing.T) {
 		word := uniqWord(t, "metrics")
 		_, err := svc.ImportWords(ctx, importReq(word, 1))
 		require.NoError(t, err)
-		list, err := svc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 100})
+		list, err := svc.ListWords(ctx, service.ListWordsRequest{Page: 1, PageSize: 100})
 		require.NoError(t, err)
 		require.Len(t, list.Items, 1)
 		id := list.Items[0].UserWord.ID
@@ -361,7 +362,7 @@ func TestIntegration_WordService_GetWord(t *testing.T) {
 		assert.InDelta(t, 40.0, detail.MasteryScore, 1e-9)
 		assert.InDelta(t, w.ReviewWeight(time.Now()), detail.ReviewWeight, 0.01)
 
-		again, err := svc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 100})
+		again, err := svc.ListWords(ctx, service.ListWordsRequest{Page: 1, PageSize: 100})
 		require.NoError(t, err)
 		assert.InDelta(t, detail.ReviewWeight, again.Items[0].ReviewWeight, 0.01,
 			"列表与详情同口径动态计算")
@@ -373,7 +374,7 @@ func TestIntegration_WordService_GetWord(t *testing.T) {
 		word := uniqWord(t, "gone")
 		_, err := svc.ImportWords(ctx, importReq(word, 1))
 		require.NoError(t, err)
-		list, err := svc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 100})
+		list, err := svc.ListWords(ctx, service.ListWordsRequest{Page: 1, PageSize: 100})
 		require.NoError(t, err)
 		id := list.Items[0].UserWord.ID
 
@@ -407,7 +408,7 @@ func TestIntegration_WordService_UpdateReviewMeaning(t *testing.T) {
 			[]domain.Meaning{{Pos: "noun", Translations: []string{"原始释义"}}}, nil))
 		_, err := svc.ImportWords(ctx, importReq(word, 1))
 		require.NoError(t, err)
-		list, err := svc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 100})
+		list, err := svc.ListWords(ctx, service.ListWordsRequest{Page: 1, PageSize: 100})
 		require.NoError(t, err)
 		return svc, list.Items[0].UserWord.ID
 	}
@@ -415,14 +416,14 @@ func TestIntegration_WordService_UpdateReviewMeaning(t *testing.T) {
 	t.Run("设置后清除回退到词典层", func(t *testing.T) {
 		svc, id := setup(t)
 		custom := []domain.Meaning{{Pos: "noun", Translations: []string{"自定义"}}}
-		require.NoError(t, svc.UpdateReviewMeaning(ctx, id, UpdateReviewMeaningRequest{CustomReviewMeaning: custom}))
+		require.NoError(t, svc.UpdateReviewMeaning(ctx, id, service.UpdateReviewMeaningRequest{CustomReviewMeaning: custom}))
 
 		stored, err := repo.NewUserWordRepo(testDB).FindByID(ctx, id)
 		require.NoError(t, err)
 		assert.Equal(t, custom, stored.CustomReviewMeaning)
 
 		// nil 表示清除（契约：传 null 清除自定义）。
-		require.NoError(t, svc.UpdateReviewMeaning(ctx, id, UpdateReviewMeaningRequest{}))
+		require.NoError(t, svc.UpdateReviewMeaning(ctx, id, service.UpdateReviewMeaningRequest{}))
 		cleared, err := repo.NewUserWordRepo(testDB).FindByID(ctx, id)
 		require.NoError(t, err)
 		assert.Nil(t, cleared.CustomReviewMeaning)
@@ -430,7 +431,7 @@ func TestIntegration_WordService_UpdateReviewMeaning(t *testing.T) {
 
 	t.Run("目标不存在时返回未找到", func(t *testing.T) {
 		svc, _ := setup(t)
-		err := svc.UpdateReviewMeaning(ctx, uuid.Must(uuid.NewV7()), UpdateReviewMeaningRequest{
+		err := svc.UpdateReviewMeaning(ctx, uuid.Must(uuid.NewV7()), service.UpdateReviewMeaningRequest{
 			CustomReviewMeaning: []domain.Meaning{{Pos: "noun", Translations: []string{"x"}}},
 		})
 		require.Error(t, err)
@@ -449,7 +450,7 @@ func TestIntegration_WordService_DeleteWord(t *testing.T) {
 		word := uniqWord(t, "delete")
 		_, err := svc.ImportWords(ctx, importReq(word, 1))
 		require.NoError(t, err)
-		list, err := svc.ListWords(ctx, ListWordsRequest{Page: 1, PageSize: 100})
+		list, err := svc.ListWords(ctx, service.ListWordsRequest{Page: 1, PageSize: 100})
 		require.NoError(t, err)
 		id := list.Items[0].UserWord.ID
 
@@ -487,6 +488,6 @@ func newTestWord(t *testing.T) *Word {
 }
 
 // importReq 构造单词条导入请求。
-func importReq(word string, count int) ImportWordsRequest {
-	return ImportWordsRequest{Words: []ImportWordItem{{Word: word, Count: count}}}
+func importReq(word string, count int) service.ImportWordsRequest {
+	return service.ImportWordsRequest{Words: []service.ImportWordItem{{Word: word, Count: count}}}
 }

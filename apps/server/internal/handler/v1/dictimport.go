@@ -15,11 +15,11 @@ import (
 // DictImportHandler 是词典导入进度端点（docs/api/meta.md §3）的 HTTP
 // 适配层：读取 DictImport 服务的进程内进度快照，不产生任何副作用。
 type DictImportHandler struct {
-	dictImport *service.DictImport
+	dictImport service.DictImport
 }
 
 // NewDictImportHandler 构造 DictImportHandler。
-func NewDictImportHandler(dictImport *service.DictImport) *DictImportHandler {
+func NewDictImportHandler(dictImport service.DictImport) *DictImportHandler {
 	return &DictImportHandler{dictImport: dictImport}
 }
 

@@ -1,4 +1,4 @@
-package service
+package v1
 
 // ReviewService 集成测试：真实 PostgreSQL 上的复习用例（docs/api/reviews.md）
 // 与 structure.md §5.4 必测场景——并发开始两轮后全库只有一个 active session、
@@ -22,6 +22,7 @@ import (
 	"github.com/dongwlin/lexi-loop/apps/server/internal/apperr"
 	"github.com/dongwlin/lexi-loop/apps/server/internal/domain"
 	"github.com/dongwlin/lexi-loop/apps/server/internal/repo"
+	"github.com/dongwlin/lexi-loop/apps/server/internal/service"
 )
 
 func TestIntegration_ReviewService_StartSession(t *testing.T) {
@@ -31,7 +32,7 @@ func TestIntegration_ReviewService_StartSession(t *testing.T) {
 		resetTables(t)
 		svc := newTestReview(t)
 
-		_, err := svc.StartSession(ctx, StartSessionRequest{Count: 5})
+		_, err := svc.StartSession(ctx, service.StartSessionRequest{Count: 5})
 		require.Error(t, err)
 		var appErr *apperr.Error
 		require.True(t, errors.As(err, &appErr))
@@ -46,7 +47,7 @@ func TestIntegration_ReviewService_StartSession(t *testing.T) {
 		seedWords(t, 3)
 		svc := newTestReview(t)
 
-		started, err := svc.StartSession(ctx, StartSessionRequest{Count: 50})
+		started, err := svc.StartSession(ctx, service.StartSessionRequest{Count: 50})
 		require.NoError(t, err)
 		assert.Equal(t, 50, started.RequestedCount)
 		assert.Equal(t, 3, started.TotalCount, "D009：total = min(count, available)")
@@ -96,13 +97,13 @@ func TestIntegration_ReviewService_StartSession(t *testing.T) {
 		svc := newTestReview(t)
 
 		type outcome struct {
-			started *StartSessionResult
+			started *service.StartSessionResult
 			err     error
 		}
 		outcomes := make(chan outcome, 2)
 		for i := 0; i < 2; i++ {
 			go func() {
-				started, err := svc.StartSession(context.Background(), StartSessionRequest{Count: 10})
+				started, err := svc.StartSession(context.Background(), service.StartSessionRequest{Count: 10})
 				outcomes <- outcome{started, err}
 			}()
 		}
@@ -136,7 +137,7 @@ func TestIntegration_ReviewService_StartSession(t *testing.T) {
 		installTrigger(t, "service_test_mid_batch_items",
 			`BEGIN IF NEW.position >= 1 THEN RAISE EXCEPTION 'injected failure during items insert'; END IF; RETURN NEW; END`)
 
-		_, err := svc.StartSession(ctx, StartSessionRequest{Count: 3})
+		_, err := svc.StartSession(ctx, service.StartSessionRequest{Count: 3})
 		require.Error(t, err)
 		assertSessionCount(t, 0)
 		assertItemCount(t, 0, "不应留下任何 items")
@@ -151,7 +152,7 @@ func TestIntegration_ReviewService_StartSession(t *testing.T) {
 		installTrigger(t, "service_test_serial_fail_items",
 			`BEGIN RAISE EXCEPTION 'injected serialization failure' USING ERRCODE = '40001'; END`)
 
-		_, err := svc.StartSession(ctx, StartSessionRequest{Count: 3})
+		_, err := svc.StartSession(ctx, service.StartSessionRequest{Count: 3})
 		require.Error(t, err)
 		var appErr *apperr.Error
 		require.True(t, errors.As(err, &appErr))
@@ -171,7 +172,7 @@ func TestIntegration_ReviewService_SubmitResult(t *testing.T) {
 		svc := newTestReview(t)
 		started := mustStart(t, svc, 1)
 
-		require.NoError(t, svc.SubmitResult(ctx, SubmitResultRequest{
+		require.NoError(t, svc.SubmitResult(ctx, service.SubmitResultRequest{
 			SessionID: started.SessionID,
 			ItemID:    started.Items[0].ItemID,
 			Result:    domain.ReviewResultRemembered,
@@ -204,7 +205,7 @@ func TestIntegration_ReviewService_SubmitResult(t *testing.T) {
 		svc := newTestReview(t)
 		started := mustStart(t, svc, 2)
 
-		require.NoError(t, svc.SubmitResult(ctx, SubmitResultRequest{
+		require.NoError(t, svc.SubmitResult(ctx, service.SubmitResultRequest{
 			SessionID: started.SessionID,
 			ItemID:    started.Items[0].ItemID,
 			Result:    domain.ReviewResultForgotten,
@@ -227,7 +228,7 @@ func TestIntegration_ReviewService_SubmitResult(t *testing.T) {
 		seedWords(t, 2)
 		svc := newTestReview(t)
 		started := mustStart(t, svc, 2)
-		req := SubmitResultRequest{
+		req := service.SubmitResultRequest{
 			SessionID: started.SessionID,
 			ItemID:    started.Items[0].ItemID,
 			Result:    domain.ReviewResultRemembered,
@@ -255,7 +256,7 @@ func TestIntegration_ReviewService_SubmitResult(t *testing.T) {
 				result = domain.ReviewResultForgotten
 			}
 			go func(result domain.ReviewResult) {
-				errs <- svc.SubmitResult(context.Background(), SubmitResultRequest{
+				errs <- svc.SubmitResult(context.Background(), service.SubmitResultRequest{
 					SessionID: started.SessionID,
 					ItemID:    started.Items[0].ItemID,
 					Result:    result,
@@ -292,7 +293,7 @@ func TestIntegration_ReviewService_SubmitResult(t *testing.T) {
 		second := mustStart(t, svc, 1)
 
 		// 用 first 轮的 URL 提交 second 轮的 item：归属不匹配 → 幂等短路。
-		require.NoError(t, svc.SubmitResult(ctx, SubmitResultRequest{
+		require.NoError(t, svc.SubmitResult(ctx, service.SubmitResultRequest{
 			SessionID: first.SessionID,
 			ItemID:    second.Items[0].ItemID,
 			Result:    domain.ReviewResultRemembered,
@@ -306,7 +307,7 @@ func TestIntegration_ReviewService_SubmitResult(t *testing.T) {
 		assert.Equal(t, 0, word.ReviewCount, "错配提交不修改统计")
 
 		// 不存在的 session / item：同样幂等短路，不报错。
-		require.NoError(t, svc.SubmitResult(ctx, SubmitResultRequest{
+		require.NoError(t, svc.SubmitResult(ctx, service.SubmitResultRequest{
 			SessionID: uuid.Must(uuid.NewV7()),
 			ItemID:    uuid.Must(uuid.NewV7()),
 			Result:    domain.ReviewResultRemembered,
@@ -319,7 +320,7 @@ func TestIntegration_ReviewService_SubmitResult(t *testing.T) {
 		svc := newTestReview(t)
 		started := mustStart(t, svc, 1)
 
-		err := svc.SubmitResult(ctx, SubmitResultRequest{
+		err := svc.SubmitResult(ctx, service.SubmitResultRequest{
 			SessionID: started.SessionID,
 			ItemID:    started.Items[0].ItemID,
 			Result:    domain.ReviewResultPending,
@@ -344,7 +345,7 @@ func TestIntegration_ReviewService_SubmitResult(t *testing.T) {
 			wg.Add(1)
 			go func(itemID uuid.UUID, result domain.ReviewResult) {
 				defer wg.Done()
-				errs <- svc.SubmitResult(context.Background(), SubmitResultRequest{
+				errs <- svc.SubmitResult(context.Background(), service.SubmitResultRequest{
 					SessionID: started.SessionID,
 					ItemID:    itemID,
 					Result:    result,
@@ -373,12 +374,12 @@ func TestIntegration_ReviewService_SubmitResult(t *testing.T) {
 		// requested=5 > total=2：便于把 total_count 篡改为 3（仍满足
 		// requested >= total 的 CHECK），使最后一题提交时的 Complete
 		// 汇总校验必然失败，从而在 item 与累计写回之后注入真实失败。
-		started, err := svc.StartSession(ctx, StartSessionRequest{Count: 5})
+		started, err := svc.StartSession(ctx, service.StartSessionRequest{Count: 5})
 		require.NoError(t, err)
 		require.Len(t, started.Items, 2)
 
 		// 先正常提交第一题，作为回滚基线。
-		require.NoError(t, svc.SubmitResult(ctx, SubmitResultRequest{
+		require.NoError(t, svc.SubmitResult(ctx, service.SubmitResultRequest{
 			SessionID: started.SessionID,
 			ItemID:    started.Items[0].ItemID,
 			Result:    domain.ReviewResultRemembered,
@@ -387,7 +388,7 @@ func TestIntegration_ReviewService_SubmitResult(t *testing.T) {
 			"UPDATE review_sessions SET total_count = 3 WHERE id = ?", started.SessionID)
 		require.NoError(t, err)
 
-		err = svc.SubmitResult(ctx, SubmitResultRequest{
+		err = svc.SubmitResult(ctx, service.SubmitResultRequest{
 			SessionID: started.SessionID,
 			ItemID:    started.Items[1].ItemID,
 			Result:    domain.ReviewResultForgotten,
@@ -423,7 +424,7 @@ func TestIntegration_ReviewService_GetSession(t *testing.T) {
 		resetTables(t)
 		svc := newTestReview(t)
 
-		_, err := svc.GetSession(ctx, GetSessionRequest{SessionID: uuid.Must(uuid.NewV7())})
+		_, err := svc.GetSession(ctx, service.GetSessionRequest{SessionID: uuid.Must(uuid.NewV7())})
 		require.Error(t, err)
 		var appErr *apperr.Error
 		require.True(t, errors.As(err, &appErr))
@@ -438,14 +439,14 @@ func TestIntegration_ReviewService_GetSession(t *testing.T) {
 		svc := newTestReview(t)
 		started := mustStart(t, svc, 3)
 
-		require.NoError(t, svc.SubmitResult(ctx, SubmitResultRequest{
+		require.NoError(t, svc.SubmitResult(ctx, service.SubmitResultRequest{
 			SessionID: started.SessionID, ItemID: started.Items[0].ItemID, Result: domain.ReviewResultRemembered,
 		}))
-		require.NoError(t, svc.SubmitResult(ctx, SubmitResultRequest{
+		require.NoError(t, svc.SubmitResult(ctx, service.SubmitResultRequest{
 			SessionID: started.SessionID, ItemID: started.Items[1].ItemID, Result: domain.ReviewResultForgotten,
 		}))
 
-		got, err := svc.GetSession(ctx, GetSessionRequest{SessionID: started.SessionID})
+		got, err := svc.GetSession(ctx, service.GetSessionRequest{SessionID: started.SessionID})
 		require.NoError(t, err)
 		assert.Equal(t, started.SessionID, got.SessionID)
 		assert.Equal(t, domain.ReviewStatusActive, got.Status)
@@ -466,14 +467,14 @@ func TestIntegration_ReviewService_GetSession(t *testing.T) {
 		svc := newTestReview(t)
 		started := mustStart(t, svc, 2)
 
-		require.NoError(t, svc.SubmitResult(ctx, SubmitResultRequest{
+		require.NoError(t, svc.SubmitResult(ctx, service.SubmitResultRequest{
 			SessionID: started.SessionID, ItemID: started.Items[0].ItemID, Result: domain.ReviewResultForgotten,
 		}))
-		require.NoError(t, svc.SubmitResult(ctx, SubmitResultRequest{
+		require.NoError(t, svc.SubmitResult(ctx, service.SubmitResultRequest{
 			SessionID: started.SessionID, ItemID: started.Items[1].ItemID, Result: domain.ReviewResultRemembered,
 		}))
 
-		got, err := svc.GetSession(ctx, GetSessionRequest{SessionID: started.SessionID})
+		got, err := svc.GetSession(ctx, service.GetSessionRequest{SessionID: started.SessionID})
 		require.NoError(t, err)
 		assert.Equal(t, domain.ReviewStatusCompleted, got.Status)
 		assert.NotNil(t, got.CompletedAt)
@@ -491,9 +492,9 @@ func TestIntegration_ReviewService_AbandonSession(t *testing.T) {
 		svc := newTestReview(t)
 		started := mustStart(t, svc, 3)
 
-		require.NoError(t, svc.AbandonSession(ctx, AbandonSessionRequest{SessionID: started.SessionID}))
+		require.NoError(t, svc.AbandonSession(ctx, service.AbandonSessionRequest{SessionID: started.SessionID}))
 		// 重复放弃：幂等成功（api/reviews.md §6）。
-		require.NoError(t, svc.AbandonSession(ctx, AbandonSessionRequest{SessionID: started.SessionID}))
+		require.NoError(t, svc.AbandonSession(ctx, service.AbandonSessionRequest{SessionID: started.SessionID}))
 
 		session, err := repo.NewReviewRepo(testDB).GetSessionByID(ctx, started.SessionID)
 		require.NoError(t, err)
@@ -507,14 +508,14 @@ func TestIntegration_ReviewService_AbandonSession(t *testing.T) {
 		svc := newTestReview(t)
 		started := mustStart(t, svc, 2)
 
-		require.NoError(t, svc.AbandonSession(ctx, AbandonSessionRequest{SessionID: started.SessionID}))
+		require.NoError(t, svc.AbandonSession(ctx, service.AbandonSessionRequest{SessionID: started.SessionID}))
 		// session 已非 active：提交契约上幂等短路（api/reviews.md §3），
 		// 不报错也不计入已废弃的轮次。
-		require.NoError(t, svc.SubmitResult(ctx, SubmitResultRequest{
+		require.NoError(t, svc.SubmitResult(ctx, service.SubmitResultRequest{
 			SessionID: started.SessionID, ItemID: started.Items[0].ItemID, Result: domain.ReviewResultRemembered,
 		}))
 
-		got, err := svc.GetSession(ctx, GetSessionRequest{SessionID: started.SessionID})
+		got, err := svc.GetSession(ctx, service.GetSessionRequest{SessionID: started.SessionID})
 		require.NoError(t, err)
 		assert.Equal(t, domain.ReviewStatusAbandoned, got.Status)
 		assert.Equal(t, 0, got.Remembered)
@@ -527,11 +528,11 @@ func TestIntegration_ReviewService_AbandonSession(t *testing.T) {
 		seedWords(t, 1)
 		svc := newTestReview(t)
 		started := mustStart(t, svc, 1)
-		require.NoError(t, svc.SubmitResult(ctx, SubmitResultRequest{
+		require.NoError(t, svc.SubmitResult(ctx, service.SubmitResultRequest{
 			SessionID: started.SessionID, ItemID: started.Items[0].ItemID, Result: domain.ReviewResultRemembered,
 		}))
 
-		err := svc.AbandonSession(ctx, AbandonSessionRequest{SessionID: started.SessionID})
+		err := svc.AbandonSession(ctx, service.AbandonSessionRequest{SessionID: started.SessionID})
 		require.Error(t, err)
 		var appErr *apperr.Error
 		require.True(t, errors.As(err, &appErr))
@@ -549,7 +550,7 @@ func TestIntegration_ReviewService_AbandonSession(t *testing.T) {
 		resetTables(t)
 		svc := newTestReview(t)
 
-		err := svc.AbandonSession(ctx, AbandonSessionRequest{SessionID: uuid.Must(uuid.NewV7())})
+		err := svc.AbandonSession(ctx, service.AbandonSessionRequest{SessionID: uuid.Must(uuid.NewV7())})
 		require.Error(t, err)
 		var appErr *apperr.Error
 		require.True(t, errors.As(err, &appErr))
@@ -582,9 +583,9 @@ func seedWords(t *testing.T, n int) []string {
 }
 
 // mustStart 开始一轮并要求成功。
-func mustStart(t *testing.T, svc *Review, count int) *StartSessionResult {
+func mustStart(t *testing.T, svc *Review, count int) *service.StartSessionResult {
 	t.Helper()
-	started, err := svc.StartSession(context.Background(), StartSessionRequest{Count: count})
+	started, err := svc.StartSession(context.Background(), service.StartSessionRequest{Count: count})
 	require.NoError(t, err)
 	require.NotEmpty(t, started.Items)
 	return started

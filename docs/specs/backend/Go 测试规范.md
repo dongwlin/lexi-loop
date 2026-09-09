@@ -229,7 +229,7 @@ import (
 
 ## 8. 测试替身
 
-测试替身只用于已经因真实替换需求而存在的窄外部端口，不用于模拟 Repo 或数据库。`bun.IDB` 是数据库执行接口，不是业务 Repo 接口。
+测试替身用于 Handler 所依赖的 Service 接口，以及因真实替换需求而存在的窄外部端口，不用于模拟 Repo 或数据库。`bun.IDB` 是数据库执行接口，不是业务 Repo 接口。
 
 ### 8.1 替身类型
 
@@ -280,7 +280,7 @@ func (m *MockMessageSender) SendVerificationCode(ctx context.Context, target, co
 ```
 
 > [!note]
-> Repo 和 Service 的关系型数据路径使用 testcontainers 跑真实 PostgreSQL，同时验证 SQL、事务、约束和 `schema` ↔ `domain` 转换。不要为了获得快速 mock 测试而改变生产架构。
+> Repo 和 Service 的关系型数据路径使用 testcontainers 跑真实 PostgreSQL，同时验证 SQL、事务、约束和 `schema` ↔ `domain` 转换。Handler 使用 Service 接口替身验证协议适配，不能替代这条真实数据路径的集成测试。
 
 ---
 
@@ -318,7 +318,7 @@ func BenchmarkUserService_Deactivate(b *testing.B) {
 运行：
 
 ```bash
-go test -bench BenchmarkUserService_Deactivate -benchmem ./internal/service/
+go test -bench BenchmarkUserService_Deactivate -benchmem ./internal/service/v1/
 ```
 
 > [!tip]

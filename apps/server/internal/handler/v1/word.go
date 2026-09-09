@@ -24,12 +24,12 @@ type noDataOutput struct {
 
 // WordHandler 是生词库端点（docs/api/words.md）的 HTTP 适配层。
 type WordHandler struct {
-	svc *service.Word
+	svc service.Word
 }
 
 // NewWordHandler 构造 WordHandler。svc 为 nil 时仅用于离线 OpenAPI spec
 // 生成（操作函数不会被调用）。
-func NewWordHandler(svc *service.Word) *WordHandler {
+func NewWordHandler(svc service.Word) *WordHandler {
 	return &WordHandler{svc: svc}
 }
 

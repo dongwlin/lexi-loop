@@ -3,8 +3,7 @@ package handler
 // 集成测试公共设施：包级 TestMain 启动一次共享的真实 PostgreSQL
 //（postgres:18-alpine，testcontainers），应用全部迁移后构造真实
 // Service + Handler 的完整 HTTP 栈；Docker 不可用或传 -short 时集成
-// 用例跳过（docs/specs/backend/Go 测试规范.md：Handler 组件测试使用
-// httptest + 真实 Service / Test DB）。
+// 用例跳过；handler/v1 的接口替身单元测试独立运行，不启动数据库。
 
 import (
 	"context"
@@ -29,7 +28,7 @@ import (
 	v1 "github.com/dongwlin/lexi-loop/apps/server/internal/handler/v1"
 	"github.com/dongwlin/lexi-loop/apps/server/internal/importer/ecdict"
 	"github.com/dongwlin/lexi-loop/apps/server/internal/infra/database"
-	"github.com/dongwlin/lexi-loop/apps/server/internal/service"
+	servicev1 "github.com/dongwlin/lexi-loop/apps/server/internal/service/v1"
 	"github.com/dongwlin/lexi-loop/apps/server/migrations"
 )
 
@@ -127,11 +126,11 @@ func resetTables(t *testing.T) {
 func newTestServer(t *testing.T) *gin.Engine {
 	t.Helper()
 	db := requireTestDB(t)
-	dictionarySvc := service.NewDictionary(db)
-	wordSvc := service.NewWord(db, dictionarySvc)
-	reviewSvc := service.NewReview(db, service.NewWeightedSampler(rand.NewPCG(7, 8)))
+	dictionarySvc := servicev1.NewDictionary(db)
+	wordSvc := servicev1.NewWord(db, dictionarySvc)
+	reviewSvc := servicev1.NewReview(db, servicev1.NewWeightedSampler(rand.NewPCG(7, 8)))
 
-	dictImportSvc := service.NewDictImport(db, ecdict.NewImporter(db, ecdict.DefaultBatchSize), "/nonexistent/ecdict.csv", true, zerolog.Nop())
+	dictImportSvc := servicev1.NewDictImport(db, ecdict.NewImporter(db, ecdict.DefaultBatchSize), "/nonexistent/ecdict.csv", true, zerolog.Nop())
 
 	engine := gin.New()
 	RegisterRoutes(engine, Options{
