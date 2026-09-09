@@ -133,6 +133,8 @@ GET /api/v1/words?page=1&pageSize=50&search=amb
 }
 ```
 
+`effectiveReviewMeaning` 的取值与词形关系补全见 [词典释义规则](../dictionary/data-model.md#71-仅含词形关系的释义补全)。
+
 列表过滤 `deleted_at IS NULL` 的 `user_words`，被删除的词不再出现。空列表时 `list` 返回 `[]`。
 
 列表项与详情（§4）都附带两个动态计算的派生指标（权重 / mastery 不落库、读取时按当前时间计算，公式权威见 [review/algorithm.md](../review/algorithm.md) §3–§6，冻结决策 D011）：

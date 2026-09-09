@@ -11,6 +11,8 @@ ECDICT 作为**导入期数据源**：大型 CSV 随镜像分发（`deploy/dict/
 
 在这一架构下，`dictionary_entries` 不是「按需查询 ECDICT 的缓存」，而是**系统本地词典库本身**。凡 ECDICT 收录的词，导入后都直接查询 `dictionary_entries` 命中，例如 `Lookup("ambiguous")`；不存在运行时「查不到再从 ECDICT 查并写回」的链路。
 
+仅含词形关系的展示释义可读取本地原形补全，规则见 [data-model.md §7.1](data-model.md#71-仅含词形关系的释义补全)；此过程不调用在线 Enrich、不写回词典。
+
 本地查询不受网络与 API 调用配额影响，大批量导入和复习无需等待第三方词典。外部访问仅限下节的 V2 在线链路。
 
 ## 2. 两条链路的划分

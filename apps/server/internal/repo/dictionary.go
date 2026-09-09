@@ -40,6 +40,23 @@ func (r *DictionaryRepo) FindByHeadword(ctx context.Context, headword string) (*
 	return toDomainEntry(&row), nil
 }
 
+// FindByHeadwords 批量读取原形词条，缺失目标不出现在结果中。
+func (r *DictionaryRepo) FindByHeadwords(ctx context.Context, headwords []string) ([]*domain.DictionaryEntry, error) {
+	if len(headwords) == 0 {
+		return nil, nil
+	}
+	rows := make([]schema.DictionaryEntry, 0)
+	err := r.db.NewSelect().Model(&rows).Where("headword IN (?)", bun.In(headwords)).OrderExpr("headword ASC").Scan(ctx)
+	if err != nil {
+		return nil, normalizeError("find dictionary entries by headwords", err)
+	}
+	entries := make([]*domain.DictionaryEntry, len(rows))
+	for i := range rows {
+		entries[i] = toDomainEntry(&rows[i])
+	}
+	return entries, nil
+}
+
 // FindByID 按 ID 查询完整词条（GetWord 等需要全部词典字段的场景）。
 func (r *DictionaryRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.DictionaryEntry, error) {
 	row := schema.DictionaryEntry{}

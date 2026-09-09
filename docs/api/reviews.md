@@ -60,6 +60,8 @@ POST /api/v1/reviews
 | `totalCount` | int | 实际抽取数量（截断后的值） |
 | `items` | array | 本轮抽中的单词列表 |
 
+`effectiveReviewMeaning` 的取值与词形关系补全见 [词典释义规则](../dictionary/data-model.md#71-仅含词形关系的释义补全)。
+
 服务器完成：获取候选词（`deleted_at IS NULL` 的 `user_words`，join 词典信息）→ 计算每个词权重（[review/algorithm.md](../review/algorithm.md)）→ 加权随机不放回抽取 → 创建 `review_session`（若已存在 `active` session，先标记 abandoned，规则见 [review/data-model.md](../review/data-model.md)）→ 创建对应数量的 `review_items` → 返回本轮单词。
 
 上述“放弃旧 active session → 抽样 → 创建新 session 与全部 items”在同一数据库事务中完成。并发创建也必须保证单 active，不会返回 items 不完整的结果。具体事务顺序见 [backend/structure.md](../backend/structure.md)。

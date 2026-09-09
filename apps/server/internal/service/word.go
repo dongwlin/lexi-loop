@@ -265,7 +265,7 @@ func (s *Word) DeleteWord(ctx context.Context, id uuid.UUID) error {
 // findEntries 按 user_words 的词条 ID 批量取词典字段，返回按词条 ID
 // 索引的映射。user_words.dictionary_entry_id 外键保证词条存在；缺失属于
 // 数据损坏，按内部错误处理。
-func (s *Word) findEntries(ctx context.Context, words []*domain.UserWord) (map[uuid.UUID]*domain.DictionaryEntry, error) {
+func (s *Word) findEntries(ctx context.Context, words []*domain.UserWord) (map[uuid.UUID]*dictionaryDisplayEntry, error) {
 	entryIDs := make([]uuid.UUID, 0, len(words))
 	seen := make(map[uuid.UUID]struct{}, len(words))
 	for _, w := range words {
@@ -274,13 +274,9 @@ func (s *Word) findEntries(ctx context.Context, words []*domain.UserWord) (map[u
 			entryIDs = append(entryIDs, w.DictionaryEntryID)
 		}
 	}
-	entries, err := repo.NewDictionaryRepo(s.db).FindByIDs(ctx, entryIDs)
+	byID, err := findDisplayEntries(ctx, repo.NewDictionaryRepo(s.db), entryIDs)
 	if err != nil {
 		return nil, apperr.Internal(err)
-	}
-	byID := make(map[uuid.UUID]*domain.DictionaryEntry, len(entries))
-	for _, entry := range entries {
-		byID[entry.ID] = entry
 	}
 	for _, w := range words {
 		if byID[w.DictionaryEntryID] == nil {
@@ -291,14 +287,14 @@ func (s *Word) findEntries(ctx context.Context, words []*domain.UserWord) (map[u
 }
 
 // newWordItem 组装列表 / 详情共用的展示读模型。
-func newWordItem(userWord *domain.UserWord, entry *domain.DictionaryEntry) *WordItem {
-	meaning, source := domain.EffectiveReviewMeaning(userWord.CustomReviewMeaning, entry.ReviewMeanings, entry.RawMeanings)
+func newWordItem(userWord *domain.UserWord, entry *dictionaryDisplayEntry) *WordItem {
+	meaning, source := entry.effectiveMeaning(userWord.CustomReviewMeaning)
 	return &WordItem{
 		UserWord:         userWord,
-		Entry:            entry,
+		Entry:            entry.DictionaryEntry,
 		EffectiveMeaning: meaning,
 		MeaningSource:    source,
-		Phonetic:         displayPhonetic(entry),
+		Phonetic:         displayPhonetic(entry.DictionaryEntry),
 		// 派生指标按当前时间计算（D011）：列表 / 详情的每次读取都是最新值。
 		MasteryScore: userWord.MasteryScore(),
 		ReviewWeight: userWord.ReviewWeight(time.Now()),
