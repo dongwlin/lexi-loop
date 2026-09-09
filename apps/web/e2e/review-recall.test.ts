@@ -222,7 +222,10 @@ for (const scenario of [
         page.getByRole('button', { name: '认识', exact: true }),
       ).toBeVisible()
       await expect(page.getByRole('button', { name: '下一词' })).toHaveCount(0)
-      await expect(page.locator('html')).not.toHaveAttribute('data-spoken-word')
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-spoken-word',
+        'brisk',
+      )
       await page.getByRole('button', { name: '播放 brisk 的发音' }).click()
       await expect(page.locator('html')).toHaveAttribute(
         'data-spoken-word',

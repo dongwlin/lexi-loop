@@ -5,6 +5,7 @@ const meta = {
   title: 'Review/Flashcard',
   component: ReviewFlashcard,
   args: {
+    autoPlayPronunciation: false,
     word: 'ambiguous',
     phonetic: '/æmˈbɪɡjuəs/',
     meaning: 'adj. 模棱两可的；含糊不清的；有歧义的',
@@ -54,3 +55,23 @@ export const LongContent: Story = {
 }
 
 export const WithoutPhonetic: Story = { args: { phonetic: '' } }
+
+// Story 中模拟语音边界，避免工作台或 CI 调用真实系统音源。
+export const AutoPlay: Story = {
+  args: { autoPlayPronunciation: true },
+  beforeEach: () => {
+    const descriptor = Object.getOwnPropertyDescriptor(
+      window,
+      'speechSynthesis',
+    )
+    Object.defineProperty(window, 'speechSynthesis', {
+      configurable: true,
+      value: { speak: () => {}, cancel: () => {} },
+    })
+    return () => {
+      if (descriptor)
+        Object.defineProperty(window, 'speechSynthesis', descriptor)
+      else Reflect.deleteProperty(window, 'speechSynthesis')
+    }
+  },
+}

@@ -25,6 +25,7 @@ function mockSpeech() {
   return { spoken, speak, cancel }
 }
 const props = {
+  autoPlayPronunciation: false,
   word: 'ambiguous',
   phonetic: '/æmˈbɪɡjuəs/',
   meaning: '模棱两可的',
@@ -35,6 +36,61 @@ const props = {
 }
 
 describe('复习卡片发音', () => {
+  it('默认首次播放一次，揭示和无关 props 更新不重播', async () => {
+    const { spoken } = mockSpeech()
+    const view = render(ReviewFlashcard, {
+      props: { ...props, autoPlayPronunciation: undefined },
+    })
+    expect(spoken).toHaveLength(1)
+    expect(spoken[0]).toMatchObject({ text: 'ambiguous', lang: 'en-US' })
+    await view.rerender({ mode: 'revealed', canCorrect: true })
+    await view.rerender({
+      meaning: '新释义',
+      phonetic: '',
+      error: '重试',
+      submitting: true,
+    })
+    expect(spoken).toHaveLength(1)
+    view.unmount()
+  })
+
+  it('切词取消旧语音并自动播放，旧回调不能污染新状态', async () => {
+    const { spoken, cancel } = mockSpeech()
+    const view = render(ReviewFlashcard, {
+      props: { ...props, autoPlayPronunciation: true },
+    })
+    const oldEnd = spoken[0].onend!
+    const oldError = spoken[0].onerror!
+    await view.rerender({ word: 'brisk' })
+    expect(cancel).toHaveBeenCalledTimes(1)
+    expect(spoken.map((item) => item.text)).toEqual(['ambiguous', 'brisk'])
+    oldEnd.call(spoken[0], new Event('end') as SpeechSynthesisEvent)
+    oldError.call(spoken[0], new Event('error') as SpeechSynthesisErrorEvent)
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '正在播放 brisk 的发音',
+    )
+    view.unmount()
+    expect(cancel).toHaveBeenCalledTimes(2)
+  })
+
+  it('关闭不自动播放，设置改变只影响下一词，批量更新读取最新设置', async () => {
+    const { spoken, cancel } = mockSpeech()
+    const view = render(ReviewFlashcard, { props })
+    expect(spoken).toHaveLength(0)
+    await view.rerender({ autoPlayPronunciation: true })
+    expect(spoken).toHaveLength(0)
+    await view.rerender({ word: 'brisk' })
+    expect(spoken.map((item) => item.text)).toEqual(['brisk'])
+    await view.rerender({ autoPlayPronunciation: false })
+    expect(cancel).not.toHaveBeenCalled()
+    await view.rerender({ word: 'cite' })
+    expect(cancel).toHaveBeenCalledTimes(1)
+    expect(spoken).toHaveLength(1)
+    await view.rerender({ word: 'derive', autoPlayPronunciation: true })
+    expect(spoken.map((item) => item.text)).toEqual(['brisk', 'derive'])
+    view.unmount()
+  })
+
   it('显示音标，空白音标不显示占位', async () => {
     const view = render(ReviewFlashcard, { props })
     expect(screen.getByText(props.phonetic)).toBeInTheDocument()

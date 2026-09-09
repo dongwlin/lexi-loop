@@ -5,15 +5,19 @@ import { Button } from '@/components/ui'
 import type { ReviewMode, ReviewResult } from '@/utils/review-state-machine'
 
 // 页面负责会话、提交与焦点；闪卡仅展示当前阶段并发出用户意图。
-defineProps<{
-  phonetic?: string
-  word: string
-  meaning: string
-  mode: ReviewMode
-  canCorrect: boolean
-  submitting: boolean
-  error: string | null
-}>()
+withDefaults(
+  defineProps<{
+    autoPlayPronunciation?: boolean
+    phonetic?: string
+    word: string
+    meaning: string
+    mode: ReviewMode
+    canCorrect: boolean
+    submitting: boolean
+    error: string | null
+  }>(),
+  { autoPlayPronunciation: true, phonetic: '' },
+)
 defineEmits<{
   choose: [result: ReviewResult]
   correct: []
@@ -29,7 +33,11 @@ defineEmits<{
       >
         {{ word }}
       </h2>
-      <ReviewPronunciation :word="word" :phonetic="phonetic" />
+      <ReviewPronunciation
+        :word="word"
+        :phonetic="phonetic"
+        :auto-play-pronunciation="autoPlayPronunciation"
+      />
     </div>
     <!-- 共用内容槽吸收常规释义行数差异；超长内容自然撑开，不隐藏待回忆的释义。 -->
     <div

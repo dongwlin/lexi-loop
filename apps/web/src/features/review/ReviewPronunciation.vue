@@ -1,9 +1,16 @@
 <script setup lang="ts">
-import { onBeforeUnmount, shallowRef, useId, watch } from 'vue'
+import { onBeforeUnmount, onMounted, shallowRef, useId, watch } from 'vue'
 import { Volume2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui'
 
-const props = defineProps<{ word: string; phonetic?: string }>()
+const props = withDefaults(
+  defineProps<{
+    word: string
+    phonetic?: string
+    autoPlayPronunciation?: boolean
+  }>(),
+  { autoPlayPronunciation: true, phonetic: '' },
+)
 const statusId = useId()
 const message = shallowRef('')
 let active: SpeechSynthesisUtterance | null = null
@@ -27,6 +34,7 @@ function play() {
   stop()
   message.value = ''
   if (
+    typeof window === 'undefined' ||
     !window.speechSynthesis ||
     typeof window.SpeechSynthesisUtterance !== 'function'
   ) {
@@ -66,9 +74,14 @@ watch(
   () => {
     stop()
     message.value = ''
+    if (props.autoPlayPronunciation) play()
   },
-  { flush: 'sync' },
+  // 等待本次 props 批量更新完成，读取同一次更新中的最新设置。
+  { flush: 'post' },
 )
+onMounted(() => {
+  if (props.autoPlayPronunciation) play()
+})
 onBeforeUnmount(stop)
 </script>
 
