@@ -74,7 +74,10 @@ defineEmits<{
           >
         </template>
       </div>
-      <p class="min-h-8 text-center text-xs text-muted-foreground">
+      <!-- 仅按主输入能力展示提示；触摸设备外接键盘仍可使用页面快捷键。 -->
+      <p
+        class="hidden min-h-8 text-center text-xs text-muted-foreground pointer-fine:[@media(hover:hover)]:block"
+      >
         <template v-if="mode === 'recalling'"
           >1 / ← 不认识 · 2 / → 认识</template
         >
