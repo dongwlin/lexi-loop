@@ -116,6 +116,7 @@ func newMockAPI(t *testing.T, word service.Word, review service.Review, dict ser
 	NewWordHandler(word).Register(api)
 	NewReviewHandler(review).Register(api)
 	NewDictImportHandler(dict).Register(api)
+	NewVersionHandler().Register(api)
 	return engine
 }
 
