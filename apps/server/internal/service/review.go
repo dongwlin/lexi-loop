@@ -199,13 +199,9 @@ func (s *Review) startSessionTx(ctx context.Context, tx bun.Tx, count int, now t
 			entryIDs = append(entryIDs, w.DictionaryEntryID)
 		}
 	}
-	entries, err := dictionaryRepo.FindByIDs(ctx, entryIDs)
+	byID, err := findDisplayEntries(ctx, dictionaryRepo, entryIDs)
 	if err != nil {
 		return nil, err
-	}
-	byID := make(map[uuid.UUID]*domain.DictionaryEntry, len(entries))
-	for _, entry := range entries {
-		byID[entry.ID] = entry
 	}
 
 	result := &StartSessionResult{
@@ -220,11 +216,11 @@ func (s *Review) startSessionTx(ctx context.Context, tx bun.Tx, count int, now t
 			// user_words.dictionary_entry_id 外键保证词条存在；缺失属于数据损坏。
 			return nil, fmt.Errorf("service: dictionary entry %s missing for user word %s", picked[i].DictionaryEntryID, picked[i].ID)
 		}
-		meaning, source := domain.EffectiveReviewMeaning(picked[i].CustomReviewMeaning, entry.ReviewMeanings, entry.RawMeanings)
+		meaning, source := entry.effectiveMeaning(picked[i].CustomReviewMeaning)
 		result.Items = append(result.Items, StartSessionItem{
 			ItemID:           item.ID,
 			Headword:         entry.Headword,
-			Phonetic:         displayPhonetic(entry),
+			Phonetic:         displayPhonetic(entry.DictionaryEntry),
 			EffectiveMeaning: meaning,
 			MeaningSource:    source,
 		})
