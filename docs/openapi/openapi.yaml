@@ -590,7 +590,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-          description: 业务前置条件不满足（无可复习生词，BASE.BIZ.USER_DISABLED）
+          description: 业务前置条件不满足（无可复习生词，BASE.BIZ.NO_REVIEWABLE_WORDS）
         "500":
           content:
             application/json:
@@ -670,7 +670,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-          description: 业务前置条件不满足（session 已结束，BASE.BIZ.USER_DISABLED）
+          description: 业务前置条件不满足（session 已结束，BASE.BIZ.SESSION_NOT_ACTIVE）
         "500":
           content:
             application/json:

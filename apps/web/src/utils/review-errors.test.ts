@@ -10,10 +10,10 @@ import {
 // 服务端英文 message 不直接展示。
 
 describe('describeReviewStartError', () => {
-  it('maps BASE.BIZ.USER_DISABLED to the no-reviewable-words copy', () => {
+  it('maps BASE.BIZ.NO_REVIEWABLE_WORDS to the no-reviewable-words copy', () => {
     const err = new ApiError('http', 'no reviewable words available', {
       httpStatus: 422,
-      code: 'BASE.BIZ.USER_DISABLED',
+      code: 'BASE.BIZ.NO_REVIEWABLE_WORDS',
     })
     expect(describeReviewStartError(err)).toBe(
       '当前没有可复习的生词，请先导入生词。',
@@ -34,7 +34,7 @@ describe('describeReviewStartError', () => {
     expect(describeReviewStartError(err)).toBe('服务暂时不可用，请稍后重试。')
   })
 
-  it('keeps 4xx errors other than USER_DISABLED on the generic copy', () => {
+  it('keeps 4xx errors other than NO_REVIEWABLE_WORDS on the generic copy', () => {
     const err = new ApiError('http', 'bad request', { httpStatus: 400 })
     expect(describeReviewStartError(err)).toBe('开始复习失败，请稍后重试')
   })
@@ -70,7 +70,7 @@ describe('describeReviewAbandonError', () => {
     })
     const notActive = new ApiError('http', 'not active', {
       httpStatus: 422,
-      code: 'BASE.BIZ.USER_DISABLED',
+      code: 'BASE.BIZ.SESSION_NOT_ACTIVE',
     })
     expect(describeReviewAbandonError(notFound)).toBe('放弃本轮失败，请重试')
     expect(describeReviewAbandonError(notActive)).toBe('放弃本轮失败，请重试')

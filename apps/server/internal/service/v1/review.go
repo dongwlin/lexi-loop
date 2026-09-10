@@ -302,9 +302,9 @@ func (s *Review) AbandonSession(ctx context.Context, req service.AbandonSessionR
 	case errors.Is(err, repo.ErrNotFound):
 		return sessionNotFound(err)
 	case errors.Is(err, domain.ErrSessionNotActive):
-		// 复用标准业务前置 code BASE.BIZ.USER_DISABLED（422）：「不满足
-		// 业务前置条件」的既有语义，message 区分具体场景。
-		return apperr.New(apperr.FailedPrecondition, apperr.CodeNoReviewableWords, "review session is not active", err)
+		// 业务前置条件不满足（422，docs/api/reviews.md §6）：session 已结束，
+		// 使用专属 code 以便客户端区分「无可复习生词」与「session 已结束」。
+		return apperr.New(apperr.FailedPrecondition, apperr.CodeSessionNotActive, "review session is not active", err)
 	case errors.Is(err, repo.ErrConflict):
 		return apperr.New(apperr.Conflict, apperr.CodeConcurrentUpdate, "resource was modified concurrently, please retry", err)
 	default:

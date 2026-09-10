@@ -537,7 +537,7 @@ func TestIntegration_ReviewService_AbandonSession(t *testing.T) {
 		var appErr *apperr.Error
 		require.True(t, errors.As(err, &appErr))
 		assert.Equal(t, apperr.FailedPrecondition, appErr.Kind)
-		assert.Equal(t, apperr.CodeNoReviewableWords, appErr.Code)
+		assert.Equal(t, apperr.CodeSessionNotActive, appErr.Code)
 		assert.Equal(t, "review session is not active", appErr.Message)
 
 		// completed 状态不被放弃破坏。

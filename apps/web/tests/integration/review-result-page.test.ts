@@ -249,7 +249,7 @@ describe('复习结果页「再来一轮」（review-flow §9）', () => {
       http.post('*/api/v1/reviews', () =>
         HttpResponse.json(
           {
-            code: 'BASE.BIZ.USER_DISABLED',
+            code: 'BASE.BIZ.NO_REVIEWABLE_WORDS',
             message: 'no reviewable words available',
             data: {},
           },
