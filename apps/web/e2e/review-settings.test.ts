@@ -98,7 +98,7 @@ for (const width of [375, 1280]) {
       expect(box!.width).toBeGreaterThanOrEqual(44)
       expect(box!.height).toBeGreaterThanOrEqual(44)
     }
-    await page.getByRole('button', { name: '认识', exact: true }).click()
+    await page.getByRole('button', { name: '记得', exact: true }).click()
     await expect(root).toHaveAttribute('data-speak-count', '1')
     await page.getByRole('button', { name: '下一词' }).click()
     await expect(root).toHaveAttribute('data-spoken-word', 'brisk')
@@ -114,7 +114,7 @@ for (const width of [375, 1280]) {
     await expect(page.getByRole('heading', { name: 'brisk' })).toBeVisible()
     expect(submissions).toEqual([{ result: 'remembered' }])
     await expect(root).toHaveAttribute('data-speak-count', '2')
-    await page.getByRole('button', { name: '认识', exact: true }).click()
+    await page.getByRole('button', { name: '记得', exact: true }).click()
     await page.getByRole('button', { name: '下一词' }).click()
     await expect(page.getByRole('heading', { name: 'cite' })).toBeVisible()
     await expect(root).not.toHaveAttribute('data-spoken-word')

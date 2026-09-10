@@ -36,6 +36,11 @@ describe('Button', () => {
     const button = screen.getByRole('button', { name: /提交/ })
     expect(button).toBeDisabled()
     expect(button).toHaveAttribute('aria-busy', 'true')
+    // Pending 只因原生 disabled 被禁用，视觉上必须保留可读文案：整体降透明度会把白字
+    // 一起合成掉（浅色实心主按钮仅 1.51:1），因此 opacity-50 只作用于真正 disabled 的
+    // 按钮（设计系统方案 §8.1「Pending 保留按钮宽度与可读文案」）。
+    expect(button.className).toContain('disabled:not-aria-busy:opacity-50')
+    expect(button.className).not.toMatch(/(?:^|\s)disabled:opacity-50(?:\s|$)/)
 
     await userEvent.click(button)
     expect(onClick).not.toHaveBeenCalled()

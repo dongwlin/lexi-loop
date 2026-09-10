@@ -79,7 +79,7 @@ for (const width of [1280, 375, 320]) {
     const section = page
       .locator('section')
       .filter({ has: page.getByRole('heading', { name: '开始复习' }) })
-    const known = page.getByRole('button', { name: '认识', exact: true })
+    const known = page.getByRole('button', { name: '记得', exact: true })
     const next = page.getByRole('button', { name: '下一词', exact: true })
     await expect(known).toBeVisible()
     const initialCard = await box(section)
@@ -115,7 +115,7 @@ for (const width of [1280, 375, 320]) {
         await (
           index % 2 === 0
             ? known
-            : page.getByRole('button', { name: '不认识', exact: true })
+            : page.getByRole('button', { name: '没记住', exact: true })
         ).click()
         const meaning = page.getByText(meanings[index], { exact: true })
         await expect(meaning).toBeVisible()
@@ -168,7 +168,7 @@ for (const width of [1280, 375, 320]) {
         })
         if (index % 2 === 0) {
           await page
-            .getByRole('button', { name: '不认识', exact: true })
+            .getByRole('button', { name: '没记住', exact: true })
             .click()
           await assertStable(next)
         }

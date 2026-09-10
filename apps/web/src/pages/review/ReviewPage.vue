@@ -497,7 +497,7 @@ function focusReviewArea() {
   reviewAreaRef.value?.focus()
 }
 
-// 触发分支切换的元素（开始 / 继续复习 / 查看释义 / 记得 / 不记得 / 自定义）随渲染卸载，
+// 触发分支切换的元素（开始 / 继续复习 / 查看释义 / 记得 / 没记住 / 自定义）随渲染卸载，
 // 浏览器对「移除已聚焦元素」的焦点归还（focus fixup）作为任务排在 Vue 渲染微任务之后，
 // 仅 nextTick 聚焦会被覆盖回 body（真实浏览器可复现：恢复后 Space / 1 / 2 无响应），
 // 因此渲染完成后跨帧检查焦点是否落在目标上，不在则再聚焦。
@@ -680,6 +680,7 @@ const reviewAreaRef = ref<HTMLElement | null>(null)
           :mode="currentMode"
           :can-correct="canCorrect"
           :submitting="isSubmitting"
+          :submission-started="submissionStarted"
           :error="submitError"
           @choose="handleInitialAnswer"
           @correct="handleCorrectToForgotten"

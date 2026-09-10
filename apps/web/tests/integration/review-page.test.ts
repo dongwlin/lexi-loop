@@ -560,9 +560,9 @@ describe('先判断再揭示释义', () => {
   }
 
   it.each([
-    ['认识', false, 'remembered'],
-    ['不认识', false, 'forgotten'],
-    ['认识', true, 'forgotten'],
+    ['记得', false, 'remembered'],
+    ['没记住', false, 'forgotten'],
+    ['记得', true, 'forgotten'],
   ] as const)(
     '初选 %s、修正 %s：下一词才提交 %s',
     async (label, correct, result) => {
@@ -575,13 +575,13 @@ describe('先判断再揭示释义', () => {
       expect(screen.getByText('noun. ambient释义')).toBeInTheDocument()
       expect(submissions).toEqual([])
       expect(
-        screen.queryByRole('button', { name: '认识' }),
+        screen.queryByRole('button', { name: '记得' }),
       ).not.toBeInTheDocument()
       if (correct)
-        await user.click(screen.getByRole('button', { name: '不认识' }))
+        await user.click(screen.getByRole('button', { name: '没记住' }))
       if (result === 'forgotten')
         expect(
-          screen.queryByRole('button', { name: '不认识' }),
+          screen.queryByRole('button', { name: '没记住' }),
         ).not.toBeInTheDocument()
       expect(
         screen.getByRole('heading', { name: 'ambient' }),
@@ -601,13 +601,13 @@ describe('先判断再揭示释义', () => {
 
   it('提交失败保留释义与最终结果，重试不会改变本卡结果', async () => {
     const { user, submissions, fail } = await startCards()
-    await user.click(screen.getByRole('button', { name: '认识' }))
+    await user.click(screen.getByRole('button', { name: '记得' }))
     fail()
     await user.click(screen.getByRole('button', { name: '下一词' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('提交失败')
     expect(screen.getByText('noun. ambient释义')).toBeInTheDocument()
     expect(
-      screen.queryByRole('button', { name: '不认识' }),
+      screen.queryByRole('button', { name: '没记住' }),
     ).not.toBeInTheDocument()
     await nextFrames()
     await user.keyboard('1')
@@ -671,14 +671,14 @@ describe('先判断再揭示释义', () => {
 
   it('未提交的暂定结果不持久化，恢复从服务端 pending 卡重新判断', async () => {
     const { user, submissions, view } = await startCards()
-    await user.click(screen.getByRole('button', { name: '认识' }))
+    await user.click(screen.getByRole('button', { name: '记得' }))
     expect(submissions).toHaveLength(0)
     view.unmount()
     await renderAppAtRoute('/review')
     await user.click(await screen.findByRole('button', { name: '继续复习' }))
     await screen.findByRole('heading', { name: 'brisk' })
     expect(screen.queryByText('noun. brisk释义')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '认识' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '记得' })).toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: '下一词' }),
     ).not.toBeInTheDocument()

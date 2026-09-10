@@ -210,7 +210,7 @@ async function handleReplay() {
           </dd>
         </div>
         <div class="flex items-baseline justify-between gap-6">
-          <dt class="text-muted-foreground">不记得</dt>
+          <dt class="text-muted-foreground">没记住</dt>
           <dd class="font-medium text-foreground tabular-nums">
             {{ session.forgotten }}
           </dd>

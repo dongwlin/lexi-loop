@@ -140,7 +140,7 @@ for (const scenario of [
           () => matchMedia('(pointer: fine) and (hover: hover)').matches,
         ),
       ).toBe(!scenario.hasTouch)
-      const recallHint = page.getByText('1 / ← 不认识 · 2 / → 认识', {
+      const recallHint = page.getByText('1 / ← 没记住 · 2 / → 记得', {
         exact: true,
       })
       const nextHint = page.locator('p').filter({ hasText: 'Space / Enter' })
@@ -160,7 +160,7 @@ for (const scenario of [
       ).toBeVisible()
       await expect(area).toBeFocused()
       expect(submissions).toEqual([])
-      await expect(nextHint).toContainText('1 / ← 修正为不认识')
+      await expect(nextHint).toContainText('1 / ← 修正为没记住')
       await expect(nextHint).toBeVisible({ visible: !scenario.hasTouch })
       await page.screenshot({
         path: `/tmp/review-${scenario.hasTouch ? 'touch' : 'pointer'}-recall-${scenario.width}-revealed.png`,
@@ -181,18 +181,18 @@ for (const scenario of [
       // Tab 到修正按钮，用原生 Enter 激活，焦点恢复到区域。
       await page.keyboard.press('Tab')
       await expect(
-        page.getByRole('button', { name: '不认识', exact: true }),
+        page.getByRole('button', { name: '没记住', exact: true }),
       ).toBeFocused()
       await page.keyboard.press('Enter')
       await expect(area).toBeFocused()
       await expect(
-        page.getByRole('button', { name: '不认识', exact: true }),
+        page.getByRole('button', { name: '没记住', exact: true }),
       ).toHaveCount(0)
-      await expect(nextHint).not.toContainText('修正为不认识')
+      await expect(nextHint).not.toContainText('修正为没记住')
       await expect(nextHint).toBeVisible({ visible: !scenario.hasTouch })
       await page.keyboard.press('2')
       await expect(
-        page.getByRole('button', { name: '认识', exact: true }),
+        page.getByRole('button', { name: '记得', exact: true }),
       ).toHaveCount(0)
       // 长按事件不得直接提交。
       await area.dispatchEvent('keydown', {
@@ -219,7 +219,7 @@ for (const scenario of [
           .filter({ has: page.getByRole('heading', { name: 'brisk' }) }),
       ).toBeFocused()
       await expect(
-        page.getByRole('button', { name: '认识', exact: true }),
+        page.getByRole('button', { name: '记得', exact: true }),
       ).toBeVisible()
       await expect(page.getByRole('button', { name: '下一词' })).toHaveCount(0)
       await expect(page.locator('html')).toHaveAttribute(

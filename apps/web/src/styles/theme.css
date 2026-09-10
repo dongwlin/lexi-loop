@@ -37,9 +37,6 @@
     --border-strong: var(--gray-10);
     --field-border: var(--border-strong);
 
-    --primary: #0072e2;
-    --primary-hover: #0068d8;
-    --primary-active: #005fcd;
     --primary-foreground: #ffffff;
     --primary-subtle: var(--blue-3);
     --primary-subtle-hover: var(--blue-4);
@@ -77,6 +74,12 @@
   .light {
     color-scheme: light;
 
+    /* 浅色品牌蓝（设计系统方案 §4.2 的校准结果）：静止、悬停、按下依次加深，
+       三步都同时满足白字 ≥ 4.5:1 与相对白卡片 ≥ 4.5:1。 */
+    --primary: #0072e2;
+    --primary-hover: #0068d8;
+    --primary-active: #005fcd;
+
     --background: #f5f5f5;
     --surface: #ffffff;
     --overlay: #ffffff;
@@ -91,6 +94,15 @@
 
   .dark {
     color-scheme: dark;
+
+    /* 深色品牌蓝单独校准（设计系统方案 §4.2）：照搬浅色三步会在深色画布上「越按越沉」
+       ——按下态相对 gray-2 卡片只有 2.95:1，按钮几乎融进背景；而白字对比度的预算上限
+       已由 #0072e2 占满（再亮即跌破 4.5:1）。因此深色下改用相反方向：悬停与按下依次
+       提亮，让交互反馈始终是「离开画布」，同时三步都保持白字 ≥ 4.5:1 与相对
+       gray-2 卡片 ≥ 3:1（静止 3.41、悬停 3.62、按下 3.85）。 */
+    --primary: #006bd6;
+    --primary-hover: #006fde;
+    --primary-active: #0073e6;
 
     --background: #0b0b0d;
     --surface: var(--gray-2);

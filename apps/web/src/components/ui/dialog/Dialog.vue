@@ -56,9 +56,11 @@ function handleOpenAutoFocus(event: Event) {
           <DialogTitle class="text-base leading-6 font-semibold">
             {{ title }}
           </DialogTitle>
+          <!-- 关闭按钮是触摸设备上的可达性入口：命中区按交互与可访问性规范 §4.4 补足
+               44 × 44，图标本身保持 size-4（规范允许视觉小于目标）。 -->
           <DialogClose
             aria-label="关闭"
-            class="-mt-1 -mr-2 flex size-9 shrink-0 items-center justify-center rounded-item text-muted-foreground outline-hidden transition-colors duration-150 ease-out hover:bg-default hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
+            class="-mt-1 -mr-2 flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-item text-muted-foreground outline-hidden transition-colors duration-150 ease-out hover:bg-default hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
           >
             <X class="size-4" aria-hidden="true" />
           </DialogClose>

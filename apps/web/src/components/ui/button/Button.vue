@@ -5,6 +5,10 @@ import { computed } from 'vue'
 // Tailwind 静态发现（§12）。Pending 用原生 disabled 阻止重复激活——仅 aria-disabled 或
 // pointer-events-none 挡不住键盘触发；焦点环在 outline-hidden 之后必须在 focus-visible 下
 // 恢复 outline-solid，否则整个配方渲染不出焦点环。
+// Pending 与 Disabled 因此共用原生 disabled，但二者不能共用视觉：整体 opacity 会把白字
+// 一起合成掉（浅色下实心主按钮只剩 1.51:1），而 §8.1 要求 Pending「保留按钮宽度与可读
+// 文案」。故整体降透明度只作用于真正 disabled 的按钮（not-aria-busy 排除 pending），
+// pending 只加进度光标与 aria-busy；光标同样互斥书写，不依赖两条 disabled 变体的先后顺序。
 type ButtonVariant =
   | 'primary'
   | 'secondary'
@@ -56,7 +60,7 @@ const isDisabled = computed(() => props.disabled || props.pending)
     :type="type"
     :disabled="isDisabled"
     :aria-busy="pending || undefined"
-    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-control px-4 py-2 text-sm font-medium outline-hidden transition-[background-color,scale] duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid disabled:cursor-not-allowed disabled:opacity-50 motion-safe:enabled:active:scale-97 motion-reduce:transition-none"
+    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-control px-4 py-2 text-sm font-medium outline-hidden transition-[background-color,scale] duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid disabled:not-aria-busy:cursor-not-allowed disabled:not-aria-busy:opacity-50 aria-busy:cursor-progress motion-safe:enabled:active:scale-97 motion-reduce:transition-none"
     :class="variantClasses[variant]"
   >
     <svg

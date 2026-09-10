@@ -127,14 +127,16 @@ Radix 的 12 个 Step 提供参考起点：1–2 为背景、3–5 为交互填�
 
 HeroUI v3 参考主色为 `oklch(0.6204 0.195 253.83)`。本方案保留其蓝色色相方向，但为常用小字号白字按钮降低亮度，采用以下项目值。参考色来自 [HeroUI 默认主题变量](https://github.com/heroui-inc/heroui/blob/v3/packages/styles/themes/default/variables.css)。
 
-| Token | 项目值 |
-| --- | --- |
-| `primary` | `#0072e2` |
-| `primary-hover` | `#0068d8` |
-| `primary-active` | `#005fcd` |
-| `primary-foreground` | `#ffffff` |
+| Token | 浅色 | 深色 |
+| --- | --- | --- |
+| `primary` | `#0072e2` | `#006bd6` |
+| `primary-hover` | `#0068d8` | `#006fde` |
+| `primary-active` | `#005fcd` | `#0073e6` |
+| `primary-foreground` | `#ffffff` | `#ffffff` |
 
-这些值是本方案的校准结果，不是 HeroUI 官方默认值。默认蓝底与白字的 sRGB 对比度约为 `4.66:1`，Hover 与 Active 更深；不得再整体降低按钮透明度作为 Hover，否则会改变文字的实际对比度。
+这些值是本方案的校准结果，不是 HeroUI 官方默认值。浅色下默认蓝底与白字的 sRGB 对比度约为 `4.66:1`（Hover `5.29:1`、Active `5.97:1`），不得再整体降低按钮透明度作为 Hover，否则会改变文字的实际对比度。
+
+深色必须单独校准，不能沿用浅色三步：白字把蓝底亮度预算压在约 `4.5:1` 的下界（再亮即跌破），而照搬浅色的 Hover / Active 是「越按越深」，相对 gray-2 卡片的对比从 `3.77:1` 掉到 `2.95:1`，按下时按钮几乎融进画布。深色改为相反方向——悬停与按下依次提亮，交互反馈始终是「离开画布」，三步同时满足白字 ≥ `4.5:1`（`5.15 / 4.85 / 4.57`）与相对卡片 ≥ `3:1`（`3.41 / 3.62 / 3.85`，覆盖 gray-2 卡片与 gray-3 弹层）。因此这三个 Token 不放进 `:root, .light, .dark` 共享块，而是浅深各自声明（§5.2）。数值为 2026-09-11 按 sRGB 计算的实测结果。
 
 小字号品牌文字使用 `primary-text`，不使用 `text-primary`。尤其在深色主题中，实心按钮的蓝色与文字需要的蓝色不能混为一谈。
 
@@ -158,7 +160,7 @@ HeroUI v3 参考主色为 `oklch(0.6204 0.195 253.83)`。本方案保留其蓝�
 | `border-strong` | `gray-10` | `gray-10` | 需要明确可辨识的控件边界 |
 | `field / field-hover` | 白色 / `gray-2` | `gray-3 / gray-4` | 默认输入区域 |
 | `field-border` | `border-strong` | `border-strong` | 显式描边输入框 |
-| `primary / hover / active` | 上述品牌校准值 | 同 Light | 实心主操作 |
+| `primary / hover / active` | §4.2 浅色校准值 | §4.2 深色校准值 | 实心主操作 |
 | `primary-foreground` | 白色 | 白色 | 实心主操作文字 |
 | `primary-subtle / subtle-hover` | `blue-3 / blue-4` | 同名暗色阶 | 轻量品牌填充 |
 | `primary-text` | `blue-11 / blue-12` 按 80:20 混合 | 同名暗色阶按相同比例混合 | 品牌文字与 Soft 变体文字 |
@@ -244,9 +246,6 @@ Radix 的 CSS 文件为 `:root / .light` 和 `.dark` 提供对应色阶，需要
     --border-strong: var(--gray-10);
     --field-border: var(--border-strong);
 
-    --primary: #0072e2;
-    --primary-hover: #0068d8;
-    --primary-active: #005fcd;
     --primary-foreground: #ffffff;
     --primary-subtle: var(--blue-3);
     --primary-subtle-hover: var(--blue-4);
@@ -276,6 +275,11 @@ Radix 的 CSS 文件为 `:root / .light` 和 `.dark` 提供对应色阶，需要
   .light {
     color-scheme: light;
 
+    /* 品牌蓝按主题分别声明（§4.2）：浅色三步依次加深 */
+    --primary: #0072e2;
+    --primary-hover: #0068d8;
+    --primary-active: #005fcd;
+
     --background: #f5f5f5;
     --surface: #ffffff;
     --overlay: #ffffff;
@@ -292,6 +296,11 @@ Radix 的 CSS 文件为 `:root / .light` 和 `.dark` 提供对应色阶，需要
 
   .dark {
     color-scheme: dark;
+
+    /* 深色三步依次提亮：浅色方向会让按下态融进深色画布 */
+    --primary: #006bd6;
+    --primary-hover: #006fde;
+    --primary-active: #0073e6;
 
     --background: #0b0b0d;
     --surface: var(--gray-2);
@@ -497,7 +506,9 @@ Forced Colors 下（2026-09-06 Chromium 实测）阴影与表面明度差全部�
     outline-hidden focus-visible:outline-solid
     focus-visible:outline-2
     focus-visible:outline-offset-2 focus-visible:outline-ring
-    disabled:cursor-not-allowed disabled:opacity-50
+    aria-busy:cursor-progress
+    disabled:not-aria-busy:cursor-not-allowed
+    disabled:not-aria-busy:opacity-50
   "
 >
   保存修改
@@ -505,6 +516,8 @@ Forced Colors 下（2026-09-06 Chromium 实测）阴影与表面明度差全部�
 ```
 
 这是样式示例，实际由共享 Button 组件封装。Disabled 使用原生 `disabled`；Pending 保留按钮宽度与可读文案、表达 `aria-busy` 并阻止重复激活。只设置 `aria-disabled` 或 `pointer-events-none` 不会阻止键盘触发。
+
+Pending 与 Disabled 共用原生 `disabled`，但不能共用视觉：整体 `opacity` 会把白字一起合成掉（浅色实心主按钮只剩 `1.51:1`），而 Pending 尚未失败、文案必须可读。因此整体降透明度只作用于真正 disabled 的按钮——用 `not-aria-busy` 把 Pending 排除在外——Pending 只加 `aria-busy` 与进度光标；两条光标声明也互斥书写，不依赖变体在产物中的先后顺序。
 
 > [!important] `outline-hidden` 之后必须恢复 `outline-solid`
 >
@@ -551,7 +564,7 @@ Invalid 状态设置真实的 `aria-invalid`、关联错误信息，并保留可
 | 组件 | 视觉配方与注意点 |
 | --- | --- |
 | Card | `rounded-card bg-surface p-4 shadow-surface`；不默认可点击；Forced Colors 下补 §7.3 的容器 outline |
-| Dialog | `rounded-dialog bg-overlay p-6 shadow-overlay`；Backdrop 独立；标题、说明、关闭与底部操作位置一致；Forced Colors 下补容器 outline |
+| Dialog | `rounded-dialog bg-overlay p-6 shadow-overlay`；Backdrop 独立；标题、说明、关闭与底部操作位置一致；右上角关闭按钮的命中区至少 `44 × 44`（`min-h-11 min-w-11`），图标本身可保持 `size-4`；Forced Colors 下补容器 outline |
 | Dropdown / Popover | `rounded-popover bg-overlay p-1 shadow-overlay`；内容保持不透明，避免文字叠影；Forced Colors 下补容器 outline（Reka 有内联 `outline: none`，必须带 `!` 后缀） |
 | Menu Item | `rounded-item`；高亮用 `default-hover`，与深色 Overlay 区分；危险项用 `danger-text` 与 `danger-subtle`；Forced Colors 下高亮补 `Highlight` 色轮廓环 |
 | Chip / Badge | `rounded-full`；默认 Subtle + Text；成功、警告、错误有文字或图标辅助 |

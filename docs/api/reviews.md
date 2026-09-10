@@ -9,7 +9,7 @@
 | 方法 | 路径 | 用途 |
 | --- | --- | --- |
 | POST | `/api/v1/reviews` | 开始一轮复习（抽词 + 建 session） |
-| POST | `/api/v1/reviews/:sessionId/items/:itemId` | 提交一个单词的结果（记得 / 不记得） |
+| POST | `/api/v1/reviews/:sessionId/items/:itemId` | 提交一个单词的结果（记得 / 没记住） |
 | POST | `/api/v1/reviews/:sessionId/abandon` | 放弃一轮进行中的复习（active → abandoned） |
 | GET | `/api/v1/reviews/:id` | 获取一轮复习的汇总与逐词结果 |
 

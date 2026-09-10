@@ -12,6 +12,7 @@ const meta = {
     mode: 'recalling',
     canCorrect: false,
     submitting: false,
+    submissionStarted: false,
     error: null,
   },
   decorators: [
@@ -25,15 +26,21 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Recalling: Story = {}
+// 揭示阶段未提交时内容槽下方常驻「尚未记录 · 点「下一词」提交」：
+// Remembered / Forgotten 钉住这条暂定标记，Submitting / Retry 钉住它让位给提交中与错误的状态。
 export const Remembered: Story = {
   args: { mode: 'revealed', canCorrect: true },
 }
 export const Forgotten: Story = { args: { mode: 'revealed' } }
 export const Submitting: Story = {
-  args: { mode: 'revealed', submitting: true },
+  args: { mode: 'revealed', submitting: true, submissionStarted: true },
 }
 export const Retry: Story = {
-  args: { mode: 'revealed', error: '提交失败，请点击「下一词」重试。' },
+  args: {
+    mode: 'revealed',
+    submissionStarted: true,
+    error: '提交失败，请点击「下一词」重试。',
+  },
 }
 export const Multiline: Story = {
   args: {
@@ -46,6 +53,9 @@ export const LongContent: Story = {
   args: {
     mode: 'revealed',
     word: 'pneumonoultramicroscopicsilicovolcanoconiosis',
+    // 音标必须与当前单词一致：长词场景要连同同样冗长的音标一起压测换行，
+    // 沿用 ambiguous 的音标会让这个 Story 声称覆盖的长词排版失真。
+    phonetic: '/ˌnjuːmənoʊˌʌltrəˌmaɪkrəˌskɒpɪkˌsɪlɪkoʊvɒlˌkeɪnoʊˌkoʊniˈoʊsɪs/',
     meaning: Array.from(
       { length: 12 },
       (_, i) =>
