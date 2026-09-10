@@ -70,10 +70,10 @@ func TestBuildOpenAPISpec(t *testing.T) {
 		resp422, has422 := op.Responses["422"]
 		if key == "post /api/v1/reviews" {
 			assert.True(t, has422, "开始复习契约保留业务前置条件 422")
-			assert.Contains(t, resp422.Description, "BASE.BIZ.USER_DISABLED")
+			assert.Contains(t, resp422.Description, "BASE.BIZ.NO_REVIEWABLE_WORDS")
 		} else if key == "post /api/v1/reviews/{sessionId}/abandon" {
 			assert.True(t, has422, "放弃复习契约保留业务前置条件 422")
-			assert.Contains(t, resp422.Description, "BASE.BIZ.USER_DISABLED")
+			assert.Contains(t, resp422.Description, "BASE.BIZ.SESSION_NOT_ACTIVE")
 		} else {
 			assert.False(t, has422, "%s 的校验失败已降为 400，不得文档化 422", key)
 		}

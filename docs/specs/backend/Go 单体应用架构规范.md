@@ -736,7 +736,7 @@ const (
     CodeInternal          = "ERROR"
     CodeTokenMissing      = "BASE.AUTH.TOKEN_MISSING"
     CodeUserNotFound      = "BASE.NOT_FOUND.USER"
-    CodeUserDisabled      = "BASE.BIZ.USER_DISABLED"
+    CodeNoReviewableWords = "BASE.BIZ.NO_REVIEWABLE_WORDS"
     CodeUserStateConflict = "BASE.BIZ.USER_STATE_CONFLICT"
     CodeConcurrentUpdate  = "BASE.BIZ.CONCURRENT_UPDATE"
 )

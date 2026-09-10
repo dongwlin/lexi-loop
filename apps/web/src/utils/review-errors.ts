@@ -30,7 +30,7 @@ function describeTransientApiError(apiError: ApiErrorLike): string | null {
 export function describeReviewStartError(err: unknown): string {
   const apiError = asApiErrorLike(err)
   if (apiError) {
-    if (apiError.code === 'BASE.BIZ.USER_DISABLED')
+    if (apiError.code === 'BASE.BIZ.NO_REVIEWABLE_WORDS')
       return '当前没有可复习的生词，请先导入生词。'
     const transient = describeTransientApiError(apiError)
     if (transient) return transient

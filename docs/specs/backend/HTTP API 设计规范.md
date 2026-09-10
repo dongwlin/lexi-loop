@@ -114,7 +114,7 @@ URL 版本与传输契约代码对应：`/v1` ↔ `handler/v1` 及其 DTO。Serv
 | `BASE.AUTH.TOKEN_EXPIRED`      | 认证失效，登录态失效或认证信息无效 | 401      |
 | `BASE.AUTH.FORBIDDEN`          | 权限不足，已认证但无当前操作权限  | 403      |
 | `BASE.BIZ.CONCURRENT_UPDATE`   | 资源版本冲突            | 409      |
-| `BASE.BIZ.USER_DISABLED`       | 不满足业务前置条件         | 422      |
+| `BASE.BIZ.*`                   | 不满足业务前置条件（具体 code 由 `apperr` 集中维护） | 422      |
 | `BASE.BIZ.RATE_LIMITED`        | 请求频率或业务额度受限       | 429      |
 | `"ERROR"`                      | 系统异常，未预料的异常       | 500      |
 

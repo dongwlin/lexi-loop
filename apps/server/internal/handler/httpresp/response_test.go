@@ -113,7 +113,7 @@ func TestFromError(t *testing.T) {
 			name:        "业务前置条件不满足映射 422",
 			err:         apperr.New(apperr.FailedPrecondition, apperr.CodeNoReviewableWords, "no reviewable words available", nil),
 			wantStatus:  http.StatusUnprocessableEntity,
-			wantCode:    "BASE.BIZ.USER_DISABLED",
+			wantCode:    "BASE.BIZ.NO_REVIEWABLE_WORDS",
 			wantMessage: "no reviewable words available",
 		},
 		{

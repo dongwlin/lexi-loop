@@ -13,12 +13,12 @@ import (
 )
 
 // keepBusiness422 列出契约中真实存在业务前置条件 422 的操作
-// （FailedPrecondition，如 BASE.BIZ.USER_DISABLED，docs/api/reviews.md §2）。
+// （FailedPrecondition，具体 code 由 apperr 集中维护，docs/api/reviews.md §2/§6）。
 // 其余操作的 422 响应是 huma 默认「校验失败」语义的残留——运行时已由
 // httpresp.UseHumaError 降为 400，文档一并移除。
 var keepBusiness422 = map[string]string{
-	"start-review-session":   "业务前置条件不满足（无可复习生词，BASE.BIZ.USER_DISABLED）",
-	"abandon-review-session": "业务前置条件不满足（session 已结束，BASE.BIZ.USER_DISABLED）",
+	"start-review-session":   "业务前置条件不满足（无可复习生词，BASE.BIZ.NO_REVIEWABLE_WORDS）",
+	"abandon-review-session": "业务前置条件不满足（session 已结束，BASE.BIZ.SESSION_NOT_ACTIVE）",
 }
 
 // buildOpenAPISpec 构造 /api/v1 的 OpenAPI 3.1 spec。离线执行：不启动

@@ -45,7 +45,8 @@ func TestCodes(t *testing.T) {
 	assert.Equal(t, "BASE.NOT_FOUND.USER", CodeNotFound)
 	assert.Equal(t, "BASE.BIZ.CONCURRENT_UPDATE", CodeConcurrentUpdate)
 	assert.Equal(t, "BASE.BIZ.RATE_LIMITED", CodeRateLimited)
-	assert.Equal(t, "BASE.BIZ.USER_DISABLED", CodeNoReviewableWords)
+	assert.Equal(t, "BASE.BIZ.NO_REVIEWABLE_WORDS", CodeNoReviewableWords)
+	assert.Equal(t, "BASE.BIZ.SESSION_NOT_ACTIVE", CodeSessionNotActive)
 }
 
 func TestNew(t *testing.T) {

@@ -80,7 +80,7 @@ POST /api/v1/reviews
 
 ```json
 {
-  "code": "BASE.BIZ.USER_DISABLED",
+  "code": "BASE.BIZ.NO_REVIEWABLE_WORDS",
   "message": "no reviewable words available",
   "data": {}
 }
@@ -223,7 +223,7 @@ POST /api/v1/reviews/:sessionId/abandon
 
 ```json
 {
-  "code": "BASE.BIZ.USER_DISABLED",
+  "code": "BASE.BIZ.SESSION_NOT_ACTIVE",
   "message": "review session is not active",
   "data": {}
 }

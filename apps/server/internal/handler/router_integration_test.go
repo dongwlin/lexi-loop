@@ -296,7 +296,7 @@ func TestIntegration_ReviewRoutes(t *testing.T) {
 		rec := doJSON(t, engine, "POST", "/api/v1/reviews", map[string]any{"count": 30})
 		require.Equal(t, http.StatusUnprocessableEntity, rec.Code)
 		e := decodeEnvelope(t, rec.Body.Bytes())
-		assert.Equal(t, "BASE.BIZ.USER_DISABLED", e.Code)
+		assert.Equal(t, "BASE.BIZ.NO_REVIEWABLE_WORDS", e.Code)
 		assert.Equal(t, "no reviewable words available", e.Message)
 		assert.JSONEq(t, "{}", string(e.Data))
 	})
@@ -445,7 +445,7 @@ func TestIntegration_ReviewRoutes(t *testing.T) {
 		rec = doJSON(t, engine, "POST", "/api/v1/reviews/"+completed.SessionID+"/abandon", nil)
 		require.Equal(t, http.StatusUnprocessableEntity, rec.Code)
 		e = decodeEnvelope(t, rec.Body.Bytes())
-		assert.Equal(t, "BASE.BIZ.USER_DISABLED", e.Code)
+		assert.Equal(t, "BASE.BIZ.SESSION_NOT_ACTIVE", e.Code)
 		assert.Equal(t, "review session is not active", e.Message)
 
 		// 不存在的 session：404。

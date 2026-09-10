@@ -66,9 +66,12 @@ const (
 	CodeConcurrentUpdate = "BASE.BIZ.CONCURRENT_UPDATE"
 	// CodeRateLimited 请求频率或业务额度受限（429）。
 	CodeRateLimited = "BASE.BIZ.RATE_LIMITED"
-	// CodeNoReviewableWords 无可复习生词（422）；契约字面量即标准 code
-	// BASE.BIZ.USER_DISABLED（docs/api/reviews.md §2）。
-	CodeNoReviewableWords = "BASE.BIZ.USER_DISABLED"
+	// CodeNoReviewableWords 无可复习生词（422）；message 为
+	// "no reviewable words available"（docs/api/reviews.md §2）。
+	CodeNoReviewableWords = "BASE.BIZ.NO_REVIEWABLE_WORDS"
+	// CodeSessionNotActive 复习 session 已结束，当前操作不满足前置条件（422）；
+	// message 为 "review session is not active"（docs/api/reviews.md §6）。
+	CodeSessionNotActive = "BASE.BIZ.SESSION_NOT_ACTIVE"
 )
 
 // Error 是携带稳定 code 与 kind 的类型化应用错误。跨层稳定契约是错误类型、
